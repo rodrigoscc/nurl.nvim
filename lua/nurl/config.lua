@@ -1,0 +1,54 @@
+---@class nurl.config: nurl.Config
+local M = {}
+
+---@class nurl.Config
+local defaults = {
+    -- dir = ".nurl",
+    dir = ".scratch",
+    -- environments_file = "environments.lua",
+    environments_file = "scratch.20251109212244.lua",
+    active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
+    ---@type nurl.Buffer[]
+    buffers = {
+        {
+            "body",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<C-r>"] = "rerun",
+                q = "close",
+            },
+        },
+        {
+            "headers",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<C-r>"] = "rerun",
+                q = "close",
+            },
+        },
+        {
+            "raw",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<C-r>"] = "rerun",
+                q = "close",
+            },
+        },
+    },
+}
+
+local config = vim.deepcopy(defaults) --[[@as nurl.Config]]
+
+---@param opts? nurl.Config
+function M.setup(opts)
+    config =
+        vim.tbl_deep_extend("force", {}, vim.deepcopy(defaults), opts or {})
+end
+
+setmetatable(M, {
+    __index = function(_, key)
+        return config[key]
+    end,
+})
+
+return M
