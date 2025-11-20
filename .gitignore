@@ -2,3 +2,4 @@
 /lua_modules
 /.luarocks
 .scratch/
+.nurl/

@@ -3,10 +3,8 @@ local M = {}
 
 ---@class nurl.Config
 local defaults = {
-    -- dir = ".nurl",
-    dir = ".scratch",
-    -- environments_file = "environments.lua",
-    environments_file = "scratch.20251109212244.lua",
+    dir = ".nurl",
+    environments_file = "environments.lua",
     active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
     ---Window config for the response window. Refer to :help nvim_open_win for the available keys.
     ---@type table
