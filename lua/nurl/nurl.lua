@@ -29,6 +29,15 @@ function M.run(request)
     local elapsed_time = ElapsedTimeFloating:new(win)
     elapsed_time:start()
 
+    -- Stop timer if parent window is closed
+    vim.api.nvim_create_autocmd("WinClosed", {
+        once = true,
+        pattern = tostring(win),
+        callback = function()
+            elapsed_time:stop()
+        end,
+    })
+
     curl:run(function(system_completed)
         elapsed_time:stop()
 

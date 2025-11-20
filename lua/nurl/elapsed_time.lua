@@ -86,8 +86,11 @@ function E:stop()
     assert(self.win ~= nil, "Window must be opened")
 
     self.timer:stop()
+
     vim.schedule(function()
-        vim.api.nvim_win_close(self.win, true)
+        if vim.api.nvim_win_is_valid(self.win) then -- win could already be closed
+            vim.api.nvim_win_close(self.win, true)
+        end
     end)
 end
 
