@@ -32,17 +32,26 @@ function M.run(request)
     curl:run(function(system_completed)
         elapsed_time:stop()
 
-        if system_completed.code ~= 0 then
-            return
-        end
-
         local stdout = vim.split(system_completed.stdout, "\n")
         local stderr = vim.split(system_completed.stderr, "\n")
 
-        local response = responses.parse(stdout, stderr)
+        local response = nil
+        if system_completed.code == 0 then
+            response = responses.parse(stdout, stderr)
+        end
 
         vim.schedule(function()
             buffers.update(internal_request, response, curl, response_buffers)
+
+            if
+                system_completed.code ~= 0
+                and response_buffers[buffers.Buffer.Raw]
+            then
+                vim.api.nvim_win_set_buf(
+                    win,
+                    response_buffers[buffers.Buffer.Raw]
+                )
+            end
         end)
     end)
 end

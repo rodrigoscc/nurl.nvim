@@ -2,8 +2,10 @@ local actions = require("nurl.actions")
 local config = require("nurl.config")
 local tables = require("nurl.utils.tables")
 
+local M = {}
+
 ---@enum nurl.BufferType
-local Buffer = {
+M.Buffer = {
     Body = "body",
     Headers = "headers",
     Raw = "raw",
@@ -16,8 +18,6 @@ local Buffer = {
 ---@class nurl.Buffer
 ---@field [1] nurl.BufferType?
 ---@field keys table<string, string|nurl.BufferAction>
-
-local M = {}
 
 ---@param action string|nurl.BufferAction
 local function expand_keymap_rhs(action)
@@ -141,13 +141,17 @@ end
 ---@param buf integer
 ---@param buffer nurl.Buffer
 ---@param request nurl.Request
----@param response nurl.Response
+---@param response nurl.Response | nil
 ---@param curl nurl.Curl
 function M.update_buffer(buf, buffer, request, response, curl)
     if buffer[1] == "body" then
-        populate_body_buffer(buf, response)
+        if response ~= nil then
+            populate_body_buffer(buf, response)
+        end
     elseif buffer[1] == "headers" then
-        populate_headers_buffer(buf, response)
+        if response ~= nil then
+            populate_headers_buffer(buf, response)
+        end
     elseif buffer[1] == "raw" then
         populate_raw_buffer(buf, curl)
     end
@@ -186,7 +190,7 @@ function M.create(request, response, curl)
 end
 
 ---@param request nurl.Request
----@param response nurl.Response
+---@param response nurl.Response | nil
 ---@param curl nurl.Curl
 ---@param buffers table<nurl.BufferType, integer>
 function M.update(request, response, curl, buffers)
