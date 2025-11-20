@@ -3,6 +3,7 @@ local responses = require("nurl.responses")
 local load_environments = require("nurl.environment").load
 local config = require("nurl.config")
 local buffers = require("nurl.buffers")
+local ElapsedTimeFloating = require("nurl.elapsed_time")
 
 local M = {}
 
@@ -14,19 +15,36 @@ function M.run(request)
 
     local curl = requests.build_curl(internal_request)
 
-    local system_completed = curl:run()
-    if system_completed.code ~= 0 then
-        return
-    end
+    local response_buffers = buffers.create(internal_request, nil, curl)
 
-    local stdout = vim.split(system_completed.stdout, "\n")
-    local stderr = vim.split(system_completed.stderr, "\n")
+    assert(#config.buffers > 0, "Must configure at least one response buffer")
+    local first_buffer_type = config.buffers[1][1]
 
-    local response = responses.parse(stdout, stderr)
+    local win = vim.api.nvim_open_win(
+        response_buffers[first_buffer_type],
+        false,
+        config.win_config
+    )
 
-    buffers.open(internal_request, response, curl)
+    local elapsed_time = ElapsedTimeFloating:new(win)
+    elapsed_time:start()
 
-    return response
+    curl:run(function(system_completed)
+        elapsed_time:stop()
+
+        if system_completed.code ~= 0 then
+            return
+        end
+
+        local stdout = vim.split(system_completed.stdout, "\n")
+        local stderr = vim.split(system_completed.stderr, "\n")
+
+        local response = responses.parse(stdout, stderr)
+
+        vim.schedule(function()
+            buffers.update(internal_request, response, curl, response_buffers)
+        end)
+    end)
 end
 
 function M.run_from_buffer()
@@ -67,9 +85,7 @@ function M.run_from_buffer()
         },
         confirm = function(picker, item)
             picker:close()
-            vim.schedule(function()
-                M.run(item.request)
-            end)
+            M.run(item.request)
         end,
     })
 end
@@ -123,9 +139,7 @@ function M.run_from_cwd()
         },
         confirm = function(picker, item)
             picker:close()
-            vim.schedule(function()
-                M.run(item.request)
-            end)
+            M.run(item.request)
         end,
     })
 end

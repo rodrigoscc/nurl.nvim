@@ -10,16 +10,24 @@ function Curl:new(o)
     return o
 end
 
-function Curl:run()
+---@param on_exit fun(out: vim.SystemCompleted) | nil
+function Curl:run(on_exit)
     local cmd = { "curl" }
 
     for _, k in ipairs(self.args) do
         table.insert(cmd, k)
     end
 
-    local result = vim.system(cmd, { text = true }):wait()
-    self.result = result
-    return result
+    if on_exit == nil then
+        local result = vim.system(cmd, { text = true }):wait()
+        self.result = result
+        return result
+    else
+        vim.system(cmd, { text = true }, function(out)
+            self.result = out
+            on_exit(out)
+        end)
+    end
 end
 
 function Curl:string()
