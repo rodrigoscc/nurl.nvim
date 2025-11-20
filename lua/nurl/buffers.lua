@@ -16,7 +16,7 @@ M.Buffer = {
 ---@field opts table
 
 ---@class nurl.Buffer
----@field [1] nurl.BufferType?
+---@field [1] nurl.BufferType
 ---@field keys table<string, string|nurl.BufferAction>
 
 ---@param action string|nurl.BufferAction
@@ -118,15 +118,17 @@ end
 function M.create_buffer(buffer, request, response, curl)
     local buf = vim.api.nvim_create_buf(true, true)
 
-    if buffer[1] == "body" then
+    local type = buffer[1]
+
+    if type == "body" then
         if response ~= nil then
             populate_body_buffer(buf, response)
         end
-    elseif buffer[1] == "headers" then
+    elseif type == "headers" then
         if response ~= nil then
             populate_headers_buffer(buf, response)
         end
-    elseif buffer[1] == "raw" then
+    elseif type == "raw" then
         populate_raw_buffer(buf, curl)
     end
 
@@ -138,30 +140,30 @@ function M.create_buffer(buffer, request, response, curl)
     return buf
 end
 
----@param buf integer
+---@param bufnr integer
 ---@param buffer nurl.Buffer
 ---@param request nurl.Request
 ---@param response nurl.Response | nil
 ---@param curl nurl.Curl
-function M.update_buffer(buf, buffer, request, response, curl)
+function M.update_buffer(bufnr, buffer, request, response, curl)
     if buffer[1] == "body" then
         if response ~= nil then
-            populate_body_buffer(buf, response)
+            populate_body_buffer(bufnr, response)
         end
     elseif buffer[1] == "headers" then
         if response ~= nil then
-            populate_headers_buffer(buf, response)
+            populate_headers_buffer(bufnr, response)
         end
     elseif buffer[1] == "raw" then
-        populate_raw_buffer(buf, curl)
+        populate_raw_buffer(bufnr, curl)
     end
 
     for lhs, rhs in pairs(buffer.keys) do
         local expanded_rhs = expand_keymap_rhs(rhs)
-        vim.keymap.set("n", lhs, expanded_rhs, { buffer = buf })
+        vim.keymap.set("n", lhs, expanded_rhs, { buffer = bufnr })
     end
 
-    return buf
+    return bufnr
 end
 
 ---@param request nurl.Request
@@ -175,9 +177,10 @@ function M.create(request, response, curl)
     for _, buffer in ipairs(config.buffers) do
         local buf = M.create_buffer(buffer, request, response, curl)
 
-        vim.b[buf].nurl_buffer_type = buffer[1]
+        local type = buffer[1]
 
-        buffers[buffer[1]] = buf
+        vim.b[buf].nurl_buffer_type = type
+        buffers[type] = buf
     end
 
     for _, bufnr in pairs(buffers) do
@@ -195,14 +198,15 @@ end
 ---@param buffers table<nurl.BufferType, integer>
 function M.update(request, response, curl, buffers)
     for _, buffer in ipairs(config.buffers) do
-        local buf = buffers[buffer[1]]
-        M.update_buffer(buf, buffer, request, response, curl)
+        local type = buffer[1]
+        local bufnr = buffers[type]
+        M.update_buffer(bufnr, buffer, request, response, curl)
+    end
 
-        for _, bufnr in pairs(buffers) do
-            vim.b[bufnr].nurl_request = request
-            vim.b[bufnr].nurl_response = response
-            vim.b[bufnr].nurl_buffers = buffers
-        end
+    for _, bufnr in pairs(buffers) do
+        vim.b[bufnr].nurl_request = request
+        vim.b[bufnr].nurl_response = response
+        vim.b[bufnr].nurl_buffers = buffers
     end
 end
 
