@@ -13,7 +13,7 @@ _G.Nurl = M
 M.winbar = winbar
 
 ---@param request nurl.SuperRequest | nurl.Request
-function M.run(request)
+function M.send(request)
     local internal_request = requests.expand(request)
 
     local curl = requests.build_curl(internal_request)
@@ -100,7 +100,7 @@ function M.run(request)
     end
 end
 
-function M.run_buffer_request()
+function M.send_buffer_request()
     local buffer_requests = dofile(vim.fn.expand("%"))
 
     local items = vim.iter(ipairs(buffer_requests))
@@ -138,12 +138,12 @@ function M.run_buffer_request()
         },
         confirm = function(picker, item)
             picker:close()
-            M.run(item.request)
+            M.send(item.request)
         end,
     })
 end
 
-function M.run_project_request()
+function M.send_project_request()
     local lua_files = vim.fs.find(function(name)
         return vim.endswith(name, ".lua") and name ~= config.environments_file
     end, { type = "file", limit = math.huge, path = config.dir })
@@ -192,7 +192,7 @@ function M.run_project_request()
         },
         confirm = function(picker, item)
             picker:close()
-            M.run(item.request)
+            M.send(item.request)
         end,
     })
 end
@@ -219,7 +219,7 @@ require("nurl.highlights").setup_highlights()
 -- print(vim.inspect(response))
 
 vim.keymap.set("n", "gH", function()
-    Nurl.run_project_request()
+    Nurl.send_project_request()
 end)
 
 return M
