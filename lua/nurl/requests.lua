@@ -7,6 +7,8 @@ local Curl = require("nurl.curl")
 ---@field data? string | table<string, any>
 ---@field form? table<string, string>
 ---@field data_urlencode? table<string, any>
+---@field pre_hook? fun(next: fun()) | nil
+---@field post_hook? fun(request: nurl.Request, response: nurl.Response | nil) | nil
 
 ---@class nurl.SuperRequest
 ---@field url string | table<string, any> | fun(): string | table<string, any>
@@ -15,6 +17,8 @@ local Curl = require("nurl.curl")
 ---@field data? string | table<string, any> | fun(): string | table<string, any>
 ---@field form? table<string, any> | fun(): table<string, any>
 ---@field data_urlencode? table<string, any> | fun(): table<string, any>
+---@field pre_hook? fun(next: fun()) | nil
+---@field post_hook? fun(request: nurl.Request, response: nurl.Response) | nil
 
 local M = {}
 
@@ -95,6 +99,8 @@ function M.expand(request)
         data = data,
         form = form,
         data_urlencode = data_urlencode,
+        pre_hook = request.pre_hook,
+        post_hook = request.post_hook,
     }
 
     return req

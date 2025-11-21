@@ -18,69 +18,89 @@ function M.run(request)
 
     local curl = requests.build_curl(internal_request)
 
-    local response_buffers = buffers.create(internal_request, nil, curl)
+    local function next_function()
+        local response_buffers = buffers.create(internal_request, nil, curl)
 
-    assert(#config.buffers > 0, "Must configure at least one response buffer")
-    local first_buffer_type = config.buffers[1][1]
+        assert(
+            #config.buffers > 0,
+            "Must configure at least one response buffer"
+        )
+        local first_buffer_type = config.buffers[1][1]
 
-    local win = vim.api.nvim_open_win(
-        response_buffers[first_buffer_type],
-        false,
-        config.win_config
-    )
+        local win = vim.api.nvim_open_win(
+            response_buffers[first_buffer_type],
+            false,
+            config.win_config
+        )
 
-    vim.wo[win].winbar = M.winbar.winbar()
+        vim.wo[win].winbar = M.winbar.winbar()
 
-    for _, bufnr in pairs(response_buffers) do
-        vim.api.nvim_create_autocmd("BufWinEnter", {
-            once = true,
-            callback = function()
-                vim.wo[win].winbar = M.winbar.winbar()
-            end,
-            buffer = bufnr,
-        })
-    end
-
-    local elapsed_time = ElapsedTimeFloating:new(win)
-    elapsed_time:start()
-
-    -- Stop timer if parent window is closed
-    vim.api.nvim_create_autocmd("WinClosed", {
-        once = true,
-        pattern = tostring(win),
-        callback = function()
-            elapsed_time:stop()
-        end,
-    })
-
-    curl:run(function(system_completed)
-        elapsed_time:stop()
-
-        local stdout = vim.split(system_completed.stdout, "\n")
-        local stderr = vim.split(system_completed.stderr, "\n")
-
-        local response = nil
-        if system_completed.code == 0 then
-            response = responses.parse(stdout, stderr)
+        for _, bufnr in pairs(response_buffers) do
+            vim.api.nvim_create_autocmd("BufWinEnter", {
+                once = true,
+                callback = function()
+                    vim.wo[win].winbar = M.winbar.winbar()
+                end,
+                buffer = bufnr,
+            })
         end
 
-        vim.schedule(function()
-            buffers.update(internal_request, response, curl, response_buffers)
+        local elapsed_time = ElapsedTimeFloating:new(win)
+        elapsed_time:start()
 
-            if
-                system_completed.code ~= 0
-                and response_buffers[buffers.Buffer.Raw]
-            then
-                vim.api.nvim_win_set_buf(
-                    win,
-                    response_buffers[buffers.Buffer.Raw]
-                )
+        -- Stop timer if parent window is closed
+        vim.api.nvim_create_autocmd("WinClosed", {
+            once = true,
+            pattern = tostring(win),
+            callback = function()
+                elapsed_time:stop()
+            end,
+        })
+
+        curl:run(function(system_completed)
+            elapsed_time:stop()
+
+            local stdout = vim.split(system_completed.stdout, "\n")
+            local stderr = vim.split(system_completed.stderr, "\n")
+
+            local response = nil
+            if system_completed.code == 0 then
+                response = responses.parse(stdout, stderr)
             end
+
+            vim.schedule(function()
+                buffers.update(
+                    internal_request,
+                    response,
+                    curl,
+                    response_buffers
+                )
+
+                if
+                    system_completed.code ~= 0
+                    and response_buffers[buffers.Buffer.Raw]
+                then
+                    vim.api.nvim_win_set_buf(
+                        win,
+                        response_buffers[buffers.Buffer.Raw]
+                    )
+                end
+
+                if internal_request.post_hook ~= nil then
+                    internal_request.post_hook(internal_request, response)
+                end
+            end)
         end)
-    end)
+    end
+
+    if internal_request.pre_hook ~= nil then
+        internal_request.pre_hook(next_function)
+    else
+        next_function()
+    end
 end
 
-function M.run_from_buffer()
+function M.run_buffer_request()
     local buffer_requests = dofile(vim.fn.expand("%"))
 
     local items = vim.iter(ipairs(buffer_requests))
@@ -123,7 +143,7 @@ function M.run_from_buffer()
     })
 end
 
-function M.run_from_cwd()
+function M.run_project_request()
     local lua_files = vim.fs.find(function(name)
         return vim.endswith(name, ".lua") and name ~= config.environments_file
     end, { type = "file", limit = math.huge, path = config.dir })
@@ -184,6 +204,8 @@ end
 -- local env = require("nurl.environment").var
 -- local activate = require("nurl.environment").activate
 load_environments()
+
+require("nurl.config").setup()
 require("nurl.highlights").setup_highlights()
 -- activate("default")
 -- local response = M.run({
@@ -195,5 +217,9 @@ require("nurl.highlights").setup_highlights()
 --     },
 -- })
 -- print(vim.inspect(response))
+
+vim.keymap.set("n", "gH", function()
+    Nurl.run_project_request()
+end)
 
 return M

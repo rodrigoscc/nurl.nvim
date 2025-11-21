@@ -93,6 +93,8 @@ function M.set(variable_name, value)
         new_text = string.format([["%s"]], value)
     elseif type(value) == "number" or type(value) == "boolean" then
         new_text = tostring(value)
+    elseif value == nil then
+        new_text = "nil"
     else
         error("value type " .. type(value) .. " not supported")
     end
