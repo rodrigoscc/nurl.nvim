@@ -36,6 +36,18 @@ local defaults = {
             },
         },
     },
+    highlight = {
+        groups = {
+            spinner = "NurlSpinner",
+            elapsed_time = "NurlElapsedTime",
+            winbar_tab_active = "NurlWinbarTabActive",
+            winbar_tab_inactive = "NurlWinbarTabInactive",
+            winbar_success_status_code = "NurlWinbarSuccessStatusCode",
+            winbar_error_status_code = "NurlWinbarErrorStatusCode",
+            winbar_loading = "NurlWinbarLoading",
+            winbar_time = "NurlWinbarTime",
+        },
+    },
 }
 
 local config = vim.deepcopy(defaults) --[[@as nurl.Config]]

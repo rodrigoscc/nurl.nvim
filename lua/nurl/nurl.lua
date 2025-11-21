@@ -4,10 +4,13 @@ local load_environments = require("nurl.environment").load
 local config = require("nurl.config")
 local buffers = require("nurl.buffers")
 local ElapsedTimeFloating = require("nurl.elapsed_time")
+local winbar = require("nurl.winbar")
 
 local M = {}
 
 _G.Nurl = M
+
+M.winbar = winbar
 
 ---@param request nurl.SuperRequest | nurl.Request
 function M.run(request)
@@ -25,6 +28,18 @@ function M.run(request)
         false,
         config.win_config
     )
+
+    vim.wo[win].winbar = M.winbar.winbar()
+
+    for _, bufnr in pairs(response_buffers) do
+        vim.api.nvim_create_autocmd("BufWinEnter", {
+            once = true,
+            callback = function()
+                vim.wo[win].winbar = M.winbar.winbar()
+            end,
+            buffer = bufnr,
+        })
+    end
 
     local elapsed_time = ElapsedTimeFloating:new(win)
     elapsed_time:start()
@@ -169,6 +184,7 @@ end
 -- local env = require("nurl.environment").var
 -- local activate = require("nurl.environment").activate
 load_environments()
+require("nurl.highlights").setup_highlights()
 -- activate("default")
 -- local response = M.run({
 --     url = "https://jsonplaceholder.typicode.com/posts",
