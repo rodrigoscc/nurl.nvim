@@ -48,7 +48,7 @@ M.builtin = {
     end,
     rerun = function(opts)
         return function()
-            Nurl.run(vim.b.nurl_request)
+            Nurl.send(vim.b.nurl_request)
         end
     end,
     close = function(opts)
