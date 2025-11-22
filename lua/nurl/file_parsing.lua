@@ -123,6 +123,31 @@ function File:find_environment_variable_node(environment, variable)
     end
 end
 
+function File:list_requests_ranges()
+    local query = vim.treesitter.query.parse(
+        "lua",
+        [[
+(return_statement (expression_list (table_constructor (field) @request)))
+    ]]
+    )
+
+    local ranges = {}
+
+    for _, match in query:iter_matches(self.tree:root(), self.contents, 0, -1) do
+        for id, nodes in pairs(match) do
+            local name = query.captures[id]
+            for _, node in ipairs(nodes) do
+                if name == "request" then
+                    local row, col, end_row, end_col = node:range()
+                    table.insert(ranges, { row, col, end_row, end_col })
+                end
+            end
+        end
+    end
+
+    return ranges
+end
+
 function File:find_index_at_position(row, col)
     local query = vim.treesitter.query.parse(
         "lua",

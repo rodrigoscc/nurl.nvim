@@ -5,6 +5,7 @@ local config = require("nurl.config")
 local buffers = require("nurl.buffers")
 local ElapsedTimeFloating = require("nurl.elapsed_time")
 local winbar = require("nurl.winbar")
+local projects = require("nurl.projects")
 
 local M = {}
 
@@ -144,45 +145,39 @@ function M.send_buffer_request()
 end
 
 function M.send_project_request()
-    local lua_files = vim.fs.find(function(name)
-        return vim.endswith(name, ".lua") and name ~= config.environments_file
-    end, { type = "file", limit = math.huge, path = config.dir })
+    local project_requests = projects.requests()
 
-    local cwd_requests = {}
+    local snacks_items = vim.iter(ipairs(project_requests))
+        :map(function(i, item)
+            local expanded = requests.expand(item.request)
 
-    for _, file in ipairs(lua_files) do
-        local file_requests = dofile(file)
-        for _, request in ipairs(file_requests) do
-            table.insert(cwd_requests, request)
-        end
-    end
+            local preview_json = ""
+            if expanded.data then
+                preview_json = vim.json.encode(expanded.data)
+            elseif expanded.data_urlencode then
+                preview_json = vim.json.encode(expanded.data_urlencode)
+            elseif expanded.form then
+                preview_json = vim.json.encode(expanded.form)
+            end
 
-    local items = vim.iter(ipairs(cwd_requests))
-        :map(function(i, request)
-            local expanded = requests.expand(request)
-
-            local item = {
+            local snacks_item = {
                 idx = i,
                 text = expanded.method .. " " .. expanded.url,
-                request = request,
+                request = item.request,
                 score = 1,
                 preview = {
-                    text = vim.json.encode(
-                        expanded.data
-                            or expanded.data_urlencode
-                            or expanded.form
-                    ),
+                    text = preview_json,
                     ft = "json",
                 },
             }
 
-            return item
+            return snacks_item
         end)
         :totable()
 
     Snacks.picker.pick("requests", {
         title = "Nurl: run",
-        items = items,
+        items = snacks_items,
         preview = "preview",
         format = "text",
         formatters = {
@@ -193,6 +188,38 @@ function M.send_project_request()
         confirm = function(picker, item)
             picker:close()
             M.send(item.request)
+        end,
+    })
+end
+
+function M.jump_to_project_request()
+    local project_requests = projects.requests()
+
+    local snacks_items = vim.iter(ipairs(project_requests))
+        :map(function(i, item)
+            local expanded = requests.expand(item.request)
+
+            local snacks_item = {
+                idx = i,
+                text = expanded.method .. " " .. expanded.url,
+                request = item,
+                file = item.file,
+                score = 1,
+                pos = { item.line, item.col },
+            }
+
+            return snacks_item
+        end)
+        :totable()
+
+    local file = require("snacks.picker.format").file
+    local text = require("snacks.picker.format").text
+
+    Snacks.picker.pick("requests", {
+        title = "Nurl: jump",
+        items = snacks_items,
+        format = function(item, picker)
+            return vim.list_extend(file(item, picker), text(item, picker))
         end,
     })
 end
@@ -218,6 +245,9 @@ require("nurl.highlights").setup_highlights()
 -- })
 -- print(vim.inspect(response))
 
+vim.keymap.set("n", "gh", function()
+    Nurl.jump_to_project_request()
+end)
 vim.keymap.set("n", "gH", function()
     Nurl.send_project_request()
 end)
