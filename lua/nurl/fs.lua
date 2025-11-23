@@ -28,10 +28,6 @@ function M.read(path)
     return data
 end
 
-function M.read_lua_file(path)
-    return dofile(path)
-end
-
 function M.write(path, contents)
     vim.uv.fs_mkdir(vim.fs.dirname(path), 493)
 

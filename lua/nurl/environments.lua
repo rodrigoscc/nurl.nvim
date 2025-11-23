@@ -24,17 +24,17 @@ end
 local M = {}
 
 ---@type string | nil
-M.active_environment = nil
+M.project_active_env = nil
 
 M.Environment = Environment
 
 ---@type table<string, nurl.Environment>
-M.environments = {}
+M.project_envs = {}
 
 function M.activate(env_name)
-    for name in pairs(M.environments) do
+    for name in pairs(M.project_envs) do
         if name == env_name then
-            M.active_environment = name
+            M.project_active_env = name
 
             local active_environments = {}
             if fs.exists(config.environments_file) then
@@ -56,11 +56,11 @@ function M.activate(env_name)
 end
 
 function M.get_active()
-    if M.active_environment == nil then
+    if M.project_active_env == nil then
         return nil
     end
 
-    return M.environments[M.active_environment]
+    return M.project_envs[M.project_active_env]
 end
 
 function M.var(variable_name)
@@ -101,7 +101,7 @@ function M.set(variable_name, value)
     end
 
     file:replace_environment_variable_value(
-        M.active_environment,
+        M.project_active_env,
         variable_name,
         new_text
     )
@@ -116,9 +116,9 @@ function M.load()
         return
     end
 
-    local environments = fs.read_lua_file(environments_path)
+    local environments = dofile(environments_path)
 
-    M.environments = environments
+    M.project_envs = environments
 
     if not fs.exists(config.active_environments_file) then
         return
@@ -127,7 +127,19 @@ function M.load()
     local content = fs.read(config.active_environments_file)
     local active_environments = vim.json.decode(content)
 
-    M.active_environment = active_environments[uv.cwd()]
+    M.project_active_env = active_environments[uv.cwd()]
+end
+
+function M.setup_reload_autocmd()
+    local environments_path =
+        vim.fs.joinpath(config.dir, config.environments_file)
+
+    vim.api.nvim_create_autocmd("BufWritePost", {
+        pattern = vim.fs.abspath(environments_path),
+        callback = function()
+            M.load()
+        end,
+    })
 end
 
 return M

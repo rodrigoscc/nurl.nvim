@@ -1,13 +1,12 @@
 local requests = require("nurl.requests")
 local responses = require("nurl.responses")
-local load_environments = require("nurl.environment").load
 local config = require("nurl.config")
 local buffers = require("nurl.buffers")
 local ElapsedTimeFloating = require("nurl.elapsed_time")
 local winbar = require("nurl.winbar")
 local projects = require("nurl.projects")
-local environments = require("nurl.environment").environments
-local activate = require("nurl.environment").activate
+local environments = require("nurl.environments").environments
+local activate = require("nurl.environments").activate
 
 local M = {}
 
@@ -265,7 +264,8 @@ end
 
 -- local env = require("nurl.environment").var
 -- local activate = require("nurl.environment").activate
-load_environments()
+require("nurl.environments").load()
+require("nurl.environments").setup_reload_autocmd()
 
 require("nurl.config").setup()
 require("nurl.highlights").setup_highlights()
