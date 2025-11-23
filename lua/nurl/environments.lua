@@ -63,14 +63,24 @@ function M.get_active()
     return M.project_envs[M.project_active_env]
 end
 
-function M.var(variable_name)
+function M.var(variable_name, use_env)
     return function()
-        local active_env = M.get_active()
-        if active_env == nil then
-            error("could not resolve variable: " .. variable_name)
+        local env
+
+        if use_env == nil then
+            env = M.get_active()
+        else
+            env = M.project_envs[use_env]
         end
 
-        return variables.expand(active_env.variables[variable_name])
+        if env == nil then
+            error(
+                "could not resolve variable since no environment is active: "
+                    .. variable_name
+            )
+        end
+
+        return variables.expand(env.variables[variable_name])
     end
 end
 
