@@ -130,11 +130,17 @@ function M.load()
     M.project_active_env = active_environments[uv.cwd()]
 end
 
+local reload_group_id = vim.api.nvim_create_augroup(
+    "nurl.environment_reload_group",
+    { clear = true }
+)
+
 function M.setup_reload_autocmd()
     local environments_path =
         vim.fs.joinpath(config.dir, config.environments_file)
 
     vim.api.nvim_create_autocmd("BufWritePost", {
+        group = reload_group_id,
         pattern = vim.fs.abspath(environments_path),
         callback = function()
             M.load()
