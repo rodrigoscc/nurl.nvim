@@ -15,7 +15,8 @@ _G.Nurl = M
 M.winbar = winbar
 
 ---@param request nurl.SuperRequest | nurl.Request
-function M.send(request)
+---@param win? integer | nil
+function M.send(request, win)
     local internal_request = requests.expand(request)
 
     local curl = requests.build_curl(internal_request)
@@ -29,11 +30,15 @@ function M.send(request)
         )
         local first_buffer_type = config.buffers[1][1]
 
-        local win = vim.api.nvim_open_win(
-            response_buffers[first_buffer_type],
-            false,
-            config.win_config
-        )
+        if win == nil then
+            win = vim.api.nvim_open_win(
+                response_buffers[first_buffer_type],
+                false,
+                config.win_config
+            )
+        else
+            vim.api.nvim_win_set_buf(win, response_buffers[first_buffer_type])
+        end
 
         vim.wo[win].winbar = M.winbar.winbar()
 

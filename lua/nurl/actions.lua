@@ -48,7 +48,7 @@ M.builtin = {
     end,
     rerun = function(opts)
         return function()
-            Nurl.send(vim.b.nurl_request)
+            Nurl.send(vim.b.nurl_request, vim.api.nvim_get_current_win())
         end
     end,
     close = function(opts)
