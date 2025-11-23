@@ -41,7 +41,7 @@ function M.time()
     local response = vim.b[0].nurl_response
 
     if response ~= nil then
-        local seconds = string.format("%.2f", response.time)
+        local seconds = string.format("%.2f", response.time.time_total)
         return string.format(
             "%%#%s#(took %ss)%%*",
             config.highlight.groups.winbar_time,

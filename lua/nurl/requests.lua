@@ -139,7 +139,10 @@ function M.build_curl(request)
     table.insert(args, "--no-progress-meter")
 
     table.insert(args, "--write-out")
-    table.insert(args, "%{stderr}%{time_total}")
+    table.insert(
+        args,
+        "%{stderr}%{time_appconnect},%{time_connect},%{time_namelookup},%{time_pretransfer},%{time_redirect},%{time_starttransfer},%{time_total}"
+    )
 
     return Curl:new({ args = args })
 end

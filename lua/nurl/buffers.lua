@@ -8,6 +8,7 @@ local M = {}
 M.Buffer = {
     Body = "body",
     Headers = "headers",
+    Stats = "stats",
     Raw = "raw",
 }
 
@@ -110,6 +111,45 @@ local function populate_raw_buffer(bufnr, curl)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, raw_lines)
 end
 
+local function populate_stats_buffer(bufnr, response)
+    local stats_lines = {}
+
+    table.insert(
+        stats_lines,
+        string.format("time_appconnect: %.4f", response.time.time_appconnect)
+    )
+    table.insert(
+        stats_lines,
+        string.format("time_connect: %.4f", response.time.time_connect)
+    )
+    table.insert(
+        stats_lines,
+        string.format("time_namelookup: %.4f", response.time.time_namelookup)
+    )
+    table.insert(
+        stats_lines,
+        string.format("time_pretransfer: %.4f", response.time.time_pretransfer)
+    )
+    table.insert(
+        stats_lines,
+        string.format("time_redirect: %.4f", response.time.time_redirect)
+    )
+    table.insert(
+        stats_lines,
+        string.format(
+            "time_starttransfer: %.4f",
+            response.time.time_starttransfer
+        )
+    )
+    table.insert(
+        stats_lines,
+        string.format("time_total: %.4f", response.time.time_total)
+    )
+
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, stats_lines)
+    vim.api.nvim_set_option_value("filetype", "yaml", { buf = bufnr })
+end
+
 ---@param buffer nurl.Buffer
 ---@param request nurl.Request
 ---@param response nurl.Response | nil
@@ -127,6 +167,10 @@ function M.create_buffer(buffer, request, response, curl)
     elseif type == "headers" then
         if response ~= nil then
             populate_headers_buffer(buf, response)
+        end
+    elseif type == "stats" then
+        if response ~= nil then
+            populate_stats_buffer(buf, response)
         end
     elseif type == "raw" then
         populate_raw_buffer(buf, curl)
@@ -153,6 +197,10 @@ function M.update_buffer(bufnr, buffer, request, response, curl)
     elseif buffer[1] == "headers" then
         if response ~= nil then
             populate_headers_buffer(bufnr, response)
+        end
+    elseif buffer[1] == "stats" then
+        if response ~= nil then
+            populate_stats_buffer(bufnr, response)
         end
     elseif buffer[1] == "raw" then
         populate_raw_buffer(bufnr, curl)

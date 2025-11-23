@@ -1,12 +1,21 @@
 local M = {}
 
+---@class nurl.ResponseTime
+---@field time_appconnect number
+---@field time_connect number
+---@field time_namelookup number
+---@field time_pretransfer number
+---@field time_redirect number
+---@field time_starttransfer number
+---@field time_total number
+
 ---@class nurl.Response
 ---@field status_code integer
 ---@field reason_phrase string
 ---@field protocol string
 ---@field headers table<string, string>
 ---@field body string
----@field time number
+---@field time nurl.ResponseTime
 
 ---@param lines string[]
 local function parse_headers(lines)
@@ -60,14 +69,12 @@ function M.parse(stdout, stderr)
 
     local protocol, status_code, reason_phrase = parse_start_line(start_line)
 
-    local total_time = tonumber(stderr[1])
-    if total_time == nil then
-        vim.notify(
-            "Could not parse total time from stderr: "
-                .. table.concat(stderr, "\n"),
-            vim.log.levels.WARN
-        )
-    end
+    local time_appconnect, time_connect, time_namelookup, time_pretransfer, time_redirect, time_starttransfer, time_total =
+        unpack(vim.iter(vim.split(stderr[1], ","))
+            :map(function(time)
+                return tonumber(time)
+            end)
+            :totable())
 
     return {
         protocol = protocol,
@@ -75,7 +82,15 @@ function M.parse(stdout, stderr)
         reason_phrase = reason_phrase,
         headers = headers,
         body = table.concat(body_lines, "\n"),
-        time = total_time,
+        time = {
+            time_appconnect = time_appconnect,
+            time_connect = time_connect,
+            time_namelookup = time_namelookup,
+            time_pretransfer = time_pretransfer,
+            time_redirect = time_redirect,
+            time_starttransfer = time_starttransfer,
+            time_total = time_total,
+        },
     }
 end
 

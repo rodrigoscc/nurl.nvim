@@ -28,6 +28,14 @@ local defaults = {
             },
         },
         {
+            "stats",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<C-r>"] = "rerun",
+                q = "close",
+            },
+        },
+        {
             "raw",
             keys = {
                 ["<Tab>"] = "next_buffer",
