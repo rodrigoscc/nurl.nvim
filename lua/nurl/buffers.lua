@@ -186,6 +186,7 @@ function M.create(request, response, curl)
     for _, bufnr in pairs(buffers) do
         vim.b[bufnr].nurl_request = request
         vim.b[bufnr].nurl_response = response
+        vim.b[bufnr].nurl_curl = curl
         vim.b[bufnr].nurl_buffers = buffers
     end
 
@@ -206,6 +207,7 @@ function M.update(request, response, curl, buffers)
     for _, bufnr in pairs(buffers) do
         vim.b[bufnr].nurl_request = request
         vim.b[bufnr].nurl_response = response
+        vim.b[bufnr].nurl_curl = curl
         vim.b[bufnr].nurl_buffers = buffers
     end
 end

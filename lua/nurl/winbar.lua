@@ -22,6 +22,15 @@ function M.status_code()
         end
     end
 
+    local curl = vim.b[0].nurl_curl
+
+    if curl.result and curl.result.code ~= 0 then
+        return string.format(
+            "%%#%s#Error%%*",
+            config.highlight.groups.winbar_error
+        )
+    end
+
     return string.format(
         "%%#%s#Loading...%%*",
         config.highlight.groups.winbar_loading
