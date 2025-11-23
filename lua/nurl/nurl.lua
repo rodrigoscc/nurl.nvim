@@ -248,6 +248,35 @@ function M.send_request_at_cursor()
     end
 end
 
+function M.yank_curl_at_cursor()
+    local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
+
+    local project_requests = projects.requests()
+
+    for _, request in ipairs(project_requests) do
+        local request_contains_cursor = (
+            request.start_row <= cursor_row
+            and request.end_row >= cursor_row
+            and (cursor_row ~= request.end_row or cursor_col < request.end_col)
+            and (
+                cursor_row ~= request.start_row
+                or cursor_col > request.start_col
+            )
+        )
+
+        if request_contains_cursor then
+            local internal_request = requests.expand(request.request)
+
+            local curl = requests.build_curl(internal_request)
+
+            vim.fn.setreg("+", curl:string())
+            vim.notify("Yanked curl command to clipboard")
+
+            return
+        end
+    end
+end
+
 function M.activate_env()
     vim.ui.select(
         vim.tbl_keys(environments),
@@ -258,27 +287,11 @@ function M.activate_env()
     )
 end
 
--- vim.schedule(function()
---     load_environments()
--- end)
-
--- local env = require("nurl.environment").var
--- local activate = require("nurl.environment").activate
-require("nurl.environments").load()
-require("nurl.environments").setup_reload_autocmd()
-
 require("nurl.config").setup()
 require("nurl.highlights").setup_highlights()
--- activate("default")
--- local response = M.run({
---     url = "https://jsonplaceholder.typicode.com/posts",
---     method = "POST",
---     headers = { ["Content-Type"] = "application/json" },
---     data = {
---         title = env("title"),
---     },
--- })
--- print(vim.inspect(response))
+
+require("nurl.environments").load()
+require("nurl.environments").setup_reload_autocmd()
 
 vim.keymap.set("n", "gh", function()
     Nurl.jump_to_project_request()
