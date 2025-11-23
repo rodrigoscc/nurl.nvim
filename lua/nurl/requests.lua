@@ -64,6 +64,8 @@ end
 
 ---@param request nurl.SuperRequest | nurl.Request
 function M.expand(request)
+    -- TODO: validate table
+
     assert(
         (not request.data and not request.form and not request.data_urlencode)
             or (request.data and not request.form and not request.data_urlencode)

@@ -138,8 +138,11 @@ function File:list_requests_ranges()
             local name = query.captures[id]
             for _, node in ipairs(nodes) do
                 if name == "request" then
-                    local row, col, end_row, end_col = node:range()
-                    table.insert(ranges, { row, col, end_row, end_col })
+                    local start_row, start_col, end_row, end_col = node:range()
+                    table.insert(
+                        ranges,
+                        { start_row, start_col, end_row, end_col }
+                    )
                 end
             end
         end

@@ -28,7 +28,7 @@ end
 ---@return string, number, string
 local function parse_start_line(line)
     local protocol, status_code_str, reason_phrase =
-        table.unpack(vim.split(line, " "))
+        unpack(vim.split(line, " "))
 
     local status_code = tonumber(status_code_str)
     if status_code == nil then

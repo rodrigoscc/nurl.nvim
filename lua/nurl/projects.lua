@@ -6,8 +6,10 @@ local M = {}
 ---@class nurl.ProjectRequestItem
 ---@field request nurl.Request
 ---@field file string
----@field line integer
----@field col integer
+---@field start_row integer
+---@field start_col integer
+---@field end_row integer
+---@field end_col integer
 
 ---@return nurl.ProjectRequestItem[]
 function M.requests()
@@ -28,13 +30,15 @@ function M.requests()
 
         for i, request in ipairs(file_requests) do
             local request_range = request_ranges[i]
-            local row, col = table.unpack(request_range)
+            local start_row, start_col, end_row, end_col = unpack(request_range)
 
             table.insert(project_requests, {
                 file = file_path,
                 request = request,
-                line = row + 1,
-                col = col,
+                start_row = start_row + 1, -- treesitter ranges starts at 0
+                start_col = start_col,
+                end_row = end_row + 1, -- treesitter ranges starts at 0
+                end_col = end_col,
             })
         end
     end

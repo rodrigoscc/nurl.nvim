@@ -205,7 +205,7 @@ function M.jump_to_project_request()
                 request = item,
                 file = item.file,
                 score = 1,
-                pos = { item.line, item.col },
+                pos = { item.start_row, item.start_col },
             }
 
             return snacks_item
@@ -222,6 +222,29 @@ function M.jump_to_project_request()
             return vim.list_extend(file(item, picker), text(item, picker))
         end,
     })
+end
+
+function M.send_request_at_cursor()
+    local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
+
+    local project_requests = projects.requests()
+
+    for _, request in ipairs(project_requests) do
+        local request_contains_cursor = (
+            request.start_row <= cursor_row
+            and request.end_row >= cursor_row
+            and (cursor_row ~= request.end_row or cursor_col < request.end_col)
+            and (
+                cursor_row ~= request.start_row
+                or cursor_col > request.start_col
+            )
+        )
+
+        if request_contains_cursor then
+            M.send(request.request)
+            return
+        end
+    end
 end
 
 -- vim.schedule(function()
@@ -250,6 +273,9 @@ vim.keymap.set("n", "gh", function()
 end)
 vim.keymap.set("n", "gH", function()
     Nurl.send_project_request()
+end)
+vim.keymap.set("n", "R", function()
+    Nurl.send_request_at_cursor()
 end)
 
 return M
