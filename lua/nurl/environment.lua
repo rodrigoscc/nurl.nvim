@@ -8,6 +8,7 @@ local config = require("nurl.config")
 local fs = require("nurl.fs")
 local FileParser = require("nurl.file_parsing").FileParser
 local uv = vim.uv or vim.loop
+local variables = require("nurl.variables")
 
 ---@class nurl.Environment
 local Environment =
@@ -69,7 +70,7 @@ function M.var(variable_name)
             error("could not resolve variable: " .. variable_name)
         end
 
-        return active_env.variables[variable_name]
+        return variables.expand(active_env.variables[variable_name])
     end
 end
 

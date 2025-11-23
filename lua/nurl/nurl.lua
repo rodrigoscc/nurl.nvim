@@ -6,6 +6,8 @@ local buffers = require("nurl.buffers")
 local ElapsedTimeFloating = require("nurl.elapsed_time")
 local winbar = require("nurl.winbar")
 local projects = require("nurl.projects")
+local environments = require("nurl.environment").environments
+local activate = require("nurl.environment").activate
 
 local M = {}
 
@@ -245,6 +247,16 @@ function M.send_request_at_cursor()
             return
         end
     end
+end
+
+function M.activate_env()
+    vim.ui.select(
+        vim.tbl_keys(environments),
+        { prompt = "Activate environment" },
+        function(choice)
+            activate(choice)
+        end
+    )
 end
 
 -- vim.schedule(function()

@@ -1,4 +1,5 @@
 local Curl = require("nurl.curl")
+local variables = require("nurl.variables")
 
 ---@class nurl.Request
 ---@field method string
@@ -40,28 +41,6 @@ local function build_url(parts)
     return table.concat(expanded_parts, "/")
 end
 
-local function expand_table(tbl)
-    return vim.tbl_map(function(value)
-        if type(value) == "table" then
-            return expand_table(value)
-        elseif type(value) == "function" then
-            return value()
-        end
-
-        return value
-    end, tbl)
-end
-
-local function expand_value(value)
-    if type(value) == "table" then
-        return expand_table(value)
-    elseif type(value) == "function" then
-        return value()
-    end
-
-    return value
-end
-
 ---@param request nurl.SuperRequest | nurl.Request
 function M.expand(request)
     -- TODO: validate table
@@ -78,7 +57,9 @@ function M.expand(request)
         "Only a single body field at the time is allowed"
     )
 
-    local request_url = expand_value(request.url)
+    local request_url = variables.expand(request.url)
+
+    assert(request_url ~= nil, "Request must have a URL")
 
     ---@type string
     local url
@@ -88,10 +69,10 @@ function M.expand(request)
         url = build_url(request_url)
     end
 
-    local headers = expand_value(request.headers)
-    local data = expand_value(request.data)
-    local form = expand_value(request.form)
-    local data_urlencode = expand_value(request.data_urlencode)
+    local headers = variables.expand(request.headers)
+    local data = variables.expand(request.data)
+    local form = variables.expand(request.form)
+    local data_urlencode = variables.expand(request.data_urlencode)
 
     ---@type nurl.Request
     local req = {
