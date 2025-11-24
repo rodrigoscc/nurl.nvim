@@ -117,12 +117,31 @@ function M.send(request, opts)
 
             vim.schedule(function()
                 if internal_request.post_hook ~= nil then
-                    internal_request.post_hook(internal_request, response)
+                    local status, result = pcall(
+                        internal_request.post_hook,
+                        internal_request,
+                        response
+                    )
+
+                    if not status then
+                        vim.notify(
+                            "Request post hook failed: " .. result,
+                            vim.log.levels.ERROR
+                        )
+                    end
                 end
 
                 local env_post_hook = environments.get_post_hook()
                 if env_post_hook ~= nil then
-                    env_post_hook(internal_request, response)
+                    local status, result =
+                        pcall(env_post_hook, internal_request, response)
+
+                    if not status then
+                        vim.notify(
+                            "Environment post hook failed: " .. result,
+                            vim.log.levels.ERROR
+                        )
+                    end
                 end
 
                 if opts.on_response then
