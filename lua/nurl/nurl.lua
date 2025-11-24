@@ -4,7 +4,6 @@ local config = require("nurl.config")
 local winbar = require("nurl.winbar")
 local projects = require("nurl.projects")
 local environments = require("nurl.environments")
-local activate = require("nurl.environments").activate
 local ResponseWindow = require("nurl.response_window")
 
 local M = {}
@@ -301,7 +300,7 @@ function M.activate_env()
         { prompt = "Activate environment" },
         function(choice)
             if choice ~= nil then
-                activate(choice)
+                environments.activate(choice)
                 vim.cmd.redrawstatus() -- in case the user is showing the active env in statusline
             end
         end
