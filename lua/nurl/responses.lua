@@ -9,6 +9,16 @@ local M = {}
 ---@field time_starttransfer number
 ---@field time_total number
 
+---@class nurl.ResponseSize
+---@field size_download number
+---@field size_header number
+---@field size_request number
+---@field size_upload number
+
+---@class nurl.ResponseSpeed
+---@field speed_download number
+---@field speed_upload number
+
 ---@class nurl.Response
 ---@field status_code integer
 ---@field reason_phrase string
@@ -16,6 +26,8 @@ local M = {}
 ---@field headers table<string, string>
 ---@field body string
 ---@field time nurl.ResponseTime
+---@field size nurl.ResponseSize
+---@field speed nurl.ResponseSpeed
 
 ---@param lines string[]
 local function parse_headers(lines)
@@ -69,7 +81,7 @@ function M.parse(stdout, stderr)
 
     local protocol, status_code, reason_phrase = parse_start_line(start_line)
 
-    local time_appconnect, time_connect, time_namelookup, time_pretransfer, time_redirect, time_starttransfer, time_total =
+    local time_appconnect, time_connect, time_namelookup, time_pretransfer, time_redirect, time_starttransfer, time_total, size_download, size_header, size_request, size_upload, speed_download, speed_upload =
         unpack(vim.iter(vim.split(stderr[1], ","))
             :map(function(time)
                 return tonumber(time)
@@ -90,6 +102,16 @@ function M.parse(stdout, stderr)
             time_redirect = time_redirect,
             time_starttransfer = time_starttransfer,
             time_total = time_total,
+        },
+        size = {
+            size_download = size_download,
+            size_header = size_header,
+            size_request = size_request,
+            size_upload = size_upload,
+        },
+        speed = {
+            speed_download = speed_download,
+            speed_upload = speed_upload,
         },
     }
 end

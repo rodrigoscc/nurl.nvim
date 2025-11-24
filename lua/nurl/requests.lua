@@ -141,7 +141,7 @@ function M.build_curl(request)
     table.insert(args, "--write-out")
     table.insert(
         args,
-        "%{stderr}%{time_appconnect},%{time_connect},%{time_namelookup},%{time_pretransfer},%{time_redirect},%{time_starttransfer},%{time_total}"
+        "%{stderr}%{time_appconnect},%{time_connect},%{time_namelookup},%{time_pretransfer},%{time_redirect},%{time_starttransfer},%{time_total},%{size_download},%{size_header},%{size_request},%{size_upload},%{speed_download},%{speed_upload}"
     )
 
     return Curl:new({ args = args })

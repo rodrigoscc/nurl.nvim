@@ -146,6 +146,32 @@ local function populate_info_buffer(bufnr, response)
         string.format("time_total: %.4f", response.time.time_total)
     )
 
+    table.insert(
+        info_lines,
+        string.format("size_download: %d", response.size.size_download)
+    )
+    table.insert(
+        info_lines,
+        string.format("size_header: %d", response.size.size_header)
+    )
+    table.insert(
+        info_lines,
+        string.format("size_request: %d", response.size.size_request)
+    )
+    table.insert(
+        info_lines,
+        string.format("size_upload: %d", response.size.size_upload)
+    )
+
+    table.insert(
+        info_lines,
+        string.format("speed_download: %d", response.speed.speed_download)
+    )
+    table.insert(
+        info_lines,
+        string.format("speed_upload: %d", response.speed.speed_upload)
+    )
+
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, info_lines)
     vim.api.nvim_set_option_value("filetype", "yaml", { buf = bufnr })
 end
