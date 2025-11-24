@@ -69,11 +69,54 @@ local function guess_file_type(headers)
 end
 
 local function populate_body_buffer(bufnr, response)
-    local body_lines = vim.split(response.body, "\n")
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, body_lines)
-
     local file_type = guess_file_type(response.headers)
-    vim.api.nvim_set_option_value("filetype", file_type, { buf = bufnr })
+
+    if file_type == "json" and vim.fn.executable("jq") == 1 then
+        vim.system(
+            { "jq", "--sort-keys", "--indent", "2" },
+            { text = true, stdin = response.body },
+            function(out)
+                vim.schedule(function()
+                    if out.code == 0 then
+                        local body_lines = vim.split(out.stdout, "\n")
+                        vim.api.nvim_buf_set_lines(
+                            bufnr,
+                            0,
+                            -1,
+                            true,
+                            body_lines
+                        )
+
+                        vim.api.nvim_set_option_value(
+                            "filetype",
+                            file_type,
+                            { buf = bufnr }
+                        )
+                    else
+                        local body_lines = vim.split(response.body, "\n")
+                        vim.api.nvim_buf_set_lines(
+                            bufnr,
+                            0,
+                            -1,
+                            true,
+                            body_lines
+                        )
+
+                        vim.api.nvim_set_option_value(
+                            "filetype",
+                            file_type,
+                            { buf = bufnr }
+                        )
+                    end
+                end)
+            end
+        )
+    else
+        local body_lines = vim.split(response.body, "\n")
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, body_lines)
+
+        vim.api.nvim_set_option_value("filetype", file_type, { buf = bufnr })
+    end
 end
 
 local function populate_headers_buffer(bufnr, response)
