@@ -17,11 +17,11 @@ M.winbar = winbar
 ---@param request nurl.SuperRequest | nurl.Request
 ---@param win? integer | nil
 function M.send(request, win)
-    local internal_request = requests.expand(request)
-
-    local curl = requests.build_curl(internal_request)
-
     local function next_function()
+        local internal_request = requests.expand(request)
+
+        local curl = requests.build_curl(internal_request)
+
         local response_buffers = buffers.create(internal_request, nil, curl)
 
         assert(
@@ -100,8 +100,8 @@ function M.send(request, win)
         end)
     end
 
-    if internal_request.pre_hook ~= nil then
-        internal_request.pre_hook(next_function)
+    if request.pre_hook ~= nil then
+        request.pre_hook(next_function, request)
     else
         next_function()
     end

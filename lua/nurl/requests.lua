@@ -8,7 +8,7 @@ local variables = require("nurl.variables")
 ---@field data? string | table<string, any>
 ---@field form? table<string, string>
 ---@field data_urlencode? table<string, any>
----@field pre_hook? fun(next: fun()) | nil
+---@field pre_hook? fun(next: fun(), request: nurl.Request | nurl.SuperRequest) | nil
 ---@field post_hook? fun(request: nurl.Request, response: nurl.Response | nil) | nil
 
 ---@class nurl.SuperRequest
@@ -18,7 +18,7 @@ local variables = require("nurl.variables")
 ---@field data? string | table<string, any> | fun(): string | table<string, any>
 ---@field form? table<string, any> | fun(): table<string, any>
 ---@field data_urlencode? table<string, any> | fun(): table<string, any>
----@field pre_hook? fun(next: fun()) | nil
+---@field pre_hook? fun(next: fun(), request: nurl.Request | nurl.SuperRequest) | nil
 ---@field post_hook? fun(request: nurl.Request, response: nurl.Response) | nil
 
 local M = {}
