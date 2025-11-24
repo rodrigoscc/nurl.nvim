@@ -269,7 +269,7 @@ function M.send_request_at_cursor()
             and (cursor_row ~= request.end_row or cursor_col < request.end_col)
             and (
                 cursor_row ~= request.start_row
-                or cursor_col > request.start_col
+                or cursor_col >= request.start_col
             )
         )
 
