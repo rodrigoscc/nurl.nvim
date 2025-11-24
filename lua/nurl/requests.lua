@@ -31,6 +31,8 @@ local function build_url(parts)
         if type(v) == "string" then
             local part = v:gsub("^/+", ""):gsub("/+$", "")
             table.insert(expanded_parts, part)
+        elseif type(v) == "number" then
+            table.insert(expanded_parts, tostring(v))
         elseif type(v) == "function" then
             local part = v()
             part = part:gsub("^/+", ""):gsub("/+$", "")
