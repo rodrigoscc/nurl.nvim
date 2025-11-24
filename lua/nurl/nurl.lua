@@ -316,6 +316,7 @@ function M.activate_env()
         function(choice)
             if choice ~= nil then
                 activate(choice)
+                vim.cmd.redrawstatus() -- in case the user is showing the active env in statusline
             end
         end
     )
@@ -325,6 +326,10 @@ function M.open_environments_file()
     local environments_file =
         vim.fs.joinpath(config.dir, config.environments_file)
     vim.cmd.edit(environments_file)
+end
+
+function M.get_active_env()
+    return environments.project_active_env
 end
 
 require("nurl.config").setup()
