@@ -19,9 +19,20 @@ M.last_request = nil
 ---@type integer | nil
 M.last_request_win = nil
 
+---@class nurl.RequestOpts
+---@field win? integer | nil
+---@field on_response? fun(response: nurl.Response | nil, curl: nurl.Curl) | nil
+
 ---@param request nurl.SuperRequest | nurl.Request
----@param win? integer | nil
-function M.send(request, win)
+---@param opts? nurl.RequestOpts | nil
+function M.send(request, opts)
+    opts = opts or {}
+
+    local response_buffers
+    local elapsed_time
+
+    local win = opts.win
+
     local function next_function()
         local internal_request = requests.expand(request)
 
@@ -29,53 +40,73 @@ function M.send(request, win)
 
         local curl = requests.build_curl(internal_request)
 
-        local response_buffers = buffers.create(internal_request, nil, curl)
+        if opts.on_response == nil then
+            response_buffers = buffers.create(internal_request, nil, curl)
 
-        assert(
-            #config.buffers > 0,
-            "Must configure at least one response buffer"
-        )
-        local first_buffer_type = config.buffers[1][1]
-
-        if win ~= nil and vim.api.nvim_win_is_valid(win) then
-            vim.api.nvim_win_set_buf(win, response_buffers[first_buffer_type])
-        else
-            win = vim.api.nvim_open_win(
-                response_buffers[first_buffer_type],
-                false,
-                config.win_config
+            assert(
+                #config.buffers > 0,
+                "Must configure at least one response buffer"
             )
-        end
+            local first_buffer_type = config.buffers[1][1]
 
-        M.last_request_win = win
+            if win ~= nil and vim.api.nvim_win_is_valid(win) then
+                vim.api.nvim_win_set_buf(
+                    win,
+                    response_buffers[first_buffer_type]
+                )
+            else
+                win = vim.api.nvim_open_win(
+                    response_buffers[first_buffer_type],
+                    false,
+                    config.win_config
+                )
+            end
 
-        vim.wo[win].winbar = M.winbar.winbar()
+            M.last_request_win = win
 
-        for _, bufnr in pairs(response_buffers) do
-            vim.api.nvim_create_autocmd("BufWinEnter", {
+            vim.wo[win].winbar = M.winbar.winbar()
+
+            for _, bufnr in pairs(response_buffers) do
+                vim.api.nvim_create_autocmd("BufWinEnter", {
+                    once = true,
+                    callback = function()
+                        vim.wo[win].winbar = M.winbar.winbar()
+                    end,
+                    buffer = bufnr,
+                })
+            end
+
+            elapsed_time = ElapsedTimeFloating:new(win)
+            elapsed_time:start()
+
+            -- Stop timer if parent window is closed
+            vim.api.nvim_create_autocmd("WinClosed", {
                 once = true,
+                pattern = tostring(win),
                 callback = function()
-                    vim.wo[win].winbar = M.winbar.winbar()
+                    elapsed_time:stop()
                 end,
-                buffer = bufnr,
             })
         end
 
-        local elapsed_time = ElapsedTimeFloating:new(win)
-        elapsed_time:start()
-
-        -- Stop timer if parent window is closed
-        vim.api.nvim_create_autocmd("WinClosed", {
-            once = true,
-            pattern = tostring(win),
-            callback = function()
-                elapsed_time:stop()
-            end,
-        })
-
-        curl:run(function(system_completed)
+        local function default_on_response(response, curl)
             elapsed_time:stop()
 
+            buffers.update(internal_request, response, curl, response_buffers)
+
+            if
+                curl.result.code ~= 0
+                and response_buffers[buffers.Buffer.Raw]
+            then
+                assert(win ~= nil, "Window should have been created already")
+                vim.api.nvim_win_set_buf(
+                    win,
+                    response_buffers[buffers.Buffer.Raw]
+                )
+            end
+        end
+
+        curl:run(function(system_completed)
             local stdout = vim.split(system_completed.stdout, "\n")
             local stderr = vim.split(system_completed.stderr, "\n")
 
@@ -85,23 +116,6 @@ function M.send(request, win)
             end
 
             vim.schedule(function()
-                buffers.update(
-                    internal_request,
-                    response,
-                    curl,
-                    response_buffers
-                )
-
-                if
-                    system_completed.code ~= 0
-                    and response_buffers[buffers.Buffer.Raw]
-                then
-                    vim.api.nvim_win_set_buf(
-                        win,
-                        response_buffers[buffers.Buffer.Raw]
-                    )
-                end
-
                 if internal_request.post_hook ~= nil then
                     internal_request.post_hook(internal_request, response)
                 end
@@ -109,6 +123,12 @@ function M.send(request, win)
                 local env_post_hook = environments.get_post_hook()
                 if env_post_hook ~= nil then
                     env_post_hook(internal_request, response)
+                end
+
+                if opts.on_response then
+                    opts.on_response(response, curl)
+                else
+                    default_on_response(response, curl)
                 end
             end)
         end)
@@ -131,7 +151,7 @@ function M.send(request, win)
 end
 
 function M.resend_last_request()
-    M.send(M.last_request, M.last_request_win)
+    M.send(M.last_request, { win = M.last_request_win })
 end
 
 function M.send_buffer_request()
