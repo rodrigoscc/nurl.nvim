@@ -50,6 +50,22 @@ function M.get_active()
     return M.project_envs[M.project_active_env]
 end
 
+function M.get_pre_hook()
+    if M.project_active_env == nil then
+        return nil
+    end
+
+    return M.project_envs[M.project_active_env].pre_hook
+end
+
+function M.get_post_hook()
+    if M.project_active_env == nil then
+        return nil
+    end
+
+    return M.project_envs[M.project_active_env].post_hook
+end
+
 function M.var(variable_name, use_env)
     return function()
         local env

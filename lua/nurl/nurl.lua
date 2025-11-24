@@ -5,7 +5,7 @@ local buffers = require("nurl.buffers")
 local ElapsedTimeFloating = require("nurl.elapsed_time")
 local winbar = require("nurl.winbar")
 local projects = require("nurl.projects")
-local environments = require("nurl.environments").environments
+local environments = require("nurl.environments")
 local activate = require("nurl.environments").activate
 
 local M = {}
@@ -96,14 +96,28 @@ function M.send(request, win)
                 if internal_request.post_hook ~= nil then
                     internal_request.post_hook(internal_request, response)
                 end
+
+                local env_post_hook = environments.get_post_hook()
+                if env_post_hook ~= nil then
+                    env_post_hook(internal_request, response)
+                end
             end)
         end)
     end
 
-    if request.pre_hook ~= nil then
-        request.pre_hook(next_function, request)
+    local function env_next_function()
+        if request.pre_hook ~= nil then
+            request.pre_hook(next_function, request)
+        else
+            next_function()
+        end
+    end
+
+    local env_pre_hook = environments.get_pre_hook()
+    if env_pre_hook == nil then
+        env_next_function()
     else
-        next_function()
+        env_pre_hook(env_next_function, request)
     end
 end
 
@@ -284,10 +298,12 @@ end
 
 function M.activate_env()
     vim.ui.select(
-        vim.tbl_keys(environments),
+        vim.tbl_keys(environments.project_envs),
         { prompt = "Activate environment" },
         function(choice)
-            activate(choice)
+            if choice ~= nil then
+                activate(choice)
+            end
         end
     )
 end
