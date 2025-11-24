@@ -58,12 +58,9 @@ function File:find_environment_variable_value_node(environment, variable)
       (field
         name: (identifier) @env (#eq? @env "%s")
         value: (table_constructor
-                 (field
-                   name: (identifier) @f (#eq? @f "variables")
-                   value: (table_constructor
-                            (field
-                              name: (identifier) @variable_name (#eq? @variable_name "%s")
-                              value: (_) @variable_value))))))))
+                (field
+                  name: (identifier) @variable_name (#eq? @variable_name "%s")
+                  value: (_) @variable_value))))))
     ]],
             environment,
             variable
@@ -97,12 +94,9 @@ function File:find_environment_variable_node(environment, variable)
       (field
         name: (identifier) @env (#eq? @env "%s")
         value: (table_constructor
-                 (field
-                   name: (identifier) @f (#eq? @f "variables")
-                   value: (table_constructor
-                            (field
-                              name: (identifier) @variable_name (#eq? @variable_name "%s")
-                              value: (_) @variable_value) @field)))))))
+                (field
+                  name: (identifier) @variable_name (#eq? @variable_name "%s")
+                  value: (_) @variable_value) @field)))))
     ]],
             environment,
             variable

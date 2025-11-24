@@ -10,25 +10,12 @@ local FileParser = require("nurl.file_parsing").FileParser
 local uv = vim.uv or vim.loop
 local variables = require("nurl.variables")
 
----@class nurl.Environment
-local Environment =
-    { name = "default", variables = {}, pre_hook = nil, post_hook = nil }
-
-function Environment:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
-
 local M = {}
 
 ---@type string | nil
 M.project_active_env = nil
 
-M.Environment = Environment
-
----@type table<string, nurl.Environment>
+---@type table<string, table<string, any>>
 M.project_envs = {}
 
 function M.activate(env_name)
@@ -80,7 +67,7 @@ function M.var(variable_name, use_env)
             )
         end
 
-        return variables.expand(env.variables[variable_name])
+        return variables.expand(env[variable_name])
     end
 end
 
@@ -91,7 +78,7 @@ function M.set(variable_name, value)
         return
     end
 
-    active_env.variables[variable_name] = value
+    active_env[variable_name] = value
 
     local environments_path =
         vim.fs.joinpath(config.dir, config.environments_file)
