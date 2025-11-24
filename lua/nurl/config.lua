@@ -15,6 +15,7 @@ local defaults = {
             "body",
             keys = {
                 ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
                 ["<C-r>"] = "rerun",
                 q = "close",
             },
@@ -23,6 +24,7 @@ local defaults = {
             "headers",
             keys = {
                 ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
                 ["<C-r>"] = "rerun",
                 q = "close",
             },
@@ -31,6 +33,7 @@ local defaults = {
             "info",
             keys = {
                 ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
                 ["<C-r>"] = "rerun",
                 q = "close",
             },
@@ -39,6 +42,7 @@ local defaults = {
             "raw",
             keys = {
                 ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
                 ["<C-r>"] = "rerun",
                 q = "close",
             },
