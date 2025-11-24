@@ -184,32 +184,6 @@ function File:list_requests_ranges()
     return ranges
 end
 
-function File:find_index_at_position(row, col)
-    local query = vim.treesitter.query.parse(
-        "lua",
-        [[
-(return_statement (expression_list (table_constructor (field) @item)))
-    ]]
-    )
-
-    local index = 1
-
-    for _, match in query:iter_matches(self.tree:root(), self.contents, 0, -1) do
-        for id, nodes in pairs(match) do
-            local name = query.captures[id]
-            for _, node in ipairs(nodes) do
-                if vim.treesitter.node_contains(node, { row, col }) then
-                    return index
-                end
-
-                index = index + 1
-            end
-        end
-    end
-
-    return nil
-end
-
 function File:replace_node(node, new_text)
     local _, _, start_bytes, _, _, end_bytes = node:range(true)
     self:replace(start_bytes, end_bytes, new_text)
