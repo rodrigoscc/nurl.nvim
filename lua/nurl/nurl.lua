@@ -321,6 +321,12 @@ function M.activate_env()
     )
 end
 
+function M.open_environments_file()
+    local environments_file =
+        vim.fs.joinpath(config.dir, config.environments_file)
+    vim.cmd.edit(environments_file)
+end
+
 require("nurl.config").setup()
 require("nurl.highlights").setup_highlights()
 
