@@ -14,11 +14,18 @@ _G.Nurl = M
 
 M.winbar = winbar
 
+---@type nurl.Request | nil
+M.last_request = nil
+---@type integer | nil
+M.last_request_win = nil
+
 ---@param request nurl.SuperRequest | nurl.Request
 ---@param win? integer | nil
 function M.send(request, win)
     local function next_function()
         local internal_request = requests.expand(request)
+
+        M.last_request = internal_request
 
         local curl = requests.build_curl(internal_request)
 
@@ -30,15 +37,17 @@ function M.send(request, win)
         )
         local first_buffer_type = config.buffers[1][1]
 
-        if win == nil then
+        if win ~= nil and vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_set_buf(win, response_buffers[first_buffer_type])
+        else
             win = vim.api.nvim_open_win(
                 response_buffers[first_buffer_type],
                 false,
                 config.win_config
             )
-        else
-            vim.api.nvim_win_set_buf(win, response_buffers[first_buffer_type])
         end
+
+        M.last_request_win = win
 
         vim.wo[win].winbar = M.winbar.winbar()
 
@@ -119,6 +128,10 @@ function M.send(request, win)
     else
         env_pre_hook(env_next_function, request)
     end
+end
+
+function M.resend_last_request()
+    M.send(M.last_request, M.last_request_win)
 end
 
 function M.send_buffer_request()
@@ -319,6 +332,9 @@ vim.keymap.set("n", "gh", function()
 end)
 vim.keymap.set("n", "gH", function()
     Nurl.send_project_request()
+end)
+vim.keymap.set("n", "gL", function()
+    Nurl.resend_last_request()
 end)
 vim.keymap.set("n", "R", function()
     Nurl.send_request_at_cursor()
