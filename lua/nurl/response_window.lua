@@ -1,0 +1,78 @@
+local buffers = require("nurl.buffers")
+local winbar = require("nurl.winbar")
+local ElapsedTimeFloating = require("nurl.elapsed_time")
+local config = require("nurl.config")
+
+---@class nurl.ResponseWindow
+---@field win integer | nil
+---@field request nurl.Request
+---@field curl nurl.Curl
+---@field elapsed_time nurl.ElapsedTimeFloating | nil
+---@field buffers table<nurl.BufferType, integer> | nil
+local ResponseWindow = { win = nil, elapsed_time = nil, buffers = nil }
+
+function ResponseWindow:new(o)
+    o = o or {}
+    o = setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function ResponseWindow:open()
+    self.buffers = buffers.create(self.request, nil, self.curl)
+
+    assert(#config.buffers > 0, "Must configure at least one response buffer")
+    local first_buffer_type = config.buffers[1][1]
+
+    if self.win ~= nil and vim.api.nvim_win_is_valid(self.win) then
+        vim.api.nvim_win_set_buf(self.win, self.buffers[first_buffer_type])
+    else
+        self.win = vim.api.nvim_open_win(
+            self.buffers[first_buffer_type],
+            false,
+            config.win_config
+        )
+    end
+
+    vim.wo[self.win].winbar = winbar.winbar()
+
+    for _, bufnr in pairs(self.buffers) do
+        vim.api.nvim_create_autocmd("BufWinEnter", {
+            once = true,
+            callback = function()
+                vim.wo[self.win].winbar = winbar.winbar()
+            end,
+            buffer = bufnr,
+        })
+    end
+
+    self.elapsed_time = ElapsedTimeFloating:new(self.win)
+    self.elapsed_time:start()
+
+    -- Stop timer if parent window is closed
+    vim.api.nvim_create_autocmd("WinClosed", {
+        once = true,
+        pattern = tostring(self.win),
+        callback = function()
+            self.elapsed_time:stop()
+        end,
+    })
+
+    return self.win
+end
+
+function ResponseWindow:update(response, curl)
+    if self.elapsed_time ~= nil then
+        self.elapsed_time:stop()
+    end
+
+    assert(self.buffers ~= nil, "Buffers must already exist")
+    buffers.update(self.request, response, curl, self.buffers)
+
+    if curl.result.code ~= 0 and self.buffers[buffers.Buffer.Raw] then
+        assert(self.win ~= nil, "Window should have been created already")
+        vim.api.nvim_win_set_buf(self.win, self.buffers[buffers.Buffer.Raw])
+    end
+end
+
+return ResponseWindow

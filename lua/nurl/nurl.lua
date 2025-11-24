@@ -1,12 +1,11 @@
 local requests = require("nurl.requests")
 local responses = require("nurl.responses")
 local config = require("nurl.config")
-local buffers = require("nurl.buffers")
-local ElapsedTimeFloating = require("nurl.elapsed_time")
 local winbar = require("nurl.winbar")
 local projects = require("nurl.projects")
 local environments = require("nurl.environments")
 local activate = require("nurl.environments").activate
+local ResponseWindow = require("nurl.response_window")
 
 local M = {}
 
@@ -28,8 +27,7 @@ M.last_request_win = nil
 function M.send(request, opts)
     opts = opts or {}
 
-    local response_buffers
-    local elapsed_time
+    local response_window
 
     local win = opts.win
 
@@ -40,70 +38,19 @@ function M.send(request, opts)
 
         local curl = requests.build_curl(internal_request)
 
-        if opts.on_response == nil then
-            response_buffers = buffers.create(internal_request, nil, curl)
-
-            assert(
-                #config.buffers > 0,
-                "Must configure at least one response buffer"
-            )
-            local first_buffer_type = config.buffers[1][1]
-
-            if win ~= nil and vim.api.nvim_win_is_valid(win) then
-                vim.api.nvim_win_set_buf(
-                    win,
-                    response_buffers[first_buffer_type]
-                )
-            else
-                win = vim.api.nvim_open_win(
-                    response_buffers[first_buffer_type],
-                    false,
-                    config.win_config
-                )
-            end
-
-            M.last_request_win = win
-
-            vim.wo[win].winbar = M.winbar.winbar()
-
-            for _, bufnr in pairs(response_buffers) do
-                vim.api.nvim_create_autocmd("BufWinEnter", {
-                    once = true,
-                    callback = function()
-                        vim.wo[win].winbar = M.winbar.winbar()
-                    end,
-                    buffer = bufnr,
-                })
-            end
-
-            elapsed_time = ElapsedTimeFloating:new(win)
-            elapsed_time:start()
-
-            -- Stop timer if parent window is closed
-            vim.api.nvim_create_autocmd("WinClosed", {
-                once = true,
-                pattern = tostring(win),
-                callback = function()
-                    elapsed_time:stop()
-                end,
+        local should_prepare_response_ui = opts.on_response == nil
+        if should_prepare_response_ui then
+            response_window = ResponseWindow:new({
+                win = win,
+                request = internal_request,
+                curl = curl,
             })
+            win = response_window:open()
+            M.last_request_win = win
         end
 
         local function default_on_response(response, curl)
-            elapsed_time:stop()
-
-            buffers.update(internal_request, response, curl, response_buffers)
-
-            if
-                curl.result.code ~= 0
-                and response_buffers[buffers.Buffer.Raw]
-            then
-                assert(win ~= nil, "Window should have been created already")
-                vim.api.nvim_win_set_buf(
-                    win,
-                    response_buffers[buffers.Buffer.Raw]
-                )
-            end
+            response_window:update(response, curl)
         end
 
         curl:run(function(system_completed)

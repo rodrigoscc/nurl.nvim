@@ -5,7 +5,7 @@ local Curl = { args = {}, result = nil }
 
 function Curl:new(o)
     o = o or {}
-    setmetatable(o, self)
+    o = setmetatable(o, self)
     self.__index = self
     return o
 end

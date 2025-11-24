@@ -21,7 +21,7 @@ function E:new(ref_win)
         spinner_extmark_id = nil,
         seconds_extmark_id = nil,
     }
-    setmetatable(o, self)
+    o = setmetatable(o, self)
     self.__index = self
     return o
 end
