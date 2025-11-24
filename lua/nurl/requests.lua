@@ -74,10 +74,15 @@ function M.expand(request)
     local form = variables.expand(request.form)
     local data_urlencode = variables.expand(request.data_urlencode)
 
+    local method = "GET"
+    if request.method ~= nil then
+        method = request.method:upper()
+    end
+
     ---@type nurl.Request
     local req = {
         url = url,
-        method = request.method or "GET",
+        method = method,
         headers = headers or {},
         data = data,
         form = form,
