@@ -113,11 +113,7 @@ function M.set(variable_name, value)
         error("value type " .. type(value) .. " not supported")
     end
 
-    file:replace_environment_variable_value(
-        M.project_active_env,
-        variable_name,
-        new_text
-    )
+    file:set_environment_variable(M.project_active_env, variable_name, new_text)
     file:save()
 end
 
