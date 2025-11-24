@@ -8,7 +8,7 @@ local M = {}
 M.Buffer = {
     Body = "body",
     Headers = "headers",
-    Stats = "stats",
+    Info = "info",
     Raw = "raw",
 }
 
@@ -111,42 +111,42 @@ local function populate_raw_buffer(bufnr, curl)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, raw_lines)
 end
 
-local function populate_stats_buffer(bufnr, response)
-    local stats_lines = {}
+local function populate_info_buffer(bufnr, response)
+    local info_lines = {}
 
     table.insert(
-        stats_lines,
+        info_lines,
         string.format("time_appconnect: %.4f", response.time.time_appconnect)
     )
     table.insert(
-        stats_lines,
+        info_lines,
         string.format("time_connect: %.4f", response.time.time_connect)
     )
     table.insert(
-        stats_lines,
+        info_lines,
         string.format("time_namelookup: %.4f", response.time.time_namelookup)
     )
     table.insert(
-        stats_lines,
+        info_lines,
         string.format("time_pretransfer: %.4f", response.time.time_pretransfer)
     )
     table.insert(
-        stats_lines,
+        info_lines,
         string.format("time_redirect: %.4f", response.time.time_redirect)
     )
     table.insert(
-        stats_lines,
+        info_lines,
         string.format(
             "time_starttransfer: %.4f",
             response.time.time_starttransfer
         )
     )
     table.insert(
-        stats_lines,
+        info_lines,
         string.format("time_total: %.4f", response.time.time_total)
     )
 
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, stats_lines)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, info_lines)
     vim.api.nvim_set_option_value("filetype", "yaml", { buf = bufnr })
 end
 
@@ -168,9 +168,9 @@ function M.create_buffer(buffer, request, response, curl)
         if response ~= nil then
             populate_headers_buffer(buf, response)
         end
-    elseif type == "stats" then
+    elseif type == "info" then
         if response ~= nil then
-            populate_stats_buffer(buf, response)
+            populate_info_buffer(buf, response)
         end
     elseif type == "raw" then
         populate_raw_buffer(buf, curl)
@@ -198,9 +198,9 @@ function M.update_buffer(bufnr, buffer, request, response, curl)
         if response ~= nil then
             populate_headers_buffer(bufnr, response)
         end
-    elseif buffer[1] == "stats" then
+    elseif buffer[1] == "info" then
         if response ~= nil then
-            populate_stats_buffer(bufnr, response)
+            populate_info_buffer(bufnr, response)
         end
     elseif buffer[1] == "raw" then
         populate_raw_buffer(bufnr, curl)

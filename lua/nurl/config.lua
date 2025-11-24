@@ -28,7 +28,7 @@ local defaults = {
             },
         },
         {
-            "stats",
+            "info",
             keys = {
                 ["<Tab>"] = "next_buffer",
                 ["<C-r>"] = "rerun",
