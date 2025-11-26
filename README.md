@@ -1,93 +1,361 @@
-# nvim-lua-plugin-template
+# nurl.nvim
 
-This repository is a template for Neovim plugins written in Lua.
+A Lua-based HTTP client for Neovim. Define requests in Lua files, manage environments, add hooks, and view responses in beautiful split windows.
 
-The intention is that you use this template to create a new repository where you then adapt this readme and add your plugin code.
-The template includes the following:
+## Features
 
-- GitHub workflows and configurations to run linters and tests
-- Packaging of tagged releases and upload to [LuaRocks][luarocks]
-  if a [`LUAROCKS_API_KEY`][luarocks-api-key] is added
-  to the [GitHub Actions secrets][gh-actions-secrets]
-- Minimal test setup:
-  - A `scm` [rockspec][rockspec-format], `nvim-lua-plugin-scm-1.rockspec`
-  - A `.busted` file
-- EditorConfig
-- A .luacheckrc
+- **Lua-based requests** - Define HTTP requests as Lua tables with full language support
+- **Environments** - Manage variables per environment (dev, staging, prod)
+- **Request history** - SQLite-backed history with full request/response data
+- **Response viewer** - Split window with body, headers, info, and raw curl output tabs
+- **Hooks** - Pre/post hooks per request, or per environment (applies to all requests when env is active)
+- **Picker integration** - Browse requests and history with [snacks.nvim](https://github.com/folke/snacks.nvim) picker
 
+## Requirements
 
-To get started writing a Lua plugin, I recommend reading `:help lua-guide` and
-`:help write-plugin`.
+- Neovim >= 0.10.0
+- `curl` in PATH
+- [snacks.nvim](https://github.com/folke/snacks.nvim) (for pickers)
+- Optional: `jq` for JSON formatting, `stylua` for environments file formatting
 
-## Scope
+## Installation
 
-Anything that the majority of plugin authors will want to have is in scope of
-this starter template. Anything that is controversial is out-of-scope.
+Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
-## Usage
-
-- Click [Use this template][use-this-template]. Do not fork.
-- Rename `nvim-lua-plugin-scm-1.rockspec` and change the `package` name
-  to the name of your plugin.
-
-## Template License
-
-The template itself is licensed under the [MIT license](https://en.wikipedia.org/wiki/MIT_License).
-The template doesn't include a LICENSE file. You should add one after creating your repository.
-
----
-
-
-The remainder of the README is text that can be preserved in your plugin:
-
----
-
-
-## Development
-
-### Run tests
-
-
-Running tests requires either
-
-- [luarocks][luarocks]
-- or [busted][busted] and [nlua][nlua]
-
-to be installed[^1].
-
-[^1]: The test suite assumes that `nlua` has been installed
-      using luarocks into `~/.luarocks/bin/`.
-
-You can then run:
-
-```bash
-luarocks test --local
-# or
-busted
+```lua
+{
+  "rodrigoscc/nurl.nvim",
+  dependencies = { "folke/snacks.nvim" },
+  opts = {},
+}
 ```
 
-Or if you want to run a single test file:
+## Quick Start
 
-```bash
-luarocks test spec/path_to_file.lua --local
-# or
-busted spec/path_to_file.lua
+### 1. Create a request file
+
+Create `.nurl/requests.lua` in your project:
+
+```lua
+return {
+    {
+        url = "https://jsonplaceholder.typicode.com/posts/1",
+        method = "GET",
+    },
+    {
+        url = "https://jsonplaceholder.typicode.com/posts",
+        method = "POST",
+        headers = {
+            ["Content-Type"] = "application/json",
+        },
+        data = {
+            title = "Hello",
+            body = "World",
+            userId = 1,
+        },
+    },
+}
 ```
 
-If you see an error like `module 'busted.runner' not found`:
+### 2. Run a request
 
-```bash
-eval $(luarocks path --no-bin)
+Position cursor on a request and run:
+
+```vim
+:Nurl send_at_cursor
 ```
 
-For this to work you need to have Lua 5.1 set as your default version for
-luarocks. If that's not the case you can pass `--lua-version 5.1` to all the
-luarocks commands above.
+Or use the picker:
 
-[rockspec-format]: https://github.com/luarocks/luarocks/wiki/Rockspec-format
-[luarocks]: https://luarocks.org
-[luarocks-api-key]: https://luarocks.org/settings/api-keys
-[gh-actions-secrets]: https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository
-[busted]: https://lunarmodules.github.io/busted/
-[nlua]: https://github.com/mfussenegger/nlua
-[use-this-template]: https://github.com/new?template_name=nvim-lua-plugin-template&template_owner=nvim-lua
+```vim
+:Nurl send
+```
+
+## Configuration
+
+```lua
+require("nurl").setup({
+    -- Project directory for Nurl files
+    dir = ".nurl",
+
+    -- Environments file name
+    environments_file = "environments.lua",
+
+    -- History settings
+    history = {
+        enabled = true,
+        db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
+        max_history_items = 5000,
+    },
+
+    -- Response window config (see :help nvim_open_win)
+    win_config = { split = "right" },
+
+    -- Response formatters by filetype
+    formatters = {
+        json = {
+            cmd = { "jq", "--sort-keys", "--indent", "2" },
+            available = function()
+                return vim.fn.executable("jq") == 1
+            end,
+        },
+    },
+
+    -- Buffer keymaps
+    buffers = {
+        {
+            "body",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                q = "close",
+            },
+        },
+        {
+            "headers",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                q = "close",
+            },
+        },
+        {
+            "info",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                q = "close",
+            },
+        },
+        {
+            "raw",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                q = "close",
+            },
+        },
+    },
+})
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `:Nurl send_at_cursor` | Send request under cursor |
+| `:Nurl send` | Pick and send a project request |
+| `:Nurl jump` | Pick and jump to a request definition |
+| `:Nurl history` | Browse request history |
+| `:Nurl env` | Switch active environment |
+| `:Nurl env_file` | Open environments file |
+| `:Nurl yank_at_cursor` | Copy curl command to clipboard |
+| `:Nurl resend [n]` | Resend last request (optional index) |
+| `:Nurl` | Show command picker |
+
+## Request Format
+
+```lua
+---@class nurl.Request
+{
+  -- Required
+  url = "https://api.example.com/users",
+
+  -- Optional (defaults to GET)
+  method = "POST",
+
+  -- Optional headers
+  headers = {
+    ["Authorization"] = "Bearer token",
+    ["Content-Type"] = "application/json",
+  },
+
+  -- Body (use only one)
+  data = { key = "value" },           -- Table: JSON encoded
+  data = '{"raw": "json"}',           -- String: sent as-is
+  form = { field = "value" },         -- multipart/form-data
+  data_urlencode = { q = "search" },  -- URL encoded
+
+  -- Hooks
+  pre_hook = function(next, request)
+    -- Called before request, must call next() to proceed
+    next()
+  end,
+  post_hook = function(request, response)
+    -- Called after response received
+  end,
+}
+```
+
+### Dynamic Values
+
+Use functions for dynamic values:
+
+```lua
+{
+  url = function()
+    return "https://api.example.com/users/" .. vim.fn.input("User ID: ")
+  end,
+  headers = function()
+    return {
+      ["X-Request-Id"] = tostring(os.time()),
+    }
+  end,
+}
+```
+
+### URL Parts
+
+Build URLs from parts:
+
+```lua
+local env = require("nurl.environments")({
+    url = {
+        env.var("base_url"),
+        "v1",
+        "users",
+        function()
+            return vim.fn.input("ID: ")
+        end,
+    },
+})
+```
+
+## Environments
+
+Create `.nurl/environments.lua`:
+
+```lua
+return {
+    default = {
+        base_url = "https://api.example.com",
+        token = "dev-token",
+    },
+    staging = {
+        base_url = "https://staging.example.com",
+        token = "staging-token",
+    },
+    production = {
+        base_url = "https://api.example.com",
+        token = "prod-token",
+    },
+}
+```
+
+Access variables in requests:
+
+```lua
+local env = require("nurl.environments")
+
+return {
+    {
+        url = { env.var("base_url"), "users" },
+        headers = {
+            ["Authorization"] = function()
+                return "Bearer " .. env.var("token")
+            end,
+        },
+    },
+}
+```
+
+Switch environments with `:Nurl env`.
+
+### Environment Hooks
+
+Add hooks inside each environment:
+
+```lua
+return {
+    default = {
+        base_url = "https://api.example.com",
+    },
+    production = {
+        base_url = "https://api.example.com",
+        pre_hook = function(next, request)
+            -- Confirm before production requests
+            if request.method ~= "GET" then
+                vim.ui.select(
+                    { "Yes", "No" },
+                    { prompt = "Send to production?" },
+                    function(choice)
+                        if choice == "Yes" then
+                            next()
+                        end
+                    end
+                )
+            else
+                next()
+            end
+        end,
+        post_hook = function(request, response)
+            -- Log all requests
+            print(
+                request.method
+                    .. " "
+                    .. request.url
+                    .. " -> "
+                    .. response.status_code
+            )
+        end,
+    },
+}
+```
+
+## API
+
+```lua
+local nurl = require("nurl")
+
+-- Send a request programmatically
+nurl.send({
+    url = "https://api.example.com/users",
+    method = "GET",
+}, {
+    -- Optional: reuse existing window
+    win = vim.api.nvim_get_current_win(),
+    -- Optional: custom response handler (skips UI)
+    on_response = function(response, curl)
+        print(response.status_code)
+    end,
+})
+
+-- Resend last request
+nurl.resend_last_request()
+nurl.resend_last_request(-2) -- second to last
+
+-- Get active environment
+local env_name = nurl.get_active_env()
+
+-- Winbar components (for statusline/winbar)
+nurl.winbar.status_code()
+nurl.winbar.time()
+nurl.winbar.tabs()
+```
+
+## Winbar
+
+The response window includes a winbar showing status code, response time, and buffer tabs. Use these in your own winbar:
+
+```lua
+vim.o.winbar =
+    "%{%v:lua.require('nurl').winbar.status_code()%} %{%v:lua.require('nurl').winbar.tabs()%}"
+```
+
+## Highlight Groups
+
+| Group | Description |
+|-------|-------------|
+| `NurlSpinner` | Loading spinner |
+| `NurlElapsedTime` | Elapsed time display |
+| `NurlWinbarTabActive` | Active tab in winbar |
+| `NurlWinbarTabInactive` | Inactive tab in winbar |
+| `NurlWinbarSuccessStatusCode` | 2xx status codes |
+| `NurlWinbarErrorStatusCode` | 4xx/5xx status codes |
+| `NurlWinbarLoading` | Loading state |
+| `NurlWinbarTime` | Response time |
+| `NurlWinbarError` | Error messages |
