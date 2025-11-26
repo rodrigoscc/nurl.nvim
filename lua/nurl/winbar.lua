@@ -72,7 +72,7 @@ function M.buffer_tab(type)
     end
 end
 
-function M.winbar()
+function M.tabs()
     local tabs = ""
 
     for _, buffer in pairs(config.buffers) do
@@ -83,8 +83,11 @@ function M.winbar()
             )
     end
 
-    return "%{%v:lua.Nurl.winbar.status_code()%}%< %{%v:lua.Nurl.winbar.time()%}%="
-        .. tabs
+    return tabs
+end
+
+function M.winbar()
+    return "%{%v:lua.Nurl.winbar.status_code()%}%< %{%v:lua.Nurl.winbar.time()%}%=%{%v:lua.Nurl.winbar.tabs()%}"
 end
 
 return M
