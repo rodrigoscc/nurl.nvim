@@ -217,15 +217,17 @@ require("nurl").setup({
 Use functions for dynamic values:
 
 ```lua
-{
-    url = function()
-        return "https://api.example.com/users/" .. vim.fn.input("User ID: ")
-    end,
-    headers = function()
-        return {
-            ["X-Request-Id"] = tostring(os.time()),
-        }
-    end,
+return {
+    {
+        url = function()
+            return "https://api.example.com/users/" .. vim.fn.input("User ID: ")
+        end,
+        headers = function()
+            return {
+                ["X-Request-Id"] = tostring(os.time()),
+            }
+        end,
+    },
 }
 ```
 
