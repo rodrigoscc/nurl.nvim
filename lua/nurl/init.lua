@@ -9,6 +9,7 @@ function M.setup(opts)
     require("nurl.highlights").setup_highlights()
     require("nurl.environments").load()
     require("nurl.environments").setup_reload_autocmd()
+    require("nurl.commands").setup()
 end
 
 -- Lazy-load nurl.nurl on first access to any key.
