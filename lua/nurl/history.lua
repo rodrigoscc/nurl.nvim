@@ -159,6 +159,10 @@ end
 
 ---@return nurl.HistoryItem[]
 function M.all()
+    if M.db == nil then
+        M.setup()
+    end
+
     local result = M.db:exec([[SELECT
   time,
   request_url,
