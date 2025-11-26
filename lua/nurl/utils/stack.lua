@@ -26,9 +26,7 @@ function Stack:push(item)
 end
 
 function Stack:get(idx)
-    assert(idx ~= 0, "0 is not a valid index")
-
-    if idx > 0 then
+    if idx >= 0 then
         return self.items[idx]
     else
         return self.items[#self.items + idx + 1]
