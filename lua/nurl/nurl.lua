@@ -237,7 +237,7 @@ function M.yank_curl_at_cursor()
             and (cursor_row ~= request.end_row or cursor_col < request.end_col)
             and (
                 cursor_row ~= request.start_row
-                or cursor_col > request.start_col
+                or cursor_col >= request.start_col
             )
         )
 
@@ -300,31 +300,31 @@ function M.open_history()
     })
 end
 
-require("nurl.config").setup()
-require("nurl.highlights").setup_highlights()
-
-require("nurl.environments").load()
-require("nurl.environments").setup_reload_autocmd()
-
-require("nurl.history").setup()
-
-vim.keymap.set("n", "gh", function()
-    Nurl.jump_to_project_request()
-end)
-vim.keymap.set("n", "gH", function()
-    Nurl.send_project_request()
-end)
-vim.keymap.set("n", "gL", function()
-    Nurl.resend_last_request()
-end)
-vim.keymap.set("n", "g;", function()
-    Nurl.resend_last_request(-2)
-end)
-vim.keymap.set("n", "R", function()
-    Nurl.send_request_at_cursor()
-end)
-vim.keymap.set("n", "gG", function()
-    Nurl.open_history()
-end)
+-- require("nurl.config").setup()
+-- require("nurl.highlights").setup_highlights()
+--
+-- require("nurl.environments").load()
+-- require("nurl.environments").setup_reload_autocmd()
+--
+-- require("nurl.history").setup()
+--
+-- vim.keymap.set("n", "gh", function()
+--     Nurl.jump_to_project_request()
+-- end)
+-- vim.keymap.set("n", "gH", function()
+--     Nurl.send_project_request()
+-- end)
+-- vim.keymap.set("n", "gL", function()
+--     Nurl.resend_last_request()
+-- end)
+-- vim.keymap.set("n", "g;", function()
+--     Nurl.resend_last_request(-2)
+-- end)
+-- vim.keymap.set("n", "R", function()
+--     Nurl.send_request_at_cursor()
+-- end)
+-- vim.keymap.set("n", "gG", function()
+--     Nurl.open_history()
+-- end)
 
 return M

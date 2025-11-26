@@ -24,7 +24,7 @@ function M.activate(env_name)
             M.project_active_env = name
 
             local active_environments = {}
-            if fs.exists(config.environments_file) then
+            if fs.exists(config.active_environments_file) then
                 local content = fs.read(config.active_environments_file)
                 active_environments = vim.json.decode(content)
             end

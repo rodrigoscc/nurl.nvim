@@ -131,15 +131,6 @@ function Result:one()
     return row
 end
 
-function Result:test()
-    local column_count = sqlite.sqlite3_column_count(self.stmt)
-    print(column_count)
-
-    for i = 0, column_count do
-        print(i)
-    end
-end
-
 function Result:all()
     local column_count = sqlite.sqlite3_column_count(self.stmt)
 
