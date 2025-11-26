@@ -2,6 +2,23 @@
 
 A Lua-based HTTP client for Neovim. Define requests in Lua files, manage environments, add hooks, and view responses in beautiful split windows.
 
+## Table of Contents
+
+- [✨ Features](#features)
+- [📋 Requirements](#requirements)
+- [📦 Installation](#installation)
+- [🚀 Quick Start](#quick-start)
+- [⚙️ Configuration](#configuration)
+- [💻 Commands](#commands)
+- [📝 Request Format](#request-format)
+  - [Dynamic Values](#dynamic-values)
+  - [URL Parts](#url-parts)
+- [🌍 Environments](#environments)
+  - [Environment Hooks](#environment-hooks)
+- [🔌 API](#api)
+- [📊 Winbar](#winbar)
+- [🎨 Highlight Groups](#highlight-groups)
+
 ## Features
 
 - **Lua-based requests** - Define HTTP requests as Lua tables with full language support
@@ -160,23 +177,27 @@ require("nurl").setup({
 ## Request Format
 
 ```lua
----@class nurl.Request
+---@class nurl.SuperRequest
 {
-  -- Required
+  -- Required: string, table of parts, or function
   url = "https://api.example.com/users",
+  url = { "https://api.example.com", "v1", "users" },
+  url = function() return "https://api.example.com/users/id" end,
 
   -- Optional (defaults to GET)
   method = "POST",
 
-  -- Optional headers
+  -- Optional headers: table or function
   headers = {
     ["Authorization"] = "Bearer token",
     ["Content-Type"] = "application/json",
   },
+  headers = function() return { ["X-Request-Id"] = tostring(os.time()) } end,
 
-  -- Body (use only one)
+  -- Body (use only one): table, string, or function
   data = { key = "value" },           -- Table: JSON encoded
   data = '{"raw": "json"}',           -- String: sent as-is
+  data = function() return { ts = os.time() } end,
   form = { field = "value" },         -- multipart/form-data
   data_urlencode = { q = "search" },  -- URL encoded
 
