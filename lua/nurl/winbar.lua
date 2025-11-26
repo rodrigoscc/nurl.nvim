@@ -83,7 +83,7 @@ function M.winbar()
             )
     end
 
-    return "%{%v:lua.Nurl.winbar.status_code()%} %{%v:lua.Nurl.winbar.time()%}%=%<"
+    return "%{%v:lua.Nurl.winbar.status_code()%}%< %{%v:lua.Nurl.winbar.time()%}%="
         .. tabs
 end
 
