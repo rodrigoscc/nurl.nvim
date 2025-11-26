@@ -11,8 +11,6 @@ local pickers = require("nurl.pickers")
 
 local M = {}
 
-_G.Nurl = M
-
 M.winbar = winbar
 
 ---@type nurl.Stack

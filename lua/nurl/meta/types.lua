@@ -1,0 +1,14 @@
+---@meta _
+
+---@class nurl.api
+---@field send fun(request: nurl.SuperRequest | nurl.Request, opts?: nurl.RequestOpts)
+---@field resend_last_request fun(index?: integer)
+---@field send_buffer_request fun()
+---@field send_project_request fun()
+---@field jump_to_project_request fun()
+---@field send_request_at_cursor fun()
+---@field yank_curl_at_cursor fun()
+---@field activate_env fun()
+---@field open_environments_file fun()
+---@field get_active_env fun(): string|nil
+---@field open_history fun()
