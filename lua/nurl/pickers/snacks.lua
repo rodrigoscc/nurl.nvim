@@ -68,6 +68,13 @@ function M.history_items_to_snacks_items(history_items)
                 idx = i,
                 score = 1,
                 request = request,
+                text = string.format(
+                    "%s %s %s %s",
+                    curl.exec_datetime,
+                    request.method,
+                    request.url,
+                    response.status_code
+                ),
                 response = response,
                 curl = curl,
                 preview = {
@@ -131,6 +138,7 @@ function M.project_request_items_to_send_snacks_items(project_request_items)
                 idx = i,
                 request = expanded,
                 score = 1,
+                text = expanded.method .. " " .. expanded.url,
                 preview = {
                     text = preview_json,
                     ft = "json",
@@ -151,6 +159,12 @@ function M.project_request_items_to_jump_snacks_items(project_request_items)
             local snacks_item = {
                 idx = i,
                 request = expanded,
+                text = string.format(
+                    "%s %s %s",
+                    item.file,
+                    expanded.method,
+                    expanded.url
+                ),
                 file = item.file,
                 score = 1,
                 pos = { item.start_row, item.start_col },
