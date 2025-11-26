@@ -240,11 +240,16 @@ ORDER BY time DESC]])
         local request = {
             method = request_method,
             url = request_url,
-            headers = request_headers and vim.json.decode(request_headers),
-            data = request_data and vim.json.decode(request_data),
-            form = request_form and vim.json.decode(request_form),
-            data_urlencode = request_data_urlencode
-                and vim.json.decode(request_data_urlencode),
+            headers = request_headers ~= "null" and vim.json.decode(
+                request_headers
+            ) or nil,
+            data = request_data ~= "null" and vim.json.decode(request_data)
+                or nil,
+            form = request_form ~= "null" and vim.json.decode(request_form)
+                or nil,
+            data_urlencode = request_data_urlencode ~= "null"
+                    and vim.json.decode(request_data_urlencode)
+                or nil,
         }
 
         ---@type nurl.Response
@@ -252,7 +257,9 @@ ORDER BY time DESC]])
             status_code = response_status_code,
             reason_phrase = response_reason_phrase,
             protocol = response_protocol,
-            headers = response_headers and vim.json.decode(response_headers),
+            headers = response_headers ~= "null" and vim.json.decode(
+                response_headers
+            ) or nil,
             body = response_body,
             time = {
                 time_appconnect = response_time_appconnect,
