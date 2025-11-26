@@ -12,9 +12,9 @@ local defaults = {
         ---@type string
         db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
         ---@type integer
-        max_history_items = 1000,
+        max_history_items = 5000,
         ---@type integer
-        history_buffer = 100,
+        history_buffer = 500,
     },
     ---Window config for the response window. Refer to :help nvim_open_win for the available keys.
     ---@type table
