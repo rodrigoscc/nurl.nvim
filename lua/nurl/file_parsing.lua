@@ -288,7 +288,7 @@ function M.parse(path)
     local parser = vim.treesitter.get_string_parser(contents, "lua")
     local tree = parser:parse()[1]
 
-    return File:new(path, contents, tree)
+    return File:new(path, contents, tree), nil
 end
 
 M.File = File
