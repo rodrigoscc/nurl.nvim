@@ -7,6 +7,7 @@ local environments = require("nurl.environments")
 local ResponseWindow = require("nurl.response_window")
 local history = require("nurl.history")
 local snacks = require("nurl.pickers.snacks")
+local Stack = require("nurl.utils.stack")
 
 local M = {}
 
@@ -14,10 +15,10 @@ _G.Nurl = M
 
 M.winbar = winbar
 
----@type nurl.Request | nil
-M.last_request = nil
----@type integer | nil
-M.last_request_win = nil
+---@type nurl.Stack
+M.last_requests = Stack:new(5)
+---@type nurl.Stack
+M.last_request_wins = Stack:new(5)
 
 ---@class nurl.RequestOpts
 ---@field win? integer | nil
@@ -35,7 +36,7 @@ function M.send(request, opts)
     local function next_function()
         local internal_request = requests.expand(request)
 
-        M.last_request = internal_request
+        M.last_requests:push(internal_request)
 
         local curl = requests.build_curl(internal_request)
 
@@ -47,7 +48,7 @@ function M.send(request, opts)
                 curl = curl,
             })
             win = response_window:open()
-            M.last_request_win = win
+            M.last_request_wins:push(win)
         end
 
         local function default_on_response(response, curl)
@@ -136,8 +137,16 @@ function M.send(request, opts)
     end
 end
 
-function M.resend_last_request()
-    M.send(M.last_request, { win = M.last_request_win })
+function M.resend_last_request(index)
+    index = index or -1
+
+    local request = M.last_requests:get(index)
+    if not request then
+        vim.notify("No last request at position: " .. index)
+        return
+    end
+
+    M.send(request, { win = M.last_request_wins:get(index) })
 end
 
 function M.send_buffer_request()
@@ -317,6 +326,9 @@ vim.keymap.set("n", "gH", function()
 end)
 vim.keymap.set("n", "gL", function()
     Nurl.resend_last_request()
+end)
+vim.keymap.set("n", "g;", function()
+    Nurl.resend_last_request(-2)
 end)
 vim.keymap.set("n", "R", function()
     Nurl.send_request_at_cursor()

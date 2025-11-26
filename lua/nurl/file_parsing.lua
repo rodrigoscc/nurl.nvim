@@ -2,15 +2,13 @@ local fs = require("nurl.fs")
 local M = {}
 
 ---@class nurl.File
-local File = {
-    contents = "",
-    path = "",
-    ---@type vim.treesitter.LanguageTree
-    tree = nil,
-}
+---@field contents string
+---@field path string
+---@field tree vim.treesitter.LanguageTree
+local File = {}
 
 function File:new(o)
-    o = o or {}
+    o = o or { contents = "", path = "", tree = nil }
 
     assert(o.tree, "tree cannot be nil")
 

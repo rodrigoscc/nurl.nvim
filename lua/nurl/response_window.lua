@@ -10,7 +10,7 @@ local config = require("nurl.config")
 ---@field curl nurl.Curl
 ---@field elapsed_time nurl.ElapsedTimeFloating | nil
 ---@field buffers table<nurl.BufferType, integer> | nil
-local ResponseWindow = { win = nil, elapsed_time = nil, buffers = nil }
+local ResponseWindow = {}
 
 function ResponseWindow:new(o)
     o = o or {}

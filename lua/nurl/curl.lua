@@ -2,7 +2,7 @@
 ---@field args string[]
 ---@field result vim.SystemCompleted | nil
 ---@field exec_datetime string | nil
-local Curl = { args = {}, result = nil, exec_datetime = nil }
+local Curl = {}
 
 function Curl:new(o)
     o = o or {}

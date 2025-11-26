@@ -14,11 +14,10 @@ local Spinner = {
         "⠇",
         "⠏",
     },
-    current_frame = 1,
 }
 
 function Spinner:new()
-    local o = {}
+    local o = { current_frame = 1 }
     o = setmetatable(o, self)
     self.__index = self
     return o
