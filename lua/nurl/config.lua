@@ -1,6 +1,10 @@
 ---@class nurl.config: nurl.Config
 local M = {}
 
+---@class nurl.ResponseFormatter
+---@field cmd string[]
+---@field available? fun(): boolean
+
 ---@class nurl.Config
 local defaults = {
     dir = ".nurl",
@@ -69,6 +73,15 @@ local defaults = {
             winbar_loading = "NurlWinbarLoading",
             winbar_time = "NurlWinbarTime",
             winbar_error = "NurlWinbarError",
+        },
+    },
+    ---@type table<string, nurl.ResponseFormatter>
+    formatters = {
+        json = {
+            cmd = { "jq", "--sort-keys", "--indent", "2" },
+            available = function()
+                return vim.fn.executable("jq") == 1
+            end,
         },
     },
 }

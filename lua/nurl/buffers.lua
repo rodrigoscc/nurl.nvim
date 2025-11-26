@@ -74,55 +74,43 @@ local function guess_file_type(headers)
 end
 
 ---@param bufnr integer
+---@param content string
+---@param file_type string
+local function set_body_buffer(bufnr, content, file_type)
+    local lines = vim.split(content, "\n")
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
+    vim.api.nvim_set_option_value("filetype", file_type, { buf = bufnr })
+end
+
+---@param bufnr integer
 ---@param response nurl.Response
 local function populate_body_buffer(bufnr, response)
     local file_type = guess_file_type(response.headers)
+    local formatter = config.formatters[file_type]
 
-    if file_type == "json" and vim.fn.executable("jq") == 1 then
+    if
+        formatter ~= nil
+        and (formatter.available == nil or formatter.available())
+    then
         vim.system(
-            { "jq", "--sort-keys", "--indent", "2" },
+            formatter.cmd,
             { text = true, stdin = response.body },
             function(out)
                 vim.schedule(function()
+                    local content
                     if out.code == 0 then
-                        local body_lines = vim.split(out.stdout, "\n")
-                        vim.api.nvim_buf_set_lines(
-                            bufnr,
-                            0,
-                            -1,
-                            true,
-                            body_lines
-                        )
-
-                        vim.api.nvim_set_option_value(
-                            "filetype",
-                            file_type,
-                            { buf = bufnr }
-                        )
+                        content = out.stdout or ""
                     else
-                        local body_lines = vim.split(response.body, "\n")
-                        vim.api.nvim_buf_set_lines(
-                            bufnr,
-                            0,
-                            -1,
-                            true,
-                            body_lines
-                        )
-
-                        vim.api.nvim_set_option_value(
-                            "filetype",
-                            file_type,
-                            { buf = bufnr }
-                        )
+                        content = response.body
                     end
+                    set_body_buffer(bufnr, content, file_type)
                 end)
             end
         )
     else
-        local body_lines = vim.split(response.body, "\n")
-        vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, body_lines)
-
-        vim.api.nvim_set_option_value("filetype", file_type, { buf = bufnr })
+        vim.schedule(function()
+            set_body_buffer(bufnr, response.body, file_type)
+        end)
     end
 end
 
