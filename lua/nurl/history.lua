@@ -141,17 +141,17 @@ end
 
 function M.delete_old_items()
     local result = M.db:exec(
-        string.format(
-            [[DELETE FROM request_history
+        [[DELETE FROM request_history
 WHERE id IN (
   SELECT id FROM request_history
   ORDER BY time ASC
-  LIMIT %d
+  LIMIT ?
 )
-AND (SELECT COUNT(*) FROM request_history) >= %d;]],
+AND (SELECT COUNT(*) FROM request_history) >= ?;]],
+        {
             config.history.history_buffer,
-            config.history.max_history_items + config.history.history_buffer
-        )
+            config.history.max_history_items + config.history.history_buffer,
+        }
     )
 
     result:close()
