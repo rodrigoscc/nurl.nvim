@@ -1,4 +1,5 @@
 local requests = require("nurl.requests")
+local file = require("snacks.picker.format").file
 
 local M = {}
 
@@ -18,6 +19,32 @@ function M.format_history_item(item)
         ret,
         { tostring(item.response.status_code), "SnacksPickerIdx" }
     )
+
+    return ret
+end
+
+function M.format_jump_snacks_item(item, picker)
+    local ret = {}
+
+    vim.list_extend(ret, file(item, picker))
+
+    table.insert(ret, { item.request.method, "SnacksPickerFileType" })
+    table.insert(ret, { " " })
+
+    table.insert(ret, { item.request.url, "SnacksPickerLabel" })
+    table.insert(ret, { " " })
+
+    return ret
+end
+
+function M.format_send_snacks_item(item)
+    local ret = {}
+
+    table.insert(ret, { item.request.method, "SnacksPickerFileType" })
+    table.insert(ret, { " " })
+
+    table.insert(ret, { item.request.url, "SnacksPickerLabel" })
+    table.insert(ret, { " " })
 
     return ret
 end
@@ -102,8 +129,7 @@ function M.project_request_items_to_send_snacks_items(project_request_items)
 
             local snacks_item = {
                 idx = i,
-                text = expanded.method .. " " .. expanded.url,
-                request = request_item.request,
+                request = expanded,
                 score = 1,
                 preview = {
                     text = preview_json,
@@ -124,8 +150,7 @@ function M.project_request_items_to_jump_snacks_items(project_request_items)
 
             local snacks_item = {
                 idx = i,
-                text = expanded.method .. " " .. expanded.url,
-                request = item,
+                request = expanded,
                 file = item.file,
                 score = 1,
                 pos = { item.start_row, item.start_col },

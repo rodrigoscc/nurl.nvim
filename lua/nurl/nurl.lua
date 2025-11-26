@@ -181,12 +181,7 @@ function M.send_project_request()
         title = "Nurl: run",
         items = snacks_items,
         preview = "preview",
-        format = "text",
-        formatters = {
-            text = {
-                ft = "http",
-            },
-        },
+        format = snacks.format_send_snacks_item,
         confirm = function(picker, item)
             picker:close()
             M.send(item.request)
@@ -200,15 +195,10 @@ function M.jump_to_project_request()
     local snacks_items =
         snacks.project_request_items_to_jump_snacks_items(project_requests)
 
-    local file = require("snacks.picker.format").file
-    local text = require("snacks.picker.format").text
-
     Snacks.picker.pick("requests", {
         title = "Nurl: jump",
         items = snacks_items,
-        format = function(item, picker)
-            return vim.list_extend(file(item, picker), text(item, picker))
-        end,
+        format = snacks.format_jump_snacks_item,
     })
 end
 
