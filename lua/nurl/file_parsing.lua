@@ -36,6 +36,15 @@ local QUERY_LAST_ENV_VAR = [[
                  (field) @last_field .)))))
 ]]
 
+local QUERY_ENV_TABLE = [[
+(return_statement
+  (expression_list
+    (table_constructor
+      (field
+        name: (identifier) @env (#eq? @env "%s")
+        value: (table_constructor) @env_table))))
+]]
+
 local QUERY_REQUESTS = [[
 (return_statement (expression_list (table_constructor (field) @request)))
 ]]
@@ -180,6 +189,14 @@ function File:find_last_environment_variable_node(environment)
     return find_capture(query, self:_root(), self.contents, "last_field")
 end
 
+---@param environment string
+---@return TSNode | nil, string | nil
+function File:find_environment_table_node(environment)
+    local query_string = string.format(QUERY_ENV_TABLE, environment)
+    local query = get_query(query_string)
+    return find_capture(query, self:_root(), self.contents, "env_table")
+end
+
 ---@return integer[][] ranges array of {start_row, start_col, end_row, end_col}
 function File:list_requests_ranges()
     local query = get_query(QUERY_REQUESTS)
@@ -227,18 +244,24 @@ end
 ---@param variable string
 ---@param new_text string
 function File:set_environment_variable(environment, variable, new_text)
-    local value_node =
-        self:find_environment_variable_value_node(environment, variable)
+    local value_node = self:find_environment_variable_value_node(environment, variable)
 
     if value_node ~= nil then
         self:replace_node(value_node, new_text)
-    else
-        local last_variable_node =
-            self:find_last_environment_variable_node(environment)
-        if last_variable_node then
-            local formatted = string.format("%s = %s", variable, new_text)
-            self:insert_after_node(last_variable_node, formatted)
-        end
+        return
+    end
+
+    local last_variable_node = self:find_last_environment_variable_node(environment)
+    if last_variable_node then
+        local formatted = string.format("%s = %s", variable, new_text)
+        self:insert_after_node(last_variable_node, formatted)
+        return
+    end
+
+    local env_table_node = self:find_environment_table_node(environment)
+    if env_table_node then
+        local formatted = string.format("{ %s = %s }", variable, new_text)
+        self:replace_node(env_table_node, formatted)
     end
 end
 
