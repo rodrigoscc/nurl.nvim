@@ -1,59 +1,8 @@
 local fs = require("nurl.fs")
+
 local M = {}
 
----@class nurl.File
----@field contents string
----@field path string
----@field tree vim.treesitter.LanguageTree
-local File = {}
-
-function File:new(o)
-    o = o or { contents = "", path = "", tree = nil }
-
-    assert(o.tree, "tree cannot be nil")
-
-    o = setmetatable(o, self)
-    self.__index = self
-    return o
-end
-
---- Append line to file
----@param text string
-function File:append_line(text)
-    self.contents = self.contents .. "\n" .. text
-end
-
---- Insert text in position
----@param i number
----@param new_text string
-function File:insert(i, new_text)
-    self.contents = self.contents:sub(1, i)
-        .. new_text
-        .. self.contents:sub(i + 1)
-end
-
---- Replace some text with other text
----@param i number
----@param j number
----@param new_text string
-function File:replace(i, j, new_text)
-    self.contents = self.contents:sub(1, i - 1)
-        .. new_text
-        .. self.contents:sub(j + 1)
-end
-
---- Remove some text in a range
----@param i number
----@param j number
-function File:remove(i, j)
-    self.contents = self.contents:sub(1, i - 1) .. self.contents:sub(j + 1)
-end
-
-function File:find_environment_variable_value_node(environment, variable)
-    local query = vim.treesitter.query.parse(
-        "lua",
-        string.format(
-            [[
+local QUERY_ENV_VAR_VALUE = [[
 (return_statement
   (expression_list
     (table_constructor
@@ -63,33 +12,9 @@ function File:find_environment_variable_value_node(environment, variable)
                 (field
                   name: (identifier) @variable_name (#eq? @variable_name "%s")
                   value: (_) @variable_value))))))
-    ]],
-            environment,
-            variable
-        )
-    )
+]]
 
-    for _, match in query:iter_matches(self.tree:root(), self.contents, 0, -1) do
-        for id, nodes in pairs(match) do
-            local name = query.captures[id]
-            for _, node in ipairs(nodes) do
-                if name == "variable_value" then
-                    local text =
-                        vim.treesitter.get_node_text(node, self.contents)
-                    return node, text
-                end
-            end
-        end
-    end
-
-    return nil, nil
-end
-
-function File:find_environment_variable_node(environment, variable)
-    local query = vim.treesitter.query.parse(
-        "lua",
-        string.format(
-            [[
+local QUERY_ENV_VAR_FIELD = [[
 (return_statement
   (expression_list
     (table_constructor
@@ -99,94 +24,184 @@ function File:find_environment_variable_node(environment, variable)
                 (field
                   name: (identifier) @variable_name (#eq? @variable_name "%s")
                   value: (_) @variable_value) @field)))))
-    ]],
-            environment,
-            variable
-        )
-    )
+]]
 
-    for _, match in query:iter_matches(self.tree:root(), self.contents, 0, -1) do
-        for id, nodes in pairs(match) do
-            local name = query.captures[id]
-            for _, node in ipairs(nodes) do
-                if name == "field" then
-                    local text =
-                        vim.treesitter.get_node_text(node, self.contents)
-                    return node, text
-                end
-            end
-        end
-    end
-
-    return nil, nil
-end
-
-function File:find_last_environment_variable_node(environment)
-    local query = vim.treesitter.query.parse(
-        "lua",
-        string.format(
-            [[
+local QUERY_LAST_ENV_VAR = [[
 (return_statement
   (expression_list
     (table_constructor
       (field
-        name: (identifier) @env (#eq? @env "default")
+        name: (identifier) @env (#eq? @env "%s")
         value: (table_constructor
                  (field) @last_field .)))))
-    ]],
-            environment
-        )
-    )
+]]
 
-    for _, match in query:iter_matches(self.tree:root(), self.contents, 0, -1) do
+local QUERY_REQUESTS = [[
+(return_statement (expression_list (table_constructor (field) @request)))
+]]
+
+---@type table<string, vim.treesitter.Query>
+local query_cache = {}
+
+---@param query_string string
+---@return vim.treesitter.Query
+local function get_query(query_string)
+    if not query_cache[query_string] then
+        query_cache[query_string] =
+            vim.treesitter.query.parse("lua", query_string)
+    end
+    return query_cache[query_string]
+end
+
+---@param query vim.treesitter.Query
+---@param root TSNode
+---@param source string
+---@param capture_name string
+---@return TSNode|nil, string|nil
+local function find_capture(query, root, source, capture_name)
+    for _, match in query:iter_matches(root, source, 0, -1) do
         for id, nodes in pairs(match) do
-            local name = query.captures[id]
-            for _, node in ipairs(nodes) do
-                if name == "last_field" then
-                    local text =
-                        vim.treesitter.get_node_text(node, self.contents)
-                    return node, text
-                end
+            if query.captures[id] == capture_name then
+                local node = nodes[1]
+                local text = vim.treesitter.get_node_text(node, source)
+                return node, text
             end
         end
     end
-
     return nil, nil
 end
 
-function File:list_requests_ranges()
-    local query = vim.treesitter.query.parse(
-        "lua",
-        [[
-(return_statement (expression_list (table_constructor (field) @request)))
-    ]]
-    )
-
-    local ranges = {}
-
-    for _, match in query:iter_matches(self.tree:root(), self.contents, 0, -1) do
+---@param query vim.treesitter.Query
+---@param root TSNode
+---@param source string
+---@param capture_name string
+---@return {node: TSNode, text: string}[]
+local function find_all_captures(query, root, source, capture_name)
+    local results = {}
+    for _, match in query:iter_matches(root, source, 0, -1) do
         for id, nodes in pairs(match) do
-            local name = query.captures[id]
-            for _, node in ipairs(nodes) do
-                if name == "request" then
-                    local start_row, start_col, end_row, end_col = node:range()
-                    table.insert(
-                        ranges,
-                        { start_row, start_col, end_row, end_col }
-                    )
+            if query.captures[id] == capture_name then
+                for _, node in ipairs(nodes) do
+                    local text = vim.treesitter.get_node_text(node, source)
+                    table.insert(results, { node = node, text = text })
                 end
             end
         end
     end
+    return results
+end
 
+---@class nurl.File
+---@field contents string
+---@field path string
+---@field private _tree TSTree
+local File = {}
+File.__index = File
+
+---@param path string
+---@param contents string
+---@param tree TSTree
+---@return nurl.File
+function File:new(path, contents, tree)
+    return setmetatable({
+        path = path,
+        contents = contents,
+        _tree = tree,
+    }, self)
+end
+
+function File:_reparse()
+    local parser = vim.treesitter.get_string_parser(self.contents, "lua")
+    self._tree = parser:parse()[1]
+end
+
+---@return TSNode
+function File:_root()
+    return self._tree:root()
+end
+
+---@param text string
+function File:append_line(text)
+    self.contents = self.contents .. "\n" .. text
+    self:_reparse()
+end
+
+---@param i number
+---@param new_text string
+function File:insert(i, new_text)
+    self.contents = self.contents:sub(1, i)
+        .. new_text
+        .. self.contents:sub(i + 1)
+    self:_reparse()
+end
+
+---@param i number
+---@param j number
+---@param new_text string
+function File:replace(i, j, new_text)
+    self.contents = self.contents:sub(1, i - 1)
+        .. new_text
+        .. self.contents:sub(j + 1)
+    self:_reparse()
+end
+
+---@param i number
+---@param j number
+function File:remove(i, j)
+    self.contents = self.contents:sub(1, i - 1) .. self.contents:sub(j + 1)
+    self:_reparse()
+end
+
+---@param environment string
+---@param variable string
+---@return TSNode | nil, string | nil
+function File:find_environment_variable_value_node(environment, variable)
+    local query_string =
+        string.format(QUERY_ENV_VAR_VALUE, environment, variable)
+    local query = get_query(query_string)
+    return find_capture(query, self:_root(), self.contents, "variable_value")
+end
+
+---@param environment string
+---@param variable string
+---@return TSNode | nil, string | nil
+function File:find_environment_variable_node(environment, variable)
+    local query_string =
+        string.format(QUERY_ENV_VAR_FIELD, environment, variable)
+    local query = get_query(query_string)
+    return find_capture(query, self:_root(), self.contents, "field")
+end
+
+---@param environment string
+---@return TSNode | nil, string | nil
+function File:find_last_environment_variable_node(environment)
+    local query_string = string.format(QUERY_LAST_ENV_VAR, environment)
+    local query = get_query(query_string)
+    return find_capture(query, self:_root(), self.contents, "last_field")
+end
+
+---@return integer[][] ranges array of {start_row, start_col, end_row, end_col}
+function File:list_requests_ranges()
+    local query = get_query(QUERY_REQUESTS)
+    local captures =
+        find_all_captures(query, self:_root(), self.contents, "request")
+
+    local ranges = {}
+    for _, capture in ipairs(captures) do
+        local start_row, start_col, end_row, end_col = capture.node:range()
+        table.insert(ranges, { start_row, start_col, end_row, end_col })
+    end
     return ranges
 end
 
+---@param node TSNode
+---@param new_text string
 function File:replace_node(node, new_text)
     local _, _, start_bytes, _, _, end_bytes = node:range(true)
     self:replace(start_bytes, end_bytes, new_text)
 end
 
+---@param node TSNode
 function File:remove_node(node)
     local _, _, start_bytes, _, _, end_bytes = node:range(true)
 
@@ -196,6 +211,8 @@ function File:remove_node(node)
     self:remove(start_bytes, end_bytes)
 end
 
+---@param node TSNode
+---@param new_text string
 function File:insert_after_node(node, new_text)
     local _, _, _, _, _, end_bytes = node:range(true)
 
@@ -206,6 +223,9 @@ function File:insert_after_node(node, new_text)
     self:insert(end_bytes, new_text)
 end
 
+---@param environment string
+---@param variable string
+---@param new_text string
 function File:set_environment_variable(environment, variable, new_text)
     local value_node =
         self:find_environment_variable_value_node(environment, variable)
@@ -215,11 +235,15 @@ function File:set_environment_variable(environment, variable, new_text)
     else
         local last_variable_node =
             self:find_last_environment_variable_node(environment)
-        new_text = string.format("%s = %s", variable, new_text)
-        self:insert_after_node(last_variable_node, new_text)
+        if last_variable_node then
+            local formatted = string.format("%s = %s", variable, new_text)
+            self:insert_after_node(last_variable_node, formatted)
+        end
     end
 end
 
+---@param environment string
+---@param variable string
 function File:unset_environment_variable(environment, variable)
     local node = self:find_environment_variable_node(environment, variable)
     if node ~= nil then
@@ -253,32 +277,20 @@ function File:save()
     end
 end
 
----@class nurl.FileParser
-local FileParser = {}
+---@param path string
+---@return nurl.File | nil, string | nil
+function M.parse(path)
+    local contents = fs.read(path)
+    if not contents then
+        return nil, "Failed to read file: " .. path
+    end
 
-function FileParser:new(o)
-    o = o or {}
-    o = setmetatable(o, self)
-    self.__index = self
-    return o
-end
-
-function FileParser:parse(path)
-    local file_contents = fs.read(path)
-
-    local parser = vim.treesitter.get_string_parser(file_contents, "lua")
+    local parser = vim.treesitter.get_string_parser(contents, "lua")
     local tree = parser:parse()[1]
 
-    return File:new({ path = path, tree = tree, contents = file_contents })
+    return File:new(path, contents, tree)
 end
 
--- local p = FileParser:new()
--- local f = p:parse(".nurl/environments.lua")
-
--- f:replace_environment_variable_value("default", "session_id", [["dani"]])
--- f:unset_environment_variable("default", "title")
--- f:save()
-
-M.FileParser = FileParser
+M.File = File
 
 return M

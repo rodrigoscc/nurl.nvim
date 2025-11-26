@@ -1,5 +1,5 @@
 local config = require("nurl.config")
-local FileParser = require("nurl.file_parsing").FileParser
+local file_parsing = require("nurl.file_parsing")
 
 local M = {}
 
@@ -21,25 +21,28 @@ function M.requests()
     local project_requests = {}
 
     for _, file_path in ipairs(lua_files) do
-        local file_parser = FileParser:new()
-        local file = file_parser:parse(file_path)
+        local file, err = file_parsing.parse(file_path)
+        if file then
+            local request_ranges = file:list_requests_ranges()
 
-        local request_ranges = file:list_requests_ranges()
+            local file_requests = dofile(file_path)
 
-        local file_requests = dofile(file_path)
+            for i, request in ipairs(file_requests) do
+                local request_range = request_ranges[i]
+                local start_row, start_col, end_row, end_col =
+                    unpack(request_range)
 
-        for i, request in ipairs(file_requests) do
-            local request_range = request_ranges[i]
-            local start_row, start_col, end_row, end_col = unpack(request_range)
-
-            table.insert(project_requests, {
-                file = file_path,
-                request = request,
-                start_row = start_row + 1, -- treesitter ranges starts at 0
-                start_col = start_col,
-                end_row = end_row + 1, -- treesitter ranges starts at 0
-                end_col = end_col,
-            })
+                table.insert(project_requests, {
+                    file = file_path,
+                    request = request,
+                    start_row = start_row + 1,
+                    start_col = start_col,
+                    end_row = end_row + 1,
+                    end_col = end_col,
+                })
+            end
+        else
+            vim.notify("Skipping file: " .. err, vim.log.levels.WARN)
         end
     end
 

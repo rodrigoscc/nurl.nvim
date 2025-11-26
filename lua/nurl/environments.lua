@@ -6,7 +6,7 @@
 
 local config = require("nurl.config")
 local fs = require("nurl.fs")
-local FileParser = require("nurl.file_parsing").FileParser
+local file_parsing = require("nurl.file_parsing")
 local uv = vim.uv or vim.loop
 local variables = require("nurl.variables")
 
@@ -99,8 +99,14 @@ function M.set(variable_name, value)
     local environments_path =
         vim.fs.joinpath(config.dir, config.environments_file)
 
-    local parser = FileParser:new()
-    local file = parser:parse(environments_path)
+    local file, err = file_parsing.parse(environments_path)
+    if not file then
+        vim.notify(
+            "Could not parse environments file: " .. err,
+            vim.log.levels.ERROR
+        )
+        return
+    end
 
     local new_text
     if type(value) == "string" then
