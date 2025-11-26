@@ -150,7 +150,7 @@ end
 function M.send_buffer_request()
     local buffer_requests = dofile(vim.fn.expand("%"))
 
-    pickers.pick_request("Nurl: run", buffer_requests, function(request)
+    pickers.pick_request("Nurl: send", buffer_requests, function(request)
         M.send(request)
     end)
 end
@@ -158,7 +158,7 @@ end
 function M.send_project_request()
     local project_requests = projects.requests()
     pickers.pick_project_request_item(
-        "Nurl: run",
+        "Nurl: send",
         project_requests,
         function(item)
             M.send(item.request)

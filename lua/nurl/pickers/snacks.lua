@@ -36,13 +36,13 @@ local function format_project_request_item(item, picker)
     table.insert(ret, { "", "SnacksPickerIcon" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.file, "SnacksPickerDir" })
-    table.insert(ret, { " " })
-
     table.insert(ret, { item.item.request.method, "SnacksPickerFileType" })
     table.insert(ret, { " " })
 
     table.insert(ret, { item.item.request.url, "SnacksPickerLabel" })
+    table.insert(ret, { " " })
+
+    table.insert(ret, { item.file, "SnacksPickerDir" })
     table.insert(ret, { " " })
 
     return ret
@@ -159,7 +159,11 @@ local function project_request_items_to_snacks_items(project_request_items)
                 idx = i,
                 item = request_item,
                 score = 1,
-                text = expanded.method .. " " .. expanded.url,
+                text = expanded.method
+                    .. " "
+                    .. expanded.url
+                    .. " "
+                    .. request_item.file,
                 preview = {
                     text = preview_json,
                     ft = "json",

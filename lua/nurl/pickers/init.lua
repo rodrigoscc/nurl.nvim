@@ -1,12 +1,15 @@
 local M = {}
 
-local pickers_interfaces = { snacks = "nurl.pickers.snacks" }
+local pickers_interfaces = {
+    { module = "snacks", interface = "nurl.pickers.snacks" },
+    { module = "telescope", interface = "nurl.pickers.telescope" },
+}
 
 local function find_picker_interface()
-    for picker_module, interface_module in pairs(pickers_interfaces) do
-        local status = pcall(require, picker_module)
+    for _, opts in ipairs(pickers_interfaces) do
+        local status = pcall(require, opts.module)
         if status then
-            return require(interface_module)
+            return require(opts.interface)
         end
     end
 
