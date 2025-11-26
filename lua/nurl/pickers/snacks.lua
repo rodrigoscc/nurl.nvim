@@ -65,21 +65,34 @@ local function format_request_item(item)
     return ret
 end
 
+local function get_preview(request)
+    local ft = "text"
+    local text = ""
+
+    if request.data then
+        if type(request.data) == "table" then
+            text = vim.json.encode(request.data)
+            ft = "json"
+        else
+            text = request.data
+        end
+    elseif request.data_urlencode then
+        text = vim.json.encode(request.data_urlencode)
+        ft = "json"
+    elseif request.form then
+        text = vim.json.encode(request.form)
+        ft = "json"
+    end
+
+    return { text = text, ft = ft }
+end
+
 ---@param history_items nurl.HistoryItem[]
 ---@return snacks.picker.Item[]
 local function history_items_to_snacks_items(history_items)
     return vim.iter(ipairs(history_items))
         :map(function(i, item)
             local request, response, curl = unpack(item)
-
-            local preview_json = ""
-            if request.data then
-                preview_json = vim.json.encode(request.data)
-            elseif request.data_urlencode then
-                preview_json = vim.json.encode(request.data_urlencode)
-            elseif request.form then
-                preview_json = vim.json.encode(request.form)
-            end
 
             local snacks_item = {
                 idx = i,
@@ -94,10 +107,7 @@ local function history_items_to_snacks_items(history_items)
                 ),
                 response = response,
                 curl = curl,
-                preview = {
-                    text = preview_json,
-                    ft = "json",
-                },
+                preview = get_preview(request),
             }
 
             return snacks_item
@@ -112,24 +122,12 @@ local function super_requests_to_snacks_items(super_requests)
         :map(function(i, request)
             local expanded = requests.expand(request)
 
-            local preview_json = ""
-            if expanded.data then
-                preview_json = vim.json.encode(expanded.data)
-            elseif expanded.data_urlencode then
-                preview_json = vim.json.encode(expanded.data_urlencode)
-            elseif expanded.form then
-                preview_json = vim.json.encode(expanded.form)
-            end
-
             local item = {
                 idx = i,
                 text = expanded.method .. " " .. expanded.url,
                 request = expanded,
                 score = 1,
-                preview = {
-                    text = preview_json,
-                    ft = "json",
-                },
+                preview = get_preview(expanded),
             }
 
             return item
@@ -144,15 +142,6 @@ local function project_request_items_to_snacks_items(project_request_items)
         :map(function(i, request_item)
             local expanded = requests.expand(request_item.request)
 
-            local preview_json = ""
-            if expanded.data then
-                preview_json = vim.json.encode(expanded.data)
-            elseif expanded.data_urlencode then
-                preview_json = vim.json.encode(expanded.data_urlencode)
-            elseif expanded.form then
-                preview_json = vim.json.encode(expanded.form)
-            end
-
             request_item.request = expanded
 
             local snacks_item = {
@@ -164,10 +153,7 @@ local function project_request_items_to_snacks_items(project_request_items)
                     .. expanded.url
                     .. " "
                     .. request_item.file,
-                preview = {
-                    text = preview_json,
-                    ft = "json",
-                },
+                preview = get_preview(request_item.request),
                 file = request_item.file,
                 pos = { request_item.start_row, request_item.start_col },
             }
@@ -188,11 +174,6 @@ function M.pick_request(title, super_requests, on_pick)
         items = items,
         preview = "preview",
         format = format_request_item,
-        formatters = {
-            text = {
-                ft = "http",
-            },
-        },
         confirm = function(picker, item)
             picker:close()
             if on_pick ~= nil then

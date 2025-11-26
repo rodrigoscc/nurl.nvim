@@ -13,9 +13,9 @@ local function make_request_previewer()
     return previewers.new_buffer_previewer({
         title = "Request Body",
         define_preview = function(self, entry)
-            local preview_text = entry.preview_text or ""
-            if preview_text ~= "" then
-                local lines = vim.split(preview_text, "\n")
+            local preview = entry.preview
+            if preview then
+                local lines = vim.split(preview.text, "\n")
                 vim.api.nvim_buf_set_lines(
                     self.state.bufnr,
                     0,
@@ -23,21 +23,32 @@ local function make_request_previewer()
                     false,
                     lines
                 )
-                vim.bo[self.state.bufnr].filetype = "json"
+                vim.bo[self.state.bufnr].filetype = preview.ft
             end
         end,
     })
 end
 
-local function get_preview_json(request)
+local function get_preview(request)
+    local ft = "text"
+    local text = ""
+
     if request.data then
-        return vim.json.encode(request.data)
+        if type(request.data) == "table" then
+            text = vim.json.encode(request.data)
+            ft = "json"
+        else
+            text = request.data
+        end
     elseif request.data_urlencode then
-        return vim.json.encode(request.data_urlencode)
+        text = vim.json.encode(request.data_urlencode)
+        ft = "json"
     elseif request.form then
-        return vim.json.encode(request.form)
+        text = vim.json.encode(request.form)
+        ft = "json"
     end
-    return ""
+
+    return { text = text, ft = ft }
 end
 
 ---@param title string
@@ -74,7 +85,7 @@ function M.pick_request(title, super_requests, on_pick)
                         ordinal = expanded.method .. " " .. expanded.url,
                         method = expanded.method,
                         url = expanded.url,
-                        preview_text = get_preview_json(expanded),
+                        preview = get_preview(expanded),
                     }
                 end,
             }),
@@ -139,7 +150,7 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
                         filename = request_item.file,
                         lnum = request_item.start_row,
                         col = request_item.start_col,
-                        preview_text = get_preview_json(expanded),
+                        preview = get_preview(expanded),
                     }
                 end,
             }),
@@ -213,7 +224,7 @@ function M.pick_request_history_item(title, history_items, on_pick)
                         method = request.method,
                         url = request.url,
                         status_code = response.status_code,
-                        preview_text = get_preview_json(request),
+                        preview = get_preview(request),
                     }
                 end,
             }),
