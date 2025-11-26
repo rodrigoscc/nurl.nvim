@@ -1,44 +1,53 @@
 local requests = require("nurl.requests")
-local file = require("snacks.picker.format").file
+local actions = require("snacks.picker.actions")
 
 local M = {}
 
-function M.format_history_item(item)
+local function format_history_item(item)
     local ret = {}
 
-    table.insert(ret, { item.curl.exec_datetime, "SnacksPickerComment" })
+    local request, response, curl = unpack(item.item)
+
+    table.insert(ret, { "", "SnacksPickerIcon" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.request.method, "SnacksPickerFileType" })
+    table.insert(ret, { curl.exec_datetime, "SnacksPickerComment" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.request.url, "SnacksPickerLabel" })
+    table.insert(ret, { request.method, "SnacksPickerFileType" })
     table.insert(ret, { " " })
 
-    table.insert(
-        ret,
-        { tostring(item.response.status_code), "SnacksPickerIdx" }
-    )
+    table.insert(ret, { request.url, "SnacksPickerLabel" })
+    table.insert(ret, { " " })
+
+    table.insert(ret, { tostring(response.status_code), "SnacksPickerIdx" })
 
     return ret
 end
 
-function M.format_jump_snacks_item(item, picker)
+local function format_project_request_item(item, picker)
     local ret = {}
 
-    vim.list_extend(ret, file(item, picker))
-
-    table.insert(ret, { item.request.method, "SnacksPickerFileType" })
+    table.insert(ret, { "", "SnacksPickerIcon" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.request.url, "SnacksPickerLabel" })
+    table.insert(ret, { item.file, "SnacksPickerDir" })
+    table.insert(ret, { " " })
+
+    table.insert(ret, { item.item.request.method, "SnacksPickerFileType" })
+    table.insert(ret, { " " })
+
+    table.insert(ret, { item.item.request.url, "SnacksPickerLabel" })
     table.insert(ret, { " " })
 
     return ret
 end
 
-function M.format_send_snacks_item(item)
+local function format_request_item(item)
     local ret = {}
+
+    table.insert(ret, { "", "SnacksPickerIcon" })
+    table.insert(ret, { " " })
 
     table.insert(ret, { item.request.method, "SnacksPickerFileType" })
     table.insert(ret, { " " })
@@ -50,7 +59,7 @@ function M.format_send_snacks_item(item)
 end
 
 ---@param history_items nurl.HistoryItem[]
-function M.history_items_to_snacks_items(history_items)
+local function history_items_to_snacks_items(history_items)
     return vim.iter(ipairs(history_items))
         :map(function(i, item)
             local request, response, curl = unpack(item)
@@ -67,7 +76,7 @@ function M.history_items_to_snacks_items(history_items)
             local snacks_item = {
                 idx = i,
                 score = 1,
-                request = request,
+                item = item,
                 text = string.format(
                     "%s %s %s %s",
                     curl.exec_datetime,
@@ -89,7 +98,7 @@ function M.history_items_to_snacks_items(history_items)
 end
 
 ---@param super_requests nurl.SuperRequest[]
-function M.super_requests_to_snacks_items(super_requests)
+local function super_requests_to_snacks_items(super_requests)
     return vim.iter(ipairs(super_requests))
         :map(function(i, request)
             local expanded = requests.expand(request)
@@ -106,7 +115,7 @@ function M.super_requests_to_snacks_items(super_requests)
             local item = {
                 idx = i,
                 text = expanded.method .. " " .. expanded.url,
-                request = request,
+                request = expanded,
                 score = 1,
                 preview = {
                     text = preview_json,
@@ -120,7 +129,7 @@ function M.super_requests_to_snacks_items(super_requests)
 end
 
 ---@param project_request_items nurl.ProjectRequestItem[]
-function M.project_request_items_to_send_snacks_items(project_request_items)
+local function project_request_items_to_snacks_items(project_request_items)
     return vim.iter(ipairs(project_request_items))
         :map(function(i, request_item)
             local expanded = requests.expand(request_item.request)
@@ -134,15 +143,19 @@ function M.project_request_items_to_send_snacks_items(project_request_items)
                 preview_json = vim.json.encode(expanded.form)
             end
 
+            request_item.request = expanded
+
             local snacks_item = {
                 idx = i,
-                request = expanded,
+                item = request_item,
                 score = 1,
                 text = expanded.method .. " " .. expanded.url,
                 preview = {
                     text = preview_json,
                     ft = "json",
                 },
+                file = request_item.file,
+                pos = { request_item.start_row, request_item.start_col },
             }
 
             return snacks_item
@@ -150,29 +163,73 @@ function M.project_request_items_to_send_snacks_items(project_request_items)
         :totable()
 end
 
+---@param title string
+---@param super_requests nurl.SuperRequest[]
+---@param on_pick? fun(request: nurl.SuperRequest)
+function M.pick_request(title, super_requests, on_pick)
+    local items = super_requests_to_snacks_items(super_requests)
+
+    Snacks.picker.pick("requests", {
+        title = title,
+        items = items,
+        preview = "preview",
+        format = format_request_item,
+        formatters = {
+            text = {
+                ft = "http",
+            },
+        },
+        confirm = function(picker, item)
+            picker:close()
+            if on_pick ~= nil then
+                on_pick(item.request)
+            end
+        end,
+    })
+end
+
+---@param title string
 ---@param project_request_items nurl.ProjectRequestItem[]
-function M.project_request_items_to_jump_snacks_items(project_request_items)
-    return vim.iter(ipairs(project_request_items))
-        :map(function(i, item)
-            local expanded = requests.expand(item.request)
+---@param on_pick? fun(item: nurl.ProjectRequestItem)
+function M.pick_project_request_item(title, project_request_items, on_pick)
+    local snacks_items =
+        project_request_items_to_snacks_items(project_request_items)
 
-            local snacks_item = {
-                idx = i,
-                request = expanded,
-                text = string.format(
-                    "%s %s %s",
-                    item.file,
-                    expanded.method,
-                    expanded.url
-                ),
-                file = item.file,
-                score = 1,
-                pos = { item.start_row, item.start_col },
-            }
+    Snacks.picker.pick("requests", {
+        title = title,
+        items = snacks_items,
+        preview = "preview",
+        format = format_project_request_item,
+        confirm = function(picker, item, action)
+            picker:close()
 
-            return snacks_item
-        end)
-        :totable()
+            if on_pick == nil then
+                actions.jump(picker, item, action)
+            else
+                on_pick(item.item)
+            end
+        end,
+    })
+end
+
+---@param title string
+---@param history_items nurl.HistoryItem[]
+---@param on_pick? fun(item: nurl.HistoryItem)
+function M.pick_request_history_item(title, history_items, on_pick)
+    local snacks_items = history_items_to_snacks_items(history_items)
+
+    Snacks.picker.pick("requests", {
+        title = title,
+        items = snacks_items,
+        preview = "preview",
+        format = format_history_item,
+        confirm = function(picker, item)
+            picker:close()
+            if on_pick ~= nil then
+                on_pick(item.item)
+            end
+        end,
+    })
 end
 
 return M

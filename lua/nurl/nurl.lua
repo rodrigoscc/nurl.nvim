@@ -6,8 +6,8 @@ local projects = require("nurl.projects")
 local environments = require("nurl.environments")
 local ResponseWindow = require("nurl.response_window")
 local history = require("nurl.history")
-local snacks = require("nurl.pickers.snacks")
 local Stack = require("nurl.utils.stack")
+local pickers = require("nurl.pickers")
 
 local M = {}
 
@@ -152,54 +152,41 @@ end
 function M.send_buffer_request()
     local buffer_requests = dofile(vim.fn.expand("%"))
 
-    local items = snacks.super_requests_to_snacks_items(buffer_requests)
-
-    Snacks.picker.pick("requests", {
-        title = "Nurl: run",
-        items = items,
-        preview = "preview",
-        format = "text",
-        formatters = {
-            text = {
-                ft = "http",
-            },
-        },
-        confirm = function(picker, item)
-            picker:close()
-            M.send(item.request)
-        end,
-    })
+    pickers.pick_request("Nurl: run", buffer_requests, function(request)
+        M.send(request)
+    end)
 end
 
 function M.send_project_request()
     local project_requests = projects.requests()
-
-    local snacks_items =
-        snacks.project_request_items_to_send_snacks_items(project_requests)
-
-    Snacks.picker.pick("requests", {
-        title = "Nurl: run",
-        items = snacks_items,
-        preview = "preview",
-        format = snacks.format_send_snacks_item,
-        confirm = function(picker, item)
-            picker:close()
+    pickers.pick_project_request_item(
+        "Nurl: run",
+        project_requests,
+        function(item)
             M.send(item.request)
-        end,
-    })
+        end
+    )
 end
 
 function M.jump_to_project_request()
     local project_requests = projects.requests()
+    pickers.pick_project_request_item("Nurl: jump", project_requests)
+end
 
-    local snacks_items =
-        snacks.project_request_items_to_jump_snacks_items(project_requests)
-
-    Snacks.picker.pick("requests", {
-        title = "Nurl: jump",
-        items = snacks_items,
-        format = snacks.format_jump_snacks_item,
-    })
+---@param cursor_row integer
+---@param cursor_col integer
+---@param request nurl.ProjectRequestItem
+local function is_cursor_contained_in_request_item(
+    cursor_row,
+    cursor_col,
+    request
+)
+    return (
+        request.start_row <= cursor_row
+        and request.end_row >= cursor_row
+        and (cursor_row ~= request.end_row or cursor_col < request.end_col)
+        and (cursor_row ~= request.start_row or cursor_col >= request.start_col)
+    )
 end
 
 function M.send_request_at_cursor()
@@ -208,15 +195,8 @@ function M.send_request_at_cursor()
     local project_requests = projects.requests()
 
     for _, request in ipairs(project_requests) do
-        local request_contains_cursor = (
-            request.start_row <= cursor_row
-            and request.end_row >= cursor_row
-            and (cursor_row ~= request.end_row or cursor_col < request.end_col)
-            and (
-                cursor_row ~= request.start_row
-                or cursor_col >= request.start_col
-            )
-        )
+        local request_contains_cursor =
+            is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
 
         if request_contains_cursor then
             M.send(request.request)
@@ -231,15 +211,8 @@ function M.yank_curl_at_cursor()
     local project_requests = projects.requests()
 
     for _, request in ipairs(project_requests) do
-        local request_contains_cursor = (
-            request.start_row <= cursor_row
-            and request.end_row >= cursor_row
-            and (cursor_row ~= request.end_row or cursor_col < request.end_col)
-            and (
-                cursor_row ~= request.start_row
-                or cursor_col >= request.start_col
-            )
-        )
+        local request_contains_cursor =
+            is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
 
         if request_contains_cursor then
             local internal_request = requests.expand(request.request)
@@ -280,24 +253,20 @@ end
 function M.open_history()
     local history_items = history.all()
 
-    local snacks_items = snacks.history_items_to_snacks_items(history_items)
-
-    Snacks.picker.pick("requests", {
-        title = "Nurl: history",
-        items = snacks_items,
-        preview = "preview",
-        format = snacks.format_history_item,
-        confirm = function(picker, item)
-            picker:close()
+    pickers.pick_request_history_item(
+        "Nurl: history",
+        history_items,
+        function(item)
+            local request, response, curl = unpack(item)
 
             local window = ResponseWindow:new({
-                request = item.request,
-                response = item.response,
-                curl = item.curl,
+                request = request,
+                response = response,
+                curl = curl,
             })
             window:open({ enter = true })
-        end,
-    })
+        end
+    )
 end
 
 -- require("nurl.config").setup()
