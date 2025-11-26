@@ -244,20 +244,23 @@ end
 ---@param variable string
 ---@param new_text string
 function File:set_environment_variable(environment, variable, new_text)
-    local value_node = self:find_environment_variable_value_node(environment, variable)
+    local value_node =
+        self:find_environment_variable_value_node(environment, variable)
 
     if value_node ~= nil then
         self:replace_node(value_node, new_text)
         return
     end
 
-    local last_variable_node = self:find_last_environment_variable_node(environment)
+    local last_variable_node =
+        self:find_last_environment_variable_node(environment)
     if last_variable_node then
         local formatted = string.format("%s = %s", variable, new_text)
         self:insert_after_node(last_variable_node, formatted)
         return
     end
 
+    -- Environment table is empty
     local env_table_node = self:find_environment_table_node(environment)
     if env_table_node then
         local formatted = string.format("{ %s = %s }", variable, new_text)
