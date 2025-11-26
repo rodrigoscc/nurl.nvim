@@ -41,9 +41,9 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-  "rodrigoscc/nurl.nvim",
-  dependencies = { "folke/snacks.nvim" },
-  opts = {},
+    "rodrigoscc/nurl.nvim",
+    dependencies = { "folke/snacks.nvim" },
+    opts = {},
 }
 ```
 
@@ -179,36 +179,36 @@ require("nurl").setup({
 ```lua
 ---@class nurl.SuperRequest
 {
-  -- Required: string, table of parts, or function
-  url = "https://api.example.com/users",
-  url = { "https://api.example.com", "v1", "users" },
-  url = function() return "https://api.example.com/users/id" end,
+    -- Required: string, table of parts, or function
+    url = "https://api.example.com/users",
+    url = { "https://api.example.com", "v1", "users" },
+    url = function() return "https://api.example.com/users/id" end,
 
-  -- Optional (defaults to GET)
-  method = "POST",
+    -- Optional (defaults to GET)
+    method = "POST",
 
-  -- Optional headers: table or function
-  headers = {
-    ["Authorization"] = "Bearer token",
-    ["Content-Type"] = "application/json",
-  },
-  headers = function() return { ["X-Request-Id"] = tostring(os.time()) } end,
+    -- Optional headers: table or function
+    headers = {
+        ["Authorization"] = "Bearer token",
+        ["Content-Type"] = "application/json",
+    },
+    headers = function() return { ["X-Request-Id"] = tostring(os.time()) } end,
 
-  -- Body (use only one): table, string, or function
-  data = { key = "value" },           -- Table: JSON encoded
-  data = '{"raw": "json"}',           -- String: sent as-is
-  data = function() return { ts = os.time() } end,
-  form = { field = "value" },         -- multipart/form-data
-  data_urlencode = { q = "search" },  -- URL encoded
+    -- Body (use only one): table, string, or function
+    data = { key = "value" },           -- Table: JSON encoded
+    data = '{"raw": "json"}',           -- String: sent as-is
+    data = function() return { ts = os.time() } end,
+    form = { field = "value" },         -- multipart/form-data
+    data_urlencode = { q = "search" },  -- URL encoded
 
-  -- Hooks
-  pre_hook = function(next, request)
-    -- Called before request, must call next() to proceed
-    next()
-  end,
-  post_hook = function(request, response)
-    -- Called after response received
-  end,
+    -- Hooks
+    pre_hook = function(next, request)
+        -- Called before request, must call next() to proceed
+        next()
+    end,
+    post_hook = function(request, response)
+        -- Called after response received
+    end,
 }
 ```
 
@@ -218,14 +218,14 @@ Use functions for dynamic values:
 
 ```lua
 {
-  url = function()
-    return "https://api.example.com/users/" .. vim.fn.input("User ID: ")
-  end,
-  headers = function()
-    return {
-      ["X-Request-Id"] = tostring(os.time()),
-    }
-  end,
+    url = function()
+        return "https://api.example.com/users/" .. vim.fn.input("User ID: ")
+    end,
+    headers = function()
+        return {
+            ["X-Request-Id"] = tostring(os.time()),
+        }
+    end,
 }
 ```
 
@@ -234,16 +234,19 @@ Use functions for dynamic values:
 Build URLs from parts:
 
 ```lua
-local env = require("nurl.environments")({
-    url = {
-        env.var("base_url"),
-        "v1",
-        "users",
-        function()
-            return vim.fn.input("ID: ")
-        end,
+return {
+    {
+        url = {
+            env.var("base_url"),
+            "v1",
+            "users",
+            function()
+                return vim.fn.input("ID: ")
+            end,
+        },
+        method = "GET",
     },
-})
+}
 ```
 
 ## Environments
