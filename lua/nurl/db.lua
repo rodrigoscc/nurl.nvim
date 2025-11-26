@@ -200,6 +200,7 @@ function Db:new(path)
     end
 
     result = db:exec([[CREATE TABLE IF NOT EXISTS request_history (
+  id INTEGER PRIMARY KEY,
   time TEXT,
   request_url TEXT,
   request_method TEXT,
