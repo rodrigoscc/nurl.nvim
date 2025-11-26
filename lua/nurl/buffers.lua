@@ -21,6 +21,7 @@ M.Buffer = {
 ---@field keys table<string, string|nurl.BufferAction>
 
 ---@param action string|nurl.BufferAction
+---@return fun()
 local function expand_keymap_rhs(action)
     local rhs
     if type(action) == "string" then
@@ -34,6 +35,8 @@ local function expand_keymap_rhs(action)
     return rhs
 end
 
+---@param headers table<string, string>
+---@return string|nil
 local function get_content_type(headers)
     for name, value in pairs(headers) do
         if string.lower(name) == "content-type" then
@@ -44,6 +47,8 @@ local function get_content_type(headers)
     return nil
 end
 
+---@param headers table<string, string>
+---@return string
 local function guess_file_type(headers)
     local content_type = get_content_type(headers)
     if content_type == nil then
@@ -68,6 +73,8 @@ local function guess_file_type(headers)
     return "text"
 end
 
+---@param bufnr integer
+---@param response nurl.Response
 local function populate_body_buffer(bufnr, response)
     local file_type = guess_file_type(response.headers)
 
@@ -119,6 +126,8 @@ local function populate_body_buffer(bufnr, response)
     end
 end
 
+---@param bufnr integer
+---@param response nurl.Response
 local function populate_headers_buffer(bufnr, response)
     local headers_lines = {
         table.concat({
@@ -136,6 +145,8 @@ local function populate_headers_buffer(bufnr, response)
     vim.api.nvim_set_option_value("filetype", "http", { buf = bufnr })
 end
 
+---@param bufnr integer
+---@param curl nurl.Curl
 local function populate_raw_buffer(bufnr, curl)
     local raw_lines = {}
     table.insert(raw_lines, curl:string())
@@ -154,6 +165,9 @@ local function populate_raw_buffer(bufnr, curl)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, raw_lines)
 end
 
+---@param bufnr integer
+---@param response nurl.Response
+---@param curl nurl.Curl
 local function populate_info_buffer(bufnr, response, curl)
     local info_lines = {}
 

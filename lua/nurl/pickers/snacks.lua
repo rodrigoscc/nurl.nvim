@@ -3,6 +3,8 @@ local actions = require("snacks.picker.actions")
 
 local M = {}
 
+---@param item snacks.picker.Item
+---@return snacks.picker.Highlight[]
 local function format_history_item(item)
     local ret = {}
 
@@ -25,6 +27,9 @@ local function format_history_item(item)
     return ret
 end
 
+---@param item snacks.picker.Item
+---@param picker snacks.Picker
+---@return snacks.picker.Highlight[]
 local function format_project_request_item(item, picker)
     local ret = {}
 
@@ -43,6 +48,8 @@ local function format_project_request_item(item, picker)
     return ret
 end
 
+---@param item snacks.picker.Item
+---@return snacks.picker.Highlight[]
 local function format_request_item(item)
     local ret = {}
 
@@ -59,6 +66,7 @@ local function format_request_item(item)
 end
 
 ---@param history_items nurl.HistoryItem[]
+---@return snacks.picker.Item[]
 local function history_items_to_snacks_items(history_items)
     return vim.iter(ipairs(history_items))
         :map(function(i, item)
@@ -98,6 +106,7 @@ local function history_items_to_snacks_items(history_items)
 end
 
 ---@param super_requests nurl.SuperRequest[]
+---@return snacks.picker.Item[]
 local function super_requests_to_snacks_items(super_requests)
     return vim.iter(ipairs(super_requests))
         :map(function(i, request)
@@ -129,6 +138,7 @@ local function super_requests_to_snacks_items(super_requests)
 end
 
 ---@param project_request_items nurl.ProjectRequestItem[]
+---@return snacks.picker.Item[]
 local function project_request_items_to_snacks_items(project_request_items)
     return vim.iter(ipairs(project_request_items))
         :map(function(i, request_item)
