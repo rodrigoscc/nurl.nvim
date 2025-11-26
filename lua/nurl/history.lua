@@ -157,6 +157,7 @@ AND (SELECT COUNT(*) FROM request_history) >= ?;]],
     result:close()
 end
 
+---@return nurl.HistoryItem[]
 function M.all()
     local result = M.db:exec([[SELECT
   time,
@@ -194,6 +195,7 @@ FROM
 ORDER BY time DESC]])
 
     local rows = result:all()
+    result:close()
 
     ---@type nurl.HistoryItem[]
     local history = {}
@@ -246,7 +248,7 @@ ORDER BY time DESC]])
             status_code = response_status_code,
             reason_phrase = response_reason_phrase,
             protocol = response_protocol,
-            headers = request_headers and vim.json.decode(response_headers),
+            headers = response_headers and vim.json.decode(response_headers),
             body = response_body,
             time = {
                 time_appconnect = response_time_appconnect,

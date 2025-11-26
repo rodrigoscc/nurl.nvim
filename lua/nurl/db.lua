@@ -90,35 +90,34 @@ local SQLITE_ROW = 100
 local SQLITE_DONE = 101
 
 ---@param stmt sqlite3_stmt*
+---@return nurl.Result
 function Result:new(stmt)
     local result = setmetatable({}, self)
     self.__index = self
 
     result.stmt = stmt
+    result.code = sqlite.sqlite3_step(result.stmt)
 
     ffi.gc(stmt, function()
-        self:close()
+        result:close()
     end)
-
-    self.code = sqlite.sqlite3_step(result.stmt)
 
     return result
 end
 
+---@return nurl.Row
 function Result:one()
     if self.code ~= SQLITE_ROW then
         error("Failed to get one row from result: " .. self.code)
     end
 
     local columns = {}
+    local column_count = sqlite.sqlite3_column_count(self.stmt)
 
-    local count_ret = ffi.string(sqlite.sqlite3_column_count(self.stmt))
-
-    local column_count = tonumber(count_ret)
-
-    for i = 0, column_count do
-        local ret = ffi.string(sqlite.sqlite3_column_text(self.stmt, i))
-        table.insert(columns, ret)
+    for i = 0, column_count - 1 do
+        local text_ptr = sqlite.sqlite3_column_text(self.stmt, i)
+        local value = text_ptr ~= nil and ffi.string(text_ptr) or nil
+        table.insert(columns, value)
     end
 
     local row = Row:new(columns)
@@ -131,6 +130,7 @@ function Result:one()
     return row
 end
 
+---@return nurl.Row[]
 function Result:all()
     local column_count = sqlite.sqlite3_column_count(self.stmt)
 
@@ -141,8 +141,9 @@ function Result:all()
         local columns = {}
 
         for i = 0, column_count - 1 do
-            local ret = ffi.string(sqlite.sqlite3_column_text(self.stmt, i))
-            table.insert(columns, ret)
+            local text_ptr = sqlite.sqlite3_column_text(self.stmt, i)
+            local value = text_ptr ~= nil and ffi.string(text_ptr) or nil
+            table.insert(columns, value)
         end
 
         local row = Row:new(columns)
@@ -223,12 +224,28 @@ function Db:new(path)
   curl_result_stdout TEXT,
   curl_result_stderr TEXT
 );]])
+    local create_code = result.code
     result:close()
 
-    if result.code ~= SQLITE_DONE then
+    if create_code ~= SQLITE_DONE then
         error(
             ("Failed to create request_history table %d: %s"):format(
-                result.code,
+                create_code,
+                db:errormsg()
+            )
+        )
+    end
+
+    result = db:exec(
+        [[CREATE INDEX IF NOT EXISTS idx_request_history_time ON request_history(time);]]
+    )
+    local index_code = result.code
+    result:close()
+
+    if index_code ~= SQLITE_DONE then
+        error(
+            ("Failed to create index on time column %d: %s"):format(
+                index_code,
                 db:errormsg()
             )
         )
