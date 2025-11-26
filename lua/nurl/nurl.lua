@@ -32,17 +32,17 @@ function M.send(request, opts)
     local win = opts.win
 
     local function next_function()
-        local internal_request = requests.expand(request)
+        local expanded_request = requests.expand(request)
 
-        M.last_requests:push(internal_request)
+        M.last_requests:push(expanded_request)
 
-        local curl = requests.build_curl(internal_request)
+        local curl = requests.build_curl(expanded_request)
 
         local should_prepare_response_ui = opts.on_response == nil
         if should_prepare_response_ui then
             response_window = ResponseWindow:new({
                 win = win,
-                request = internal_request,
+                request = expanded_request,
                 curl = curl,
             })
             win = response_window:open()
@@ -63,10 +63,10 @@ function M.send(request, opts)
             end
 
             vim.schedule(function()
-                if internal_request.post_hook ~= nil then
+                if expanded_request.post_hook ~= nil then
                     local status, result = pcall(
-                        internal_request.post_hook,
-                        internal_request,
+                        expanded_request.post_hook,
+                        expanded_request,
                         response
                     )
 
@@ -81,7 +81,7 @@ function M.send(request, opts)
                 local env_post_hook = environments.get_post_hook()
                 if env_post_hook ~= nil then
                     local status, result =
-                        pcall(env_post_hook, internal_request, response)
+                        pcall(env_post_hook, expanded_request, response)
 
                     if not status then
                         vim.notify(
@@ -102,7 +102,7 @@ function M.send(request, opts)
                 if request_was_sent and config.history.enabled then
                     local status, error = pcall(
                         history.insert_history_entry,
-                        internal_request,
+                        expanded_request,
                         response,
                         curl
                     )
@@ -213,9 +213,9 @@ function M.yank_curl_at_cursor()
             is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
 
         if request_contains_cursor then
-            local internal_request = requests.expand(request.request)
+            local expanded_request = requests.expand(request.request)
 
-            local curl = requests.build_curl(internal_request)
+            local curl = requests.build_curl(expanded_request)
 
             vim.fn.setreg("+", curl:string())
             vim.notify("Yanked curl command to clipboard")
