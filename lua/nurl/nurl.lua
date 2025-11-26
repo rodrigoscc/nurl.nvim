@@ -5,6 +5,8 @@ local winbar = require("nurl.winbar")
 local projects = require("nurl.projects")
 local environments = require("nurl.environments")
 local ResponseWindow = require("nurl.response_window")
+local history = require("nurl.history")
+local snacks = require("nurl.pickers.snacks")
 
 local M = {}
 
@@ -95,6 +97,25 @@ function M.send(request, opts)
                 else
                     default_on_response(response, curl)
                 end
+
+                local request_was_sent = response ~= nil
+                    and curl.result.code == 0
+                if request_was_sent and config.history.enabled then
+                    local status, error = pcall(
+                        history.insert_history_entry,
+                        internal_request,
+                        response,
+                        curl
+                    )
+                    if not status then
+                        vim.notify(
+                            ("Failed to save request in history: %s"):format(
+                                error
+                            ),
+                            vim.log.levels.ERROR
+                        )
+                    end
+                end
             end)
         end)
     end
@@ -122,28 +143,7 @@ end
 function M.send_buffer_request()
     local buffer_requests = dofile(vim.fn.expand("%"))
 
-    local items = vim.iter(ipairs(buffer_requests))
-        :map(function(i, request)
-            local expanded = requests.expand(request)
-
-            local item = {
-                idx = i,
-                text = expanded.method .. " " .. expanded.url,
-                request = request,
-                score = 1,
-                preview = {
-                    text = vim.json.encode(
-                        expanded.data
-                            or expanded.data_urlencode
-                            or expanded.form
-                    ),
-                    ft = "json",
-                },
-            }
-
-            return item
-        end)
-        :totable()
+    local items = snacks.super_requests_to_snacks_items(buffer_requests)
 
     Snacks.picker.pick("requests", {
         title = "Nurl: run",
@@ -165,33 +165,8 @@ end
 function M.send_project_request()
     local project_requests = projects.requests()
 
-    local snacks_items = vim.iter(ipairs(project_requests))
-        :map(function(i, item)
-            local expanded = requests.expand(item.request)
-
-            local preview_json = ""
-            if expanded.data then
-                preview_json = vim.json.encode(expanded.data)
-            elseif expanded.data_urlencode then
-                preview_json = vim.json.encode(expanded.data_urlencode)
-            elseif expanded.form then
-                preview_json = vim.json.encode(expanded.form)
-            end
-
-            local snacks_item = {
-                idx = i,
-                text = expanded.method .. " " .. expanded.url,
-                request = item.request,
-                score = 1,
-                preview = {
-                    text = preview_json,
-                    ft = "json",
-                },
-            }
-
-            return snacks_item
-        end)
-        :totable()
+    local snacks_items =
+        snacks.project_request_items_to_send_snacks_items(project_requests)
 
     Snacks.picker.pick("requests", {
         title = "Nurl: run",
@@ -213,22 +188,8 @@ end
 function M.jump_to_project_request()
     local project_requests = projects.requests()
 
-    local snacks_items = vim.iter(ipairs(project_requests))
-        :map(function(i, item)
-            local expanded = requests.expand(item.request)
-
-            local snacks_item = {
-                idx = i,
-                text = expanded.method .. " " .. expanded.url,
-                request = item,
-                file = item.file,
-                score = 1,
-                pos = { item.start_row, item.start_col },
-            }
-
-            return snacks_item
-        end)
-        :totable()
+    local snacks_items =
+        snacks.project_request_items_to_jump_snacks_items(project_requests)
 
     local file = require("snacks.picker.format").file
     local text = require("snacks.picker.format").text
@@ -317,11 +278,36 @@ function M.get_active_env()
     return environments.project_active_env
 end
 
+function M.open_history()
+    local history_items = history.all()
+
+    local snacks_items = snacks.history_items_to_snacks_items(history_items)
+
+    Snacks.picker.pick("requests", {
+        title = "Nurl: history",
+        items = snacks_items,
+        preview = "preview",
+        format = snacks.format_history_item,
+        confirm = function(picker, item)
+            picker:close()
+
+            local window = ResponseWindow:new({
+                request = item.request,
+                response = item.response,
+                curl = item.curl,
+            })
+            window:open({ enter = true })
+        end,
+    })
+end
+
 require("nurl.config").setup()
 require("nurl.highlights").setup_highlights()
 
 require("nurl.environments").load()
 require("nurl.environments").setup_reload_autocmd()
+
+require("nurl.history").setup()
 
 vim.keymap.set("n", "gh", function()
     Nurl.jump_to_project_request()
@@ -334,6 +320,9 @@ vim.keymap.set("n", "gL", function()
 end)
 vim.keymap.set("n", "R", function()
     Nurl.send_request_at_cursor()
+end)
+vim.keymap.set("n", "gG", function()
+    Nurl.open_history()
 end)
 
 return M

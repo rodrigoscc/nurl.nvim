@@ -6,6 +6,12 @@ local defaults = {
     dir = ".nurl",
     environments_file = "environments.lua",
     active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
+    history = {
+        ---@type boolean
+        enabled = true,
+        ---@type string
+        db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
+    },
     ---Window config for the response window. Refer to :help nvim_open_win for the available keys.
     ---@type table
     win_config = { split = "right" },

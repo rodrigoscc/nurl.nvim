@@ -1,7 +1,8 @@
 ---@class nurl.Curl
 ---@field args string[]
 ---@field result vim.SystemCompleted | nil
-local Curl = { args = {}, result = nil }
+---@field exec_datetime string | nil
+local Curl = { args = {}, result = nil, exec_datetime = nil }
 
 function Curl:new(o)
     o = o or {}
@@ -18,6 +19,7 @@ function Curl:run(on_exit)
         table.insert(cmd, k)
     end
 
+    self.exec_datetime = tostring(os.date("%Y-%m-%dT%H:%M:%S")) -- local time
     if on_exit == nil then
         local result = vim.system(cmd, { text = true }):wait()
         self.result = result

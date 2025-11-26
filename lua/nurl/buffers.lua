@@ -154,8 +154,10 @@ local function populate_raw_buffer(bufnr, curl)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, raw_lines)
 end
 
-local function populate_info_buffer(bufnr, response)
+local function populate_info_buffer(bufnr, response, curl)
     local info_lines = {}
+
+    table.insert(info_lines, string.format("date: %s", curl.exec_datetime))
 
     table.insert(
         info_lines,
@@ -239,7 +241,7 @@ function M.create_buffer(buffer, request, response, curl)
         end
     elseif type == "info" then
         if response ~= nil then
-            populate_info_buffer(buf, response)
+            populate_info_buffer(buf, response, curl)
         end
     elseif type == "raw" then
         populate_raw_buffer(buf, curl)
@@ -269,7 +271,7 @@ function M.update_buffer(bufnr, buffer, request, response, curl)
         end
     elseif buffer[1] == "info" then
         if response ~= nil then
-            populate_info_buffer(bufnr, response)
+            populate_info_buffer(bufnr, response, curl)
         end
     elseif buffer[1] == "raw" then
         populate_raw_buffer(bufnr, curl)

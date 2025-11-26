@@ -6,6 +6,7 @@ local config = require("nurl.config")
 ---@class nurl.ResponseWindow
 ---@field win integer | nil
 ---@field request nurl.Request
+---@field response? nurl.Response | nil
 ---@field curl nurl.Curl
 ---@field elapsed_time nurl.ElapsedTimeFloating | nil
 ---@field buffers table<nurl.BufferType, integer> | nil
@@ -18,8 +19,14 @@ function ResponseWindow:new(o)
     return o
 end
 
-function ResponseWindow:open()
-    self.buffers = buffers.create(self.request, nil, self.curl)
+---@class ResponseWindowOpts
+---@field enter? boolean
+
+---@param opts? ResponseWindowOpts
+function ResponseWindow:open(opts)
+    opts = opts or {}
+
+    self.buffers = buffers.create(self.request, self.response, self.curl)
 
     assert(#config.buffers > 0, "Must configure at least one response buffer")
     local first_buffer_type = config.buffers[1][1]
@@ -34,6 +41,10 @@ function ResponseWindow:open()
         )
     end
 
+    if opts.enter then
+        vim.api.nvim_set_current_win(self.win)
+    end
+
     vim.wo[self.win].winbar = winbar.winbar()
 
     for _, bufnr in pairs(self.buffers) do
@@ -46,15 +57,19 @@ function ResponseWindow:open()
         })
     end
 
-    self.elapsed_time = ElapsedTimeFloating:new(self.win)
-    self.elapsed_time:start()
+    if self.response == nil then
+        self.elapsed_time = ElapsedTimeFloating:new(self.win)
+        self.elapsed_time:start()
+    end
 
     -- Stop timer if parent window is closed
     vim.api.nvim_create_autocmd("WinClosed", {
         once = true,
         pattern = tostring(self.win),
         callback = function()
-            self.elapsed_time:stop()
+            if self.elapsed_time ~= nil then
+                self.elapsed_time:stop()
+            end
         end,
     })
 
