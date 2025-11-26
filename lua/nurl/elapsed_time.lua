@@ -1,5 +1,7 @@
 local Spinner = require("nurl.spinner")
 
+local elapsed_time_ns = vim.api.nvim_create_namespace("nurl.elapsed-time")
+
 ---@class nurl.ElapsedTimeFloating
 ---@field private bufnr integer | nil
 ---@field private win integer | nil
@@ -64,19 +66,29 @@ function E:start()
                 { frame .. " " .. unit }
             )
 
-            self.spinner_extmark_id =
-                vim.api.nvim_buf_set_extmark(self.bufnr, 1, 0, 0, {
+            self.spinner_extmark_id = vim.api.nvim_buf_set_extmark(
+                self.bufnr,
+                elapsed_time_ns,
+                0,
+                0,
+                {
                     end_col = #frame,
                     hl_group = "Number",
                     id = self.spinner_extmark_id,
-                })
+                }
+            )
 
-            self.seconds_extmark_id =
-                vim.api.nvim_buf_set_extmark(self.bufnr, 1, 0, #frame + 1, {
+            self.seconds_extmark_id = vim.api.nvim_buf_set_extmark(
+                self.bufnr,
+                elapsed_time_ns,
+                0,
+                #frame + 1,
+                {
                     end_col = #frame + 1 + #unit,
                     hl_group = "LineNr",
                     id = self.seconds_extmark_id,
-                })
+                }
+            )
         end)
     end)
 end
