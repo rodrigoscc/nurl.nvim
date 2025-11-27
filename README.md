@@ -26,13 +26,13 @@ A Lua-based HTTP client for Neovim. Define requests in Lua files, manage environ
 - **Request history** - SQLite-backed history with full request/response data
 - **Response viewer** - Split window with body, headers, info, and raw curl output tabs
 - **Hooks** - Pre/post hooks per request, or per environment (applies to all requests when env is active)
-- **Picker integration** - Browse requests and history with [snacks.nvim](https://github.com/folke/snacks.nvim) picker
+- **Picker integration** - Browse requests and history with [snacks.nvim](https://github.com/folke/snacks.nvim) or [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 
 ## Requirements
 
 - Neovim >= 0.10.0
 - `curl` in PATH
-- [snacks.nvim](https://github.com/folke/snacks.nvim) (for pickers)
+- [snacks.nvim](https://github.com/folke/snacks.nvim) or [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) (for pickers)
 - Optional: `jq` for JSON formatting, `stylua` for environments file formatting
 
 ## Installation
@@ -42,7 +42,11 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
     "rodrigoscc/nurl.nvim",
-    dependencies = { "folke/snacks.nvim" },
+    dependencies = { "folke/snacks.nvim" }, -- Optional
+    dependencies = { -- Optional
+        'nvim-telescope/telescope.nvim', tag = 'v0.1.9',
+        dependencies = { 'nvim-lua/plenary.nvim' }
+    },
     opts = {},
 }
 ```
@@ -290,6 +294,26 @@ return {
 ```
 
 Switch environments with `:Nurl env`.
+
+### Setting Variables Programmatically
+
+Use `env.set()` to update environment variables from hooks:
+
+```lua
+local env = require("nurl.environments")
+
+return {
+    {
+        url = "https://api.example.com/login",
+        method = "POST",
+        data = { username = "user", password = "pass" },
+        post_hook = function(request, response)
+            local body = vim.json.decode(response.body)
+            env.set("token", body.access_token)
+        end,
+    },
+}
+```
 
 ### Environment Hooks
 
