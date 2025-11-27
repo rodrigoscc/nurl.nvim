@@ -174,7 +174,7 @@ end
 function M.pick_request(title, super_requests, on_pick)
     local items = super_requests_to_snacks_items(super_requests)
 
-    Snacks.picker.pick("requests", {
+    Snacks.picker.pick("buffer_requests", {
         title = title,
         items = items,
         preview = "preview",
@@ -195,7 +195,7 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
     local snacks_items =
         project_request_items_to_snacks_items(project_request_items)
 
-    Snacks.picker.pick("requests", {
+    Snacks.picker.pick("project_requests", {
         title = title,
         items = snacks_items,
         preview = "preview",
@@ -218,7 +218,7 @@ end
 function M.pick_request_history_item(title, history_items, on_pick)
     local snacks_items = history_items_to_snacks_items(history_items)
 
-    Snacks.picker.pick("requests", {
+    Snacks.picker.pick("history", {
         title = title,
         items = snacks_items,
         preview = "preview",
