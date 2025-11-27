@@ -104,14 +104,15 @@ VALUES
             curl.exec_datetime,
             request.url,
             request.method,
-            vim.json.encode(request.headers),
-            vim.json.encode(request.data),
-            vim.json.encode(request.form),
-            vim.json.encode(request.data_urlencode),
+            request.headers and vim.json.encode(request.headers) or vim.NIL,
+            request.data and vim.json.encode(request.data) or vim.NIL,
+            request.form and vim.json.encode(request.form) or vim.NIL,
+            request.data_urlencode and vim.json.encode(request.data_urlencode)
+                or vim.NIL,
             response.status_code,
             response.reason_phrase,
             response.protocol,
-            vim.json.encode(response.headers),
+            response.headers and vim.json.encode(response.headers) or vim.NIL,
             response.body,
             response.time.time_appconnect,
             response.time.time_connect,
@@ -126,7 +127,7 @@ VALUES
             response.size.size_upload,
             response.speed.speed_download,
             response.speed.speed_upload,
-            vim.json.encode(curl.args),
+            vim.json.encode(curl.args) or vim.NIL,
             curl.result.code,
             curl.result.signal,
             curl.result.stdout,
@@ -240,16 +241,11 @@ ORDER BY time DESC]])
         local request = {
             method = request_method,
             url = request_url,
-            headers = request_headers ~= "null" and vim.json.decode(
-                request_headers
-            ) or nil,
-            data = request_data ~= "null" and vim.json.decode(request_data)
-                or nil,
-            form = request_form ~= "null" and vim.json.decode(request_form)
-                or nil,
-            data_urlencode = request_data_urlencode ~= "null"
-                    and vim.json.decode(request_data_urlencode)
-                or nil,
+            headers = request_headers and vim.json.decode(request_headers),
+            data = request_data and vim.json.decode(request_data),
+            form = request_form and vim.json.decode(request_form),
+            data_urlencode = request_data_urlencode
+                and vim.json.decode(request_data_urlencode),
         }
 
         ---@type nurl.Response
@@ -257,9 +253,7 @@ ORDER BY time DESC]])
             status_code = response_status_code,
             reason_phrase = response_reason_phrase,
             protocol = response_protocol,
-            headers = response_headers ~= "null" and vim.json.decode(
-                response_headers
-            ) or nil,
+            headers = response_headers and vim.json.decode(response_headers),
             body = response_body,
             time = {
                 time_appconnect = response_time_appconnect,

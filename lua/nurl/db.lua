@@ -16,7 +16,9 @@ ffi.cdef([[
   int sqlite3_bind_text(sqlite3_stmt*, int, const char*, int n, void(*)(void*));
   int sqlite3_bind_int64(sqlite3_stmt*, int, long long);
   int sqlite3_bind_double(sqlite3_stmt*, int, double);
+  int sqlite3_bind_null(sqlite3_stmt*, int);
   const unsigned char *sqlite3_column_text(sqlite3_stmt*, int);
+  int sqlite3_column_type(sqlite3_stmt*, int iCol);
   long long sqlite3_column_int64(sqlite3_stmt*, int);
   int sqlite3_column_count(sqlite3_stmt *pStmt);
   const char *sqlite3_errmsg(sqlite3*);
@@ -36,6 +38,8 @@ local function bind(stmt, idx, value, value_type)
         return sqlite.sqlite3_bind_double(stmt, idx, value)
     elseif value_type == "boolean" then
         return sqlite.sqlite3_bind_int64(stmt, idx, value and 1 or 0)
+    elseif value_type == "nil" or value == vim.NIL then
+        return sqlite.sqlite3_bind_null(stmt, idx)
     else
         error(
             "Unsupported value type: "
@@ -67,18 +71,33 @@ function Row:new(columns)
 end
 
 ---@param idx integer
+---@return string | nil
 function Row:get_string(idx)
-    return self.columns[idx]
+    local value = self.columns[idx]
+    if value == vim.NIL then
+        return nil
+    end
+    return value
 end
 
 ---@param idx integer
+---@return number | nil
 function Row:get_number(idx)
-    return tonumber(self.columns[idx])
+    local value = self.columns[idx]
+    if value == vim.NIL then
+        return nil
+    end
+    return tonumber(value)
 end
 
 ---@param idx integer
+---@return boolean | nil
 function Row:get_boolean(idx)
-    return self.columns[idx] == "1"
+    local value = self.columns[idx]
+    if value == vim.NIL then
+        return nil
+    end
+    return value == "1"
 end
 
 ---@class nurl.Result
@@ -88,6 +107,7 @@ local Result = {}
 
 local SQLITE_ROW = 100
 local SQLITE_DONE = 101
+local SQLITE_NULL = 5
 
 ---@param stmt sqlite3_stmt*
 ---@return nurl.Result
@@ -115,9 +135,14 @@ function Result:one()
     local column_count = sqlite.sqlite3_column_count(self.stmt)
 
     for i = 0, column_count - 1 do
-        local text_ptr = sqlite.sqlite3_column_text(self.stmt, i)
-        local value = text_ptr ~= nil and ffi.string(text_ptr) or nil
-        table.insert(columns, value)
+        local column_type = sqlite.sqlite3_column_type(self.stmt, i)
+        if column_type == SQLITE_NULL then
+            table.insert(columns, vim.NIL)
+        else
+            local text_ptr = sqlite.sqlite3_column_text(self.stmt, i)
+            local value = text_ptr ~= nil and ffi.string(text_ptr) or vim.NIL
+            table.insert(columns, value)
+        end
     end
 
     local row = Row:new(columns)
@@ -141,9 +166,15 @@ function Result:all()
         local columns = {}
 
         for i = 0, column_count - 1 do
-            local text_ptr = sqlite.sqlite3_column_text(self.stmt, i)
-            local value = text_ptr ~= nil and ffi.string(text_ptr) or nil
-            table.insert(columns, value)
+            local column_type = sqlite.sqlite3_column_type(self.stmt, i)
+            if column_type == SQLITE_NULL then
+                table.insert(columns, vim.NIL)
+            else
+                local text_ptr = sqlite.sqlite3_column_text(self.stmt, i)
+                local value = text_ptr ~= nil and ffi.string(text_ptr)
+                    or vim.NIL
+                table.insert(columns, value)
+            end
         end
 
         local row = Row:new(columns)
