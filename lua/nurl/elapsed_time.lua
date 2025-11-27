@@ -2,6 +2,9 @@ local Spinner = require("nurl.spinner")
 
 local elapsed_time_ns = vim.api.nvim_create_namespace("nurl.elapsed-time")
 
+local FLOAT_WIDTH = 10
+local FLOAT_HEIGHT = 1
+
 ---@class nurl.ElapsedTimeFloating
 ---@field private bufnr integer | nil
 ---@field private win integer | nil
@@ -12,7 +15,6 @@ local elapsed_time_ns = vim.api.nvim_create_namespace("nurl.elapsed-time")
 ---@field private start_time_ns number | nil
 ---@field private timer uv.uv_timer_t | nil
 local E = {}
-E.__index = E
 
 function E:new(ref_win)
     local o = {
@@ -28,20 +30,30 @@ function E:new(ref_win)
     return o
 end
 
-function E:start()
+---@private
+---@return { row: number, col: number }
+function E:_get_centered_position()
     local height = vim.api.nvim_win_get_height(self.ref_win)
     local width = vim.api.nvim_win_get_width(self.ref_win)
 
+    return {
+        row = (height / 2) - (FLOAT_HEIGHT / 2),
+        col = (width / 2) - (FLOAT_WIDTH / 2),
+    }
+end
+
+function E:start()
     self.bufnr = vim.api.nvim_create_buf(true, true)
 
+    local pos = self:_get_centered_position()
     self.win = vim.api.nvim_open_win(self.bufnr, false, {
         focusable = false,
         relative = "win",
         win = self.ref_win,
-        row = (height / 2) - 1,
-        col = (width / 2) - 1 - 5,
-        width = 24,
-        height = 1,
+        row = pos.row,
+        col = pos.col,
+        width = FLOAT_WIDTH,
+        height = FLOAT_HEIGHT,
     })
 
     self.timer = vim.uv.new_timer()
@@ -55,6 +67,23 @@ function E:start()
             string.format("%.2f", (current_time_ns - self.start_time_ns) / 1e9)
 
         vim.schedule(function()
+            if not vim.api.nvim_win_is_valid(self.ref_win) then
+                self:stop()
+                return
+            end
+
+            if not vim.api.nvim_win_is_valid(self.win) then
+                return
+            end
+
+            local pos = self:_get_centered_position()
+            vim.api.nvim_win_set_config(self.win, {
+                relative = "win",
+                win = self.ref_win,
+                row = pos.row,
+                col = pos.col,
+            })
+
             local frame = self.spinner:frame()
             local unit = seconds .. "s"
 
