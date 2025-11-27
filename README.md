@@ -18,6 +18,7 @@ A Lua-based HTTP client for Neovim. Define requests in Lua files, manage environ
 - [🔌 API](#api)
 - [📊 Winbar](#winbar)
 - [🎨 Highlight Groups](#highlight-groups)
+- [📖 Recipes](#recipes)
 
 ## Features
 
@@ -410,3 +411,46 @@ vim.o.winbar =
 | `NurlWinbarLoading` | Loading state |
 | `NurlWinbarTime` | Response time |
 | `NurlWinbarError` | Error messages |
+
+## Recipes
+
+### 1Password CLI for secrets
+
+Use the 1Password CLI (`op`) to fetch secrets at request time:
+
+```lua
+local env = require("nurl.environments")
+
+local function op_get(item_id, field)
+    return function()
+        local result = vim.system({
+            "op", "item", "get", item_id, "--fields", field, "--format", "json"
+        }, { text = true }):wait()
+
+        if result.code ~= 0 then
+            error("Failed getting op item")
+        end
+ 
+        local data = vim.json.decode(result.stdout)
+        return data.value
+    end
+end
+
+return {
+    {
+        url = { env.var("base_url"), "auth", "login" },
+        method = "POST",
+        headers = {
+            ["Content-Type"] = "application/json",
+        },
+        data = {
+            username = op_get("eeljppn94azg8iqq7rrdtd1g4u", "username"),
+            password = op_get("eeljppn94azg8iqq7rrdtd1g4u", "password"),
+        },
+        end,
+        post_hook = function(request, response)
+            local body = vim.json.decode(response.body)
+            env.set("token", body.access_token)
+        end,
+    },
+}
