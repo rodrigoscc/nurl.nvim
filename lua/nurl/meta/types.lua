@@ -12,3 +12,4 @@
 ---@field open_environments_file fun()
 ---@field get_active_env fun(): string|nil
 ---@field open_history fun()
+---@field lazy fun(value: any)

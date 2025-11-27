@@ -3,10 +3,10 @@ local M = {}
 ---@class nurl.ExpandOpts
 ---@field lazy? boolean if true, do not expand functions wrapped by nurl.lazy()
 
----@param fn fun()
-function M.lazy(fn)
+---@param value any
+function M.lazy(value)
     return setmetatable({}, {
-        __nurl_lazy = fn,
+        __nurl_lazy = value,
         __tojson = function()
             return "<LAZY>"
         end,
