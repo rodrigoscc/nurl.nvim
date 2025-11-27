@@ -36,10 +36,10 @@ local function format_project_request_item(item, picker)
     table.insert(ret, { "", "SnacksPickerIcon" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.item.request.method, "SnacksPickerFileType" })
+    table.insert(ret, { item.lazy.method, "SnacksPickerFileType" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.item.request.url, "SnacksPickerLabel" })
+    table.insert(ret, { item.lazy.url, "SnacksPickerLabel" })
     table.insert(ret, { " " })
 
     table.insert(ret, { item.file, "SnacksPickerDir" })
@@ -56,10 +56,10 @@ local function format_request_item(item)
     table.insert(ret, { "", "SnacksPickerIcon" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.request.method, "SnacksPickerFileType" })
+    table.insert(ret, { item.lazy.method, "SnacksPickerFileType" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.request.url, "SnacksPickerLabel" })
+    table.insert(ret, { item.lazy.url, "SnacksPickerLabel" })
     table.insert(ret, { " " })
 
     return ret
@@ -120,14 +120,16 @@ end
 local function super_requests_to_snacks_items(super_requests)
     return vim.iter(ipairs(super_requests))
         :map(function(i, request)
-            local expanded = requests.expand(request)
+            local expanded = requests.expand(request, { lazy = true })
+            local lazy = requests.stringify_lazy(expanded)
 
             local item = {
                 idx = i,
-                text = expanded.method .. " " .. expanded.url,
+                text = lazy.method .. " " .. lazy.url,
                 request = expanded,
+                lazy = lazy,
                 score = 1,
-                preview = get_preview(expanded),
+                preview = get_preview(lazy),
             }
 
             return item
@@ -140,20 +142,23 @@ end
 local function project_request_items_to_snacks_items(project_request_items)
     return vim.iter(ipairs(project_request_items))
         :map(function(i, request_item)
-            local expanded = requests.expand(request_item.request)
+            local expanded =
+                requests.expand(request_item.request, { lazy = true })
+            local lazy = requests.stringify_lazy(expanded)
 
             request_item.request = expanded
 
             local snacks_item = {
                 idx = i,
                 item = request_item,
+                lazy = lazy,
                 score = 1,
-                text = expanded.method
+                text = lazy.method
                     .. " "
-                    .. expanded.url
+                    .. lazy.url
                     .. " "
                     .. request_item.file,
-                preview = get_preview(request_item.request),
+                preview = get_preview(lazy),
                 file = request_item.file,
                 pos = { request_item.start_row, request_item.start_col },
             }

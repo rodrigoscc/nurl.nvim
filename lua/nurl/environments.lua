@@ -83,7 +83,7 @@ function M.var(variable_name, use_env)
             )
         end
 
-        return variables.expand(env[variable_name])
+        return env[variable_name]
     end
 end
 

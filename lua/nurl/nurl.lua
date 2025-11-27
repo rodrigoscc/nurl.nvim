@@ -8,10 +8,13 @@ local ResponseWindow = require("nurl.response_window")
 local history = require("nurl.history")
 local Stack = require("nurl.utils.stack")
 local pickers = require("nurl.pickers")
+local variables = require("nurl.variables")
 
 local M = {}
 
 M.winbar = winbar
+
+M.lazy = variables.lazy
 
 ---@type nurl.Stack
 M.last_requests = Stack:new(5)

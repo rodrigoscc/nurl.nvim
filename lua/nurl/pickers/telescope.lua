@@ -78,14 +78,15 @@ function M.pick_request(title, super_requests, on_pick)
             finder = finders.new_table({
                 results = super_requests,
                 entry_maker = function(request)
-                    local expanded = requests.expand(request)
+                    local expanded = requests.expand(request, { lazy = true })
+                    local lazy = requests.stringify_lazy(expanded)
                     return {
                         value = expanded,
                         display = make_display,
-                        ordinal = expanded.method .. " " .. expanded.url,
-                        method = expanded.method,
-                        url = expanded.url,
-                        preview = get_preview(expanded),
+                        ordinal = lazy.method .. " " .. lazy.url,
+                        method = lazy.method,
+                        url = lazy.url,
+                        preview = get_preview(lazy),
                     }
                 end,
             }),
@@ -134,23 +135,25 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
             finder = finders.new_table({
                 results = project_request_items,
                 entry_maker = function(request_item)
-                    local expanded = requests.expand(request_item.request)
+                    local expanded =
+                        requests.expand(request_item.request, { lazy = true })
+                    local lazy = requests.stringify_lazy(expanded)
                     request_item.request = expanded
                     return {
                         value = request_item,
                         display = make_display,
-                        ordinal = expanded.method
+                        ordinal = lazy.method
                             .. " "
-                            .. expanded.url
+                            .. lazy.url
                             .. " "
                             .. request_item.file,
-                        method = expanded.method,
-                        url = expanded.url,
+                        method = lazy.method,
+                        url = lazy.url,
                         file = request_item.file,
                         filename = request_item.file,
                         lnum = request_item.start_row,
                         col = request_item.start_col,
-                        preview = get_preview(expanded),
+                        preview = get_preview(lazy),
                     }
                 end,
             }),

@@ -33,10 +33,6 @@ local function build_url(parts)
             table.insert(expanded_parts, part)
         elseif type(v) == "number" then
             table.insert(expanded_parts, tostring(v))
-        elseif type(v) == "function" then
-            local part = v()
-            part = part:gsub("^/+", ""):gsub("/+$", "")
-            table.insert(expanded_parts, part)
         end
     end
 
@@ -44,8 +40,9 @@ local function build_url(parts)
 end
 
 ---@param request nurl.SuperRequest | nurl.Request
-function M.expand(request)
-    -- TODO: validate table
+---@param opts? nurl.ExpandOpts
+function M.expand(request, opts)
+    opts = opts or {}
 
     assert(
         (not request.data and not request.form and not request.data_urlencode)
@@ -59,7 +56,47 @@ function M.expand(request)
         "Only a single body field at the time is allowed"
     )
 
-    local request_url = variables.expand(request.url)
+    local request_url = variables.expand(request.url, opts)
+
+    assert(request_url ~= nil, "Request must have a URL")
+
+    local url
+    if type(request_url) == "string" then
+        url = request_url
+    elseif not opts.lazy then
+        url = build_url(request_url)
+    else
+        url = request_url
+    end
+
+    local headers = variables.expand(request.headers, opts)
+    local data = variables.expand(request.data, opts)
+    local form = variables.expand(request.form, opts)
+    local data_urlencode = variables.expand(request.data_urlencode, opts)
+
+    local method = "GET"
+    if request.method ~= nil then
+        method = request.method:upper()
+    end
+
+    ---@type nurl.Request|nurl.SuperRequest
+    local req = {
+        url = url,
+        method = method,
+        headers = headers or {},
+        data = data,
+        form = form,
+        data_urlencode = data_urlencode,
+        pre_hook = request.pre_hook,
+        post_hook = request.post_hook,
+    }
+
+    return req
+end
+
+---@param request nurl.SuperRequest | nurl.Request
+function M.stringify_lazy(request)
+    local request_url = variables.stringify_lazy(request.url)
 
     assert(request_url ~= nil, "Request must have a URL")
 
@@ -71,10 +108,22 @@ function M.expand(request)
         url = build_url(request_url)
     end
 
-    local headers = variables.expand(request.headers)
-    local data = variables.expand(request.data)
-    local form = variables.expand(request.form)
-    local data_urlencode = variables.expand(request.data_urlencode)
+    local headers = variables.stringify_lazy(request.headers)
+    local data = variables.stringify_lazy(request.data)
+    local form = variables.stringify_lazy(request.form)
+    local data_urlencode = variables.stringify_lazy(request.data_urlencode)
+
+    -- Make sure the fields that are expected to be tables are still tables after calling stringify_lazy
+    if type(headers) == "string" then
+        headers = { [variables.LAZY_PLACEHOLDER] = variables.LAZY_PLACEHOLDER }
+    end
+    if type(form) == "string" then
+        form = { [variables.LAZY_PLACEHOLDER] = variables.LAZY_PLACEHOLDER }
+    end
+    if type(data_urlencode) == "string" then
+        data_urlencode =
+            { [variables.LAZY_PLACEHOLDER] = variables.LAZY_PLACEHOLDER }
+    end
 
     local method = "GET"
     if request.method ~= nil then
