@@ -103,6 +103,10 @@ function E:stop()
         if vim.api.nvim_win_is_valid(self.win) then -- win could already be closed
             vim.api.nvim_win_close(self.win, true)
         end
+
+        if vim.api.nvim_buf_is_valid(self.bufnr) then
+            vim.api.nvim_buf_delete(self.bufnr, { force = true })
+        end
     end)
 end
 
