@@ -51,7 +51,9 @@ function ResponseWindow:open(opts)
         vim.api.nvim_create_autocmd("BufWinEnter", {
             once = true,
             callback = function()
-                vim.wo[self.win].winbar = winbar.winbar()
+                -- Use 0 instead of self.win here so that the correct win is used
+                -- in case the user enters the buffers on other win.
+                vim.wo[0].winbar = winbar.winbar()
             end,
             buffer = bufnr,
         })
