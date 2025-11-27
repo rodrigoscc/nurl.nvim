@@ -12,6 +12,7 @@ A Lua-based HTTP client for Neovim. Define requests in Lua files, manage environ
 - [💻 Commands](#commands)
 - [📝 Request Format](#request-format)
   - [Dynamic Values](#dynamic-values)
+  - [Lazy Values](#lazy-values)
   - [URL Parts](#url-parts)
 - [🌍 Environments](#environments)
   - [Environment Hooks](#environment-hooks)
@@ -237,6 +238,25 @@ return {
 }
 ```
 
+### Lazy Values
+
+Use `nurl.lazy()` for values that should only be resolved right before sending (not during picker preview):
+
+```lua
+local nurl = require("nurl")
+
+{
+    url = "https://api.example.com/login",
+    method = "POST",
+    data = {
+        username = "user",
+        password = nurl.lazy(function()
+            return vim.fn.inputsecret("Password: ")
+        end),
+    },
+}
+```
+
 ### URL Parts
 
 Build URLs from parts:
@@ -416,13 +436,14 @@ vim.o.winbar =
 
 ### 1Password CLI for secrets
 
-Use the 1Password CLI (`op`) to fetch secrets at request time:
+Use the 1Password CLI (`op`) with `nurl.lazy()` to fetch secrets only when sending:
 
 ```lua
+local nurl = require("nurl")
 local env = require("nurl.environments")
 
 local function op_get(item_id, field)
-    return function()
+    return nurl.lazy(function()
         local result = vim.system({
             "op", "item", "get", item_id, "--fields", field, "--format", "json"
         }, { text = true }):wait()
@@ -433,7 +454,7 @@ local function op_get(item_id, field)
  
         local data = vim.json.decode(result.stdout)
         return data.value
-    end
+    end)
 end
 
 return {
@@ -447,7 +468,6 @@ return {
             username = op_get("eeljppn94azg8iqq7rrdtd1g4u", "username"),
             password = op_get("eeljppn94azg8iqq7rrdtd1g4u", "password"),
         },
-        end,
         post_hook = function(request, response)
             local body = vim.json.decode(response.body)
             env.set("token", body.access_token)
