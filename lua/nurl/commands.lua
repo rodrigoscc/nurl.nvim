@@ -8,6 +8,9 @@ M.commands = {
     send = function()
         require("nurl").send_project_request()
     end,
+    send_from_buffer = function()
+        require("nurl").send_buffer_request()
+    end,
     jump = function()
         require("nurl").jump_to_project_request()
     end,

@@ -170,6 +170,7 @@ require("nurl").setup({
 |---------|-------------|
 | `:Nurl send_at_cursor` | Send request under cursor |
 | `:Nurl send` | Pick and send a project request |
+| `:Nurl send_from_buffer` | Pick and send a request from current buffer |
 | `:Nurl jump` | Pick and jump to a request definition |
 | `:Nurl history` | Browse request history |
 | `:Nurl env` | Switch active environment |
