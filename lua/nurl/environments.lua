@@ -164,10 +164,7 @@ function M.var(variable_name, use_env)
         end
 
         if env == nil then
-            error(
-                "could not resolve variable since no environment is active: "
-                    .. variable_name
-            )
+            return nil
         end
 
         return env[variable_name]
