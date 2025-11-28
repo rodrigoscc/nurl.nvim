@@ -1,6 +1,5 @@
 local actions = require("nurl.actions")
 local config = require("nurl.config")
-local tables = require("nurl.utils.tables")
 
 local M = {}
 
@@ -142,11 +141,11 @@ local function populate_raw_buffer(bufnr, curl)
     if curl.result then
         if curl.result.stdout then
             local stdout_lines = vim.split(curl.result.stdout, "\n")
-            tables.extend(raw_lines, stdout_lines)
+            vim.list_extend(raw_lines, stdout_lines)
         end
         if curl.result.stderr then
             local stderr_lines = vim.split(curl.result.stderr, "\n")
-            tables.extend(raw_lines, stderr_lines)
+            vim.list_extend(raw_lines, stderr_lines)
         end
     end
 
