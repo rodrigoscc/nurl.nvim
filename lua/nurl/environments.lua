@@ -26,7 +26,7 @@ M.project_envs = {}
 ---@type nurl.EnvOperation[]
 local operations_queue = {}
 
-M.file = nil
+M.project_env_file = nil
 
 local function safe_coroutine_resume(my_coroutine)
     if coroutine.status(my_coroutine) == "dead" then
@@ -50,9 +50,9 @@ local function safe_coroutine_resume(my_coroutine)
     end
 end
 
-M.worker_coroutine = coroutine.create(function()
+M.file_worker_coroutine = coroutine.create(function()
     while true do
-        if M.file == nil then
+        if M.project_env_file == nil then
             error("Environment file wasn't loaded. Stopping worker...")
         end
 
@@ -77,22 +77,25 @@ M.worker_coroutine = coroutine.create(function()
                 error("value type " .. type(op.value) .. " not supported")
             end
 
-            M.file:set_environment_variable(
+            M.project_env_file:set_environment_variable(
                 M.project_active_env,
                 op.name,
                 new_text
             )
         elseif op.op == "unset" then
-            M.file:unset_environment_variable(M.project_active_env, op.name)
+            M.project_env_file:unset_environment_variable(
+                M.project_active_env,
+                op.name
+            )
         end
 
         local saved = false
 
-        M.file:save(function()
+        M.project_env_file:save(function()
             saved = true
             vim.schedule(function()
                 -- running inside vim.schedule just in case
-                safe_coroutine_resume(M.worker_coroutine)
+                safe_coroutine_resume(M.file_worker_coroutine)
             end)
         end)
 
@@ -185,7 +188,7 @@ function M.set(variable_name, value)
         { op = "set", name = variable_name, value = value }
     )
 
-    safe_coroutine_resume(M.worker_coroutine)
+    safe_coroutine_resume(M.file_worker_coroutine)
 end
 
 function M.unset(variable_name)
@@ -199,7 +202,7 @@ function M.unset(variable_name)
 
     table.insert(operations_queue, { op = "unset", name = variable_name })
 
-    safe_coroutine_resume()
+    safe_coroutine_resume(M.file_worker_coroutine)
 end
 
 function M.load()
@@ -232,7 +235,7 @@ function M.load()
         return
     end
 
-    M.file = file
+    M.project_env_file = file
 end
 
 local reload_group_id = vim.api.nvim_create_augroup(
