@@ -1,5 +1,5 @@
 local config = require("nurl.config")
-local file_parsing = require("nurl.file_parsing")
+local file_parsing = require("nurl.utils.file_parsing")
 
 local M = {}
 

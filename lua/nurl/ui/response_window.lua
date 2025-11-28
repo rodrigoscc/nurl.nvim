@@ -1,6 +1,6 @@
-local buffers = require("nurl.buffers")
-local winbar = require("nurl.winbar")
-local ElapsedTimeFloating = require("nurl.elapsed_time")
+local buffers = require("nurl.ui.buffers")
+local winbar = require("nurl.ui.winbar")
+local ElapsedTimeFloating = require("nurl.ui.elapsed_time")
 local config = require("nurl.config")
 
 ---@class nurl.ResponseWindow

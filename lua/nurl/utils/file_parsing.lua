@@ -1,4 +1,4 @@
-local fs = require("nurl.fs")
+local fs = require("nurl.data.fs")
 
 local M = {}
 

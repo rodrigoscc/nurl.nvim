@@ -1,5 +1,5 @@
 local uv = vim.uv or vim.loop
-local Spinner = require("nurl.spinner")
+local Spinner = require("nurl.ui.spinner")
 
 local elapsed_time_ns = vim.api.nvim_create_namespace("nurl.elapsed-time")
 

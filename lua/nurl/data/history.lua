@@ -9,7 +9,7 @@ local M = {}
 M.db = nil
 
 function M.setup()
-    local Db = require("nurl.db")
+    local Db = require("nurl.data.db")
 
     M.db = Db:new(config.history.db_file)
 
