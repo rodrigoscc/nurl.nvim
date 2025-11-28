@@ -235,6 +235,8 @@ function File:insert_after_node(node, new_text)
 
     if self.contents:sub(end_bytes + 1, end_bytes + 1) == "," then
         end_bytes = end_bytes + 1
+    else
+        new_text = "," .. new_text
     end
 
     self:insert(end_bytes, new_text)
@@ -265,6 +267,7 @@ function File:set_environment_variable(environment, variable, new_text)
     if env_table_node then
         local formatted = string.format("{ %s = %s }", variable, new_text)
         self:replace_node(env_table_node, formatted)
+        return
     end
 end
 
