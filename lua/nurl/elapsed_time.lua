@@ -1,3 +1,4 @@
+local uv = vim.uv or vim.loop
 local Spinner = require("nurl.spinner")
 
 local elapsed_time_ns = vim.api.nvim_create_namespace("nurl.elapsed-time")
@@ -56,13 +57,13 @@ function E:start()
         height = FLOAT_HEIGHT,
     })
 
-    self.timer = vim.uv.new_timer()
+    self.timer = uv.new_timer()
     assert(self.timer ~= nil, "Timer must be created")
 
-    self.start_time_ns = vim.uv.hrtime()
+    self.start_time_ns = uv.hrtime()
 
     self.timer:start(0, 50, function()
-        local current_time_ns = vim.uv.hrtime()
+        local current_time_ns = uv.hrtime()
         local seconds =
             string.format("%.2f", (current_time_ns - self.start_time_ns) / 1e9)
 

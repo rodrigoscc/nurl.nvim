@@ -29,7 +29,7 @@ function M.read(path)
 end
 
 function M.write(path, contents)
-    vim.uv.fs_mkdir(vim.fs.dirname(path), 493)
+    uv.fs_mkdir(vim.fs.dirname(path), 493)
 
     local fd, err = uv.fs_open(path, "w+", 438)
     if fd == nil then
