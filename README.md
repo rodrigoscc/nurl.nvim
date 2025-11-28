@@ -59,6 +59,14 @@ A Lua-based HTTP client for Neovim. Define requests in Lua files, manage environ
 - [📊 Winbar](#winbar)
 - [🎨 Highlight Groups](#highlight-groups)
 - [📖 Recipes](#recipes)
+  - [1Password CLI for secrets](#1password-cli-for-secrets)
+  - [OAuth2 Token Refresh](#oauth2-token-refresh)
+  - [Using Response Values](#using-response-values)
+  - [HMAC Signature](#hmac-signature)
+  - [Environment-Based Confirmation](#environment-based-confirmation)
+  - [Response Validation](#response-validation)
+  - [GraphQL with Variables](#graphql-with-variables)
+  - [File Upload with Picker](#file-upload-with-picker)
 
 ## Features
 
@@ -284,7 +292,7 @@ Use `nurl.lazy()` for values that should only be resolved right before sending (
 ```lua
 local nurl = require("nurl")
 
-{
+return {
     url = "https://api.example.com/login",
     method = "POST",
     data = {
@@ -484,13 +492,20 @@ local env = require("nurl.environments")
 local function op_get(item_id, field)
     return nurl.lazy(function()
         local result = vim.system({
-            "op", "item", "get", item_id, "--fields", field, "--format", "json"
+            "op",
+            "item",
+            "get",
+            item_id,
+            "--fields",
+            field,
+            "--format",
+            "json",
         }, { text = true }):wait()
 
         if result.code ~= 0 then
             error("Failed getting op item")
         end
- 
+
         local data = vim.json.decode(result.stdout)
         return data.value
     end)
@@ -513,3 +528,285 @@ return {
         end,
     },
 }
+```
+
+### OAuth2 Token Refresh
+
+Auto-refresh expired tokens before requests using environment hooks:
+
+```lua
+-- .nurl/environments.lua
+local nurl = require("nurl")
+local var = require("nurl.environments").var
+local set = require("nurl.environments").set
+
+local function is_token_expired()
+    local expires_at = var("expires_at")()
+    return not expires_at or tonumber(expires_at) < os.time()
+end
+
+local function refresh_token(next)
+    nurl.send({
+        url = "https://auth.example.com/oauth/token",
+        method = "POST",
+        headers = { ["Content-Type"] = "application/json" },
+        data = {
+            grant_type = "refresh_token",
+            refresh_token = var("refresh_token"),
+        },
+    }, {
+        on_response = function(response)
+            if response and response.status_code == 201 then
+                local body = vim.json.decode(response.body)
+                set("access_token", body.access_token)
+                set("refresh_token", body.refresh_token)
+                set("expires_at", os.time() + body.expires_in)
+                next()
+            else
+                vim.notify("Failed to refresh token", vim.log.levels.ERROR)
+            end
+        end,
+    })
+end
+
+return {
+    default = {
+        base_url = "https://api.example.com",
+        access_token = nil,
+        refresh_token = nil,
+        expires_at = nil,
+        pre_hook = function(next, request)
+            if is_token_expired() then
+                refresh_token(next)
+            else
+                next()
+            end
+        end,
+    },
+}
+```
+
+### Using Response Values
+
+Store response data for use in subsequent requests:
+
+```lua
+local nurl = require("nurl")
+local env = require("nurl.environments")
+
+return {
+    {
+        url = { env.var("base_url"), "users" },
+        method = "POST",
+        data = { name = "John Doe", email = "john@example.com" },
+        post_hook = function(request, response)
+            local user = vim.json.decode(response.body)
+            env.set("last_user_id", user.id)
+        end,
+    },
+    {
+        url = {
+            env.var("base_url"),
+            "users",
+            env.var("last_user_id"),
+            "profile",
+        },
+        method = "PUT",
+        data = { bio = "Software Developer" },
+    },
+}
+```
+
+### HMAC Signature
+
+Sign requests with HMAC-SHA256:
+
+```lua
+local env = require("nurl.environments")
+
+local function hmac_sha256(key, message)
+    local result = vim.fn.system({
+        "openssl",
+        "dgst",
+        "-sha256",
+        "-hmac",
+        key,
+    }, message)
+    return result:match("=%s*(%x+)") or ""
+end
+
+local body = '{"action":"test"}'
+
+return {
+    {
+        url = { env.var("base_url"), "api", "secure" },
+        method = "POST",
+        headers = function()
+            local timestamp = tostring(os.time())
+            local signature =
+                hmac_sha256(env.var("api_secret")(), timestamp .. body)
+            return {
+                ["Content-Type"] = "application/json",
+                ["X-Timestamp"] = timestamp,
+                ["X-Signature"] = signature,
+            }
+        end,
+        data = body,
+    },
+}
+```
+
+### Environment-Based Confirmation
+
+Require confirmation before dangerous requests in production:
+
+```lua
+-- .nurl/environments.lua
+return {
+    development = {
+        base_url = "https://dev.example.com",
+    },
+    production = {
+        base_url = "https://api.example.com",
+        pre_hook = function(next, request)
+            if request.method == "GET" then
+                next()
+                return
+            end
+
+            vim.ui.select({ "Yes", "No" }, {
+                prompt = "Send to PRODUCTION?",
+            }, function(choice)
+                if choice == "Yes" then
+                    next()
+                end
+            end)
+        end,
+    },
+}
+```
+
+### Response Validation
+
+Validate responses and notify on failure:
+
+```lua
+local env = require("nurl.environments")
+
+local function expect_status(codes)
+    return function(request, response)
+        if not vim.tbl_contains(codes, response.status_code) then
+            vim.notify(
+                string.format(
+                    "Unexpected status %d for %s",
+                    response.status_code,
+                    request.url
+                ),
+                vim.log.levels.ERROR
+            )
+        end
+    end
+end
+
+local function expect_json_field(field)
+    return function(request, response)
+        local ok, body = pcall(vim.json.decode, response.body)
+        if not ok or body[field] == nil then
+            vim.notify("Missing field: " .. field, vim.log.levels.ERROR)
+        end
+    end
+end
+
+return {
+    {
+        url = { env.var("base_url"), "users", "123" },
+        post_hook = function(request, response)
+            expect_status({ 200, 201 })(request, response)
+            expect_json_field("id")(request, response)
+        end,
+    },
+}
+```
+
+### GraphQL with Variables
+
+Build GraphQL queries programmatically:
+
+```lua
+local env = require("nurl.environments")
+
+local function graphql(query, variables)
+    return {
+        url = { env.var("base_url"), "graphql" },
+        method = "POST",
+        headers = {
+            ["Content-Type"] = "application/json",
+        },
+        data = {
+            query = query,
+            variables = variables,
+        },
+    }
+end
+
+return {
+    graphql(
+        [[
+        query GetUser($id: ID!) {
+            user(id: $id) {
+                id
+                name
+                email
+            }
+        }
+    ]],
+        {
+            id = function()
+                return vim.fn.input("User ID: ")
+            end,
+        }
+    ),
+    graphql(
+        [[
+        mutation CreateUser($input: CreateUserInput!) {
+            createUser(input: $input) {
+                id
+                name
+            }
+        }
+    ]],
+        {
+            input = {
+                name = "John Doe",
+                email = "john@example.com",
+            },
+        }
+    ),
+}
+```
+
+### File Upload with Picker
+
+Select a file to upload using Neovim's UI:
+
+```lua
+local function choose_file(next, request)
+    vim.ui.input(
+        { prompt = "File path: ", completion = "file" },
+        function(input)
+            if input then
+                request.form = { file = "@" .. vim.fn.expand(input) }
+                next()
+            end
+        end
+    )
+end
+
+return {
+    {
+        url = { "https://api.example.com/files/upload" },
+        method = "POST",
+        pre_hook = choose_file,
+    },
+}
+```
