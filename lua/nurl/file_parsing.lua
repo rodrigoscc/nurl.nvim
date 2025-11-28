@@ -280,7 +280,8 @@ function File:unset_environment_variable(environment, variable)
     end
 end
 
-function File:save()
+---@param on_save? fun(success: boolean)
+function File:save(on_save)
     if vim.fn.executable("stylua") == 1 then
         vim.system(
             { "stylua", "-" },
@@ -295,14 +296,43 @@ function File:save()
                         ),
                         vim.log.levels.WARN
                     )
-                    fs.write(self.path, self.contents)
                 else
-                    fs.write(self.path, out.stdout)
+                    self.contents = out.stdout
+                    self:_reparse()
+                end
+
+                local status, err = pcall(fs.write, self.path, self.contents)
+                if not status then
+                    vim.notify(
+                        string.format(
+                            "Failed writing file %s: %s",
+                            self.path,
+                            err
+                        ),
+                        vim.log.levels.WARN
+                    )
+                end
+
+                if on_save then
+                    on_save(status)
                 end
             end
         )
     else
-        fs.write(self.path, self.contents)
+        vim.schedule(function()
+            local status, err = pcall(fs.write, self.path, self.contents)
+
+            if not status then
+                vim.notify(
+                    string.format("Failed writing file %s: %s", self.path, err),
+                    vim.log.levels.WARN
+                )
+            end
+
+            if on_save then
+                on_save(status)
+            end
+        end)
     end
 end
 
