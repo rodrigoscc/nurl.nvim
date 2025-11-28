@@ -236,6 +236,7 @@ function Db:new(path)
   response_protocol TEXT,
   response_headers TEXT,
   response_body TEXT,
+  response_body_file TEXT,
   response_time_appconnect REAL,
   response_time_connect REAL,
   response_time_namelookup REAL,

@@ -21,11 +21,11 @@ function Curl:run(on_exit)
 
     self.exec_datetime = tostring(os.date("%Y-%m-%dT%H:%M:%S")) -- local time
     if on_exit == nil then
-        local result = vim.system(cmd, { text = true }):wait()
+        local result = vim.system(cmd):wait()
         self.result = result
         return result
     else
-        vim.system(cmd, { text = true }, function(out)
+        vim.system(cmd, {}, function(out)
             self.result = out
             on_exit(out)
         end)

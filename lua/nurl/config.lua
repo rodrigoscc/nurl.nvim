@@ -72,6 +72,7 @@ local defaults = {
             winbar_error_status_code = "NurlWinbarErrorStatusCode",
             winbar_loading = "NurlWinbarLoading",
             winbar_time = "NurlWinbarTime",
+            winbar_file = "NurlWinbarFile",
             winbar_error = "NurlWinbarError",
         },
     },

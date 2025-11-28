@@ -40,4 +40,20 @@ function M.write(path, contents)
     uv.fs_close(fd)
 end
 
+function M.write_temp(filename, contents)
+    local temp_dir = uv.fs_mkdtemp("/tmp/nurl.XXXXXX")
+
+    local path = vim.fs.joinpath(temp_dir, filename)
+
+    local fd, err = uv.fs_open(path, "w+", 438)
+    if fd == nil then
+        error("Could not open file: " .. path .. err)
+    end
+
+    uv.fs_write(fd, contents, -1)
+    uv.fs_close(fd)
+
+    return path
+end
+
 return M

@@ -1,5 +1,6 @@
 local actions = require("nurl.actions")
 local config = require("nurl.config")
+local responses = require("nurl.responses")
 
 local M = {}
 
@@ -35,21 +36,9 @@ local function expand_keymap_rhs(action)
 end
 
 ---@param headers table<string, string>
----@return string|nil
-local function get_content_type(headers)
-    for name, value in pairs(headers) do
-        if string.lower(name) == "content-type" then
-            return value
-        end
-    end
-
-    return nil
-end
-
----@param headers table<string, string>
 ---@return string
 local function guess_file_type(headers)
-    local content_type = get_content_type(headers)
+    local content_type = responses.get_content_type(headers)
     if content_type == nil then
         return "text"
     elseif
@@ -81,9 +70,29 @@ local function set_body_buffer(bufnr, content, file_type)
     vim.api.nvim_set_option_value("filetype", file_type, { buf = bufnr })
 end
 
+local function open_file_in_buffer(bufnr, file)
+    local existing_buffer = vim.fn.bufnr(file)
+    if existing_buffer ~= -1 then
+        -- Specially important for when the user opens a request in history which buffers are still open.
+        vim.api.nvim_buf_delete(existing_buffer, { force = true })
+    end
+
+    vim.api.nvim_buf_set_name(bufnr, file)
+    vim.api.nvim_buf_call(bufnr, function()
+        vim.cmd("edit") -- WORKAROUND: Snacks.image won't render the file without this
+    end)
+end
+
 ---@param bufnr integer
 ---@param response nurl.Response
 local function populate_body_buffer(bufnr, response)
+    if response.body_file then
+        vim.schedule(function()
+            open_file_in_buffer(bufnr, response.body_file)
+        end)
+        return
+    end
+
     local file_type = guess_file_type(response.headers)
     local formatter = config.formatters[file_type]
 

@@ -52,6 +52,23 @@ function M.time()
     return ""
 end
 
+function M.body_file()
+    local buffer_type = vim.b[0].nurl_buffer_type
+
+    ---@type nurl.Response
+    local response = vim.b[0].nurl_response
+
+    if buffer_type == "body" and response and response.body_file then
+        return string.format(
+            "%%#%s#[%s]%%*",
+            config.highlight.groups.winbar_file,
+            response.body_file
+        )
+    end
+
+    return ""
+end
+
 function M.buffer_tab(type)
     local buffer_type = vim.b[0].nurl_buffer_type
 
@@ -87,7 +104,7 @@ function M.tabs()
 end
 
 function M.winbar()
-    return "%{%v:lua.Nurl.winbar.status_code()%}%< %{%v:lua.Nurl.winbar.time()%}%=%{%v:lua.Nurl.winbar.tabs()%}"
+    return "%{%v:lua.Nurl.winbar.status_code()%}%< %{%v:lua.Nurl.winbar.time()%} %{%v:lua.Nurl.winbar.body_file()%}%=%{%v:lua.Nurl.winbar.tabs()%}"
 end
 
 return M
