@@ -25,21 +25,27 @@ function M.requests()
         if file then
             local request_ranges = file:list_requests_ranges()
 
-            local file_requests = dofile(file_path)
+            local status, file_requests = pcall(dofile, file_path)
+            if not status then
+                vim.notify(
+                    ("Skipping file %s: %s"):format(file_path, file_requests),
+                    vim.log.levels.WARN
+                )
+            else
+                for i, request in ipairs(file_requests) do
+                    local request_range = request_ranges[i]
+                    local start_row, start_col, end_row, end_col =
+                        unpack(request_range)
 
-            for i, request in ipairs(file_requests) do
-                local request_range = request_ranges[i]
-                local start_row, start_col, end_row, end_col =
-                    unpack(request_range)
-
-                table.insert(project_requests, {
-                    file = file_path,
-                    request = request,
-                    start_row = start_row + 1,
-                    start_col = start_col,
-                    end_row = end_row + 1,
-                    end_col = end_col,
-                })
+                    table.insert(project_requests, {
+                        file = file_path,
+                        request = request,
+                        start_row = start_row + 1,
+                        start_col = start_col,
+                        end_row = end_row + 1,
+                        end_col = end_col,
+                    })
+                end
             end
         else
             vim.notify("Skipping file: " .. err, vim.log.levels.WARN)
