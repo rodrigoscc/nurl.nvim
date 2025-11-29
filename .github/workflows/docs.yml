@@ -15,7 +15,6 @@ jobs:
       - run: mkdir -p doc
       - uses: kdheepak/panvimdoc@main
         with:
-          vimdoc: ${{ github.event.repository.name }}
           version: "Neovim >= 0.10.0"
           toc: true
       - uses: stefanzweifel/git-auto-commit-action@v5
