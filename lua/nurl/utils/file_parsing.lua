@@ -4,45 +4,44 @@ local M = {}
 
 local QUERY_ENV_VAR_VALUE = [[
 (return_statement
-  (expression_list
-    (table_constructor
-      (field
-        name: (identifier) @env (#eq? @env "%s")
-        value: (table_constructor
-                (field
-                  name: (identifier) @variable_name (#eq? @variable_name "%s")
-                  value: (_) @variable_value))))))
+    (expression_list
+        (table_constructor
+            (field
+                name: (identifier) @env (#eq? @env "%s")
+                value: (table_constructor
+                    (field
+                        name: (identifier) @variable_name (#eq? @variable_name "%s")
+                        value: (_) @variable_value))))))
 ]]
 
 local QUERY_ENV_VAR_FIELD = [[
 (return_statement
-  (expression_list
-    (table_constructor
-      (field
-        name: (identifier) @env (#eq? @env "%s")
-        value: (table_constructor
-                (field
-                  name: (identifier) @variable_name (#eq? @variable_name "%s")
-                  value: (_) @variable_value) @field)))))
+    (expression_list
+        (table_constructor
+            (field
+                name: (identifier) @env (#eq? @env "%s")
+                value: (table_constructor
+                    (field
+                        name: (identifier) @variable_name (#eq? @variable_name "%s")
+                        value: (_) @variable_value) @field)))))
 ]]
 
 local QUERY_LAST_ENV_VAR = [[
 (return_statement
-  (expression_list
-    (table_constructor
-      (field
-        name: (identifier) @env (#eq? @env "%s")
-        value: (table_constructor
-                 (field) @last_field .)))))
+    (expression_list
+        (table_constructor
+            (field
+                name: (identifier) @env (#eq? @env "%s")
+                value: (table_constructor (field) @last_field .)))))
 ]]
 
 local QUERY_ENV_TABLE = [[
 (return_statement
-  (expression_list
-    (table_constructor
-      (field
-        name: (identifier) @env (#eq? @env "%s")
-        value: (table_constructor) @env_table))))
+    (expression_list
+        (table_constructor
+            (field
+                name: (identifier) @env (#eq? @env "%s")
+                value: (table_constructor) @env_table))))
 ]]
 
 local QUERY_REQUESTS = [[

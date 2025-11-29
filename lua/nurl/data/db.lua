@@ -1,27 +1,27 @@
 local ffi = require("ffi")
 
 ffi.cdef([[
-  typedef struct sqlite3 sqlite3;
-  typedef struct sqlite3_stmt sqlite3_stmt;
+    typedef struct sqlite3 sqlite3;
+    typedef struct sqlite3_stmt sqlite3_stmt;
 
-  int sqlite3_open(const char *filename, sqlite3 **ppDb);
-  int sqlite3_close(sqlite3*);
-  int sqlite3_exec(
-    sqlite3*, const char *sql, int (*callback)(void*,int,char**,char**), void*, char **errmsg);
-  int sqlite3_prepare_v2(
-    sqlite3*, const char *zSql, int nByte, sqlite3_stmt **ppStmt, const char **pzTail);
-  int sqlite3_reset(sqlite3_stmt*);
-  int sqlite3_step(sqlite3_stmt*);
-  int sqlite3_finalize(sqlite3_stmt*);
-  int sqlite3_bind_text(sqlite3_stmt*, int, const char*, int n, void(*)(void*));
-  int sqlite3_bind_int64(sqlite3_stmt*, int, long long);
-  int sqlite3_bind_double(sqlite3_stmt*, int, double);
-  int sqlite3_bind_null(sqlite3_stmt*, int);
-  const unsigned char *sqlite3_column_text(sqlite3_stmt*, int);
-  int sqlite3_column_type(sqlite3_stmt*, int iCol);
-  long long sqlite3_column_int64(sqlite3_stmt*, int);
-  int sqlite3_column_count(sqlite3_stmt *pStmt);
-  const char *sqlite3_errmsg(sqlite3*);
+    int sqlite3_open(const char *filename, sqlite3 **ppDb);
+    int sqlite3_close(sqlite3*);
+    int sqlite3_exec(
+      sqlite3*, const char *sql, int (*callback)(void*,int,char**,char**), void*, char **errmsg);
+    int sqlite3_prepare_v2(
+      sqlite3*, const char *zSql, int nByte, sqlite3_stmt **ppStmt, const char **pzTail);
+    int sqlite3_reset(sqlite3_stmt*);
+    int sqlite3_step(sqlite3_stmt*);
+    int sqlite3_finalize(sqlite3_stmt*);
+    int sqlite3_bind_text(sqlite3_stmt*, int, const char*, int n, void(*)(void*));
+    int sqlite3_bind_int64(sqlite3_stmt*, int, long long);
+    int sqlite3_bind_double(sqlite3_stmt*, int, double);
+    int sqlite3_bind_null(sqlite3_stmt*, int);
+    const unsigned char *sqlite3_column_text(sqlite3_stmt*, int);
+    int sqlite3_column_type(sqlite3_stmt*, int iCol);
+    long long sqlite3_column_int64(sqlite3_stmt*, int);
+    int sqlite3_column_count(sqlite3_stmt *pStmt);
+    const char *sqlite3_errmsg(sqlite3*);
 ]])
 
 local sqlite = ffi.load("sqlite3")
@@ -223,39 +223,39 @@ function Db:new(path)
     end
 
     result = db:exec([[CREATE TABLE IF NOT EXISTS request_history (
-  id INTEGER PRIMARY KEY,
-  time TEXT,
-  request_url TEXT,
-  request_title TEXT,
-  request_method TEXT,
-  request_headers TEXT,
-  request_data TEXT,
-  request_form TEXT,
-  request_data_urlencode TEXT,
-  response_status_code INTEGER,
-  response_reason_phrase TEXT,
-  response_protocol TEXT,
-  response_headers TEXT,
-  response_body TEXT,
-  response_body_file TEXT,
-  response_time_appconnect REAL,
-  response_time_connect REAL,
-  response_time_namelookup REAL,
-  response_time_pretransfer REAL,
-  response_time_redirect REAL,
-  response_time_starttransfer REAL,
-  response_time_total REAL,
-  response_size_download INTEGER,
-  response_size_header INTEGER,
-  response_size_request INTEGER,
-  response_size_upload INTEGER,
-  response_speed_download INTEGER,
-  response_speed_upload INTEGER,
-  curl_args TEXT,
-  curl_result_code INTEGER,
-  curl_result_signal TEXT,
-  curl_result_stdout TEXT,
-  curl_result_stderr TEXT
+    id INTEGER PRIMARY KEY,
+    time TEXT,
+    request_url TEXT,
+    request_title TEXT,
+    request_method TEXT,
+    request_headers TEXT,
+    request_data TEXT,
+    request_form TEXT,
+    request_data_urlencode TEXT,
+    response_status_code INTEGER,
+    response_reason_phrase TEXT,
+    response_protocol TEXT,
+    response_headers TEXT,
+    response_body TEXT,
+    response_body_file TEXT,
+    response_time_appconnect REAL,
+    response_time_connect REAL,
+    response_time_namelookup REAL,
+    response_time_pretransfer REAL,
+    response_time_redirect REAL,
+    response_time_starttransfer REAL,
+    response_time_total REAL,
+    response_size_download INTEGER,
+    response_size_header INTEGER,
+    response_size_request INTEGER,
+    response_size_upload INTEGER,
+    response_speed_download INTEGER,
+    response_speed_upload INTEGER,
+    curl_args TEXT,
+    curl_result_code INTEGER,
+    curl_result_signal TEXT,
+    curl_result_stdout TEXT,
+    curl_result_stderr TEXT
 );]])
     local create_code = result.code
     result:close()

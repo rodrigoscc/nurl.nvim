@@ -35,7 +35,7 @@ function M.insert_history_entry(request, response, curl)
 
     local result = M.db:exec(
         [[INSERT INTO
-  request_history (
+request_history (
     time,
     request_url,
     request_title,
@@ -68,9 +68,9 @@ function M.insert_history_entry(request, response, curl)
     curl_result_signal,
     curl_result_stdout,
     curl_result_stderr
-  )
+)
 VALUES
-  (
+(
     ?,
     ?,
     ?,
@@ -103,7 +103,7 @@ VALUES
     ?,
     ?,
     ?
-  );]],
+);]],
         {
             curl.exec_datetime,
             request.url,
@@ -150,9 +150,9 @@ function M.delete_old_items()
     local result = M.db:exec(
         [[DELETE FROM request_history
 WHERE id IN (
-  SELECT id FROM request_history
-  ORDER BY time ASC
-  LIMIT ?
+    SELECT id FROM request_history
+    ORDER BY time ASC
+    LIMIT ?
 )
 AND (SELECT COUNT(*) FROM request_history) >= ?;]],
         {
@@ -171,40 +171,40 @@ function M.all()
     end
 
     local result = M.db:exec([[SELECT
-  time,
-  request_url,
-  request_title,
-  request_method,
-  request_headers,
-  request_data,
-  request_form,
-  request_data_urlencode,
-  response_status_code,
-  response_reason_phrase,
-  response_protocol,
-  response_headers,
-  response_body,
-  response_body_file,
-  response_time_appconnect,
-  response_time_connect,
-  response_time_namelookup,
-  response_time_pretransfer,
-  response_time_redirect,
-  response_time_starttransfer,
-  response_time_total,
-  response_size_download,
-  response_size_header,
-  response_size_request,
-  response_size_upload,
-  response_speed_download,
-  response_speed_upload,
-  curl_args,
-  curl_result_code,
-  curl_result_signal,
-  curl_result_stdout,
-  curl_result_stderr
+    time,
+    request_url,
+    request_title,
+    request_method,
+    request_headers,
+    request_data,
+    request_form,
+    request_data_urlencode,
+    response_status_code,
+    response_reason_phrase,
+    response_protocol,
+    response_headers,
+    response_body,
+    response_body_file,
+    response_time_appconnect,
+    response_time_connect,
+    response_time_namelookup,
+    response_time_pretransfer,
+    response_time_redirect,
+    response_time_starttransfer,
+    response_time_total,
+    response_size_download,
+    response_size_header,
+    response_size_request,
+    response_size_upload,
+    response_speed_download,
+    response_speed_upload,
+    curl_args,
+    curl_result_code,
+    curl_result_signal,
+    curl_result_stdout,
+    curl_result_stderr
 FROM
-  request_history
+    request_history
 ORDER BY time DESC]])
 
     local rows = result:all()
