@@ -433,8 +433,6 @@ nurl.send({
     url = "https://api.example.com/users",
     method = "GET",
 }, {
-    -- Optional: reuse existing window
-    win = vim.api.nvim_get_current_win(),
     -- Optional: custom response handler (skips UI)
     on_response = function(response, curl)
         print(response.status_code)
