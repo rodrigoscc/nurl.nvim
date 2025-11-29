@@ -3,29 +3,40 @@
 ==============================================================================
 Table of Contents                                *nurl.nvim-table-of-contents*
 
-1. nurl.nvim                                             |nurl.nvim-nurl.nvim|
-  - Table of Contents                  |nurl.nvim-nurl.nvim-table-of-contents|
-  - Features                                    |nurl.nvim-nurl.nvim-features|
-  - Requirements                            |nurl.nvim-nurl.nvim-requirements|
-  - Installation                            |nurl.nvim-nurl.nvim-installation|
-  - Quick Start                              |nurl.nvim-nurl.nvim-quick-start|
-  - Configuration                          |nurl.nvim-nurl.nvim-configuration|
-  - Commands                                    |nurl.nvim-nurl.nvim-commands|
-  - Request Format                        |nurl.nvim-nurl.nvim-request-format|
-  - Environments                            |nurl.nvim-nurl.nvim-environments|
-  - API                                              |nurl.nvim-nurl.nvim-api|
-  - Winbar                                        |nurl.nvim-nurl.nvim-winbar|
-  - Highlight Groups                    |nurl.nvim-nurl.nvim-highlight-groups|
-  - Recipes                                      |nurl.nvim-nurl.nvim-recipes|
-
-==============================================================================
-1. nurl.nvim                                             *nurl.nvim-nurl.nvim*
-
+1. Table of Contents                             |nurl.nvim-table-of-contents|
+2. Features                                               |nurl.nvim-features|
+3. Requirements                                       |nurl.nvim-requirements|
+4. Installation                                       |nurl.nvim-installation|
+5. Quick Start                                         |nurl.nvim-quick-start|
+  - 1. Create a request file  |nurl.nvim-quick-start-1.-create-a-request-file|
+  - 2. Run a request                  |nurl.nvim-quick-start-2.-run-a-request|
+6. Configuration                                     |nurl.nvim-configuration|
+7. Commands                                               |nurl.nvim-commands|
+8. Request Format                                   |nurl.nvim-request-format|
+  - Dynamic Values                   |nurl.nvim-request-format-dynamic-values|
+  - Lazy Values                         |nurl.nvim-request-format-lazy-values|
+  - URL Parts                             |nurl.nvim-request-format-url-parts|
+9. Environments                                       |nurl.nvim-environments|
+  - Setting Variables Programmatically|nurl.nvim-environments-setting-variables-programmatically|
+  - Environment Hooks               |nurl.nvim-environments-environment-hooks|
+10. API                                                        |nurl.nvim-api|
+11. Winbar                                                  |nurl.nvim-winbar|
+12. Highlight Groups                              |nurl.nvim-highlight-groups|
+13. Recipes                                                |nurl.nvim-recipes|
+  - 1Password CLI for secrets    |nurl.nvim-recipes-1password-cli-for-secrets|
+  - OAuth2 Token Refresh              |nurl.nvim-recipes-oauth2-token-refresh|
+  - Using Response Values            |nurl.nvim-recipes-using-response-values|
+  - HMAC Signature                          |nurl.nvim-recipes-hmac-signature|
+  - Environment-Based Confirmation|nurl.nvim-recipes-environment-based-confirmation|
+  - Response Validation                |nurl.nvim-recipes-response-validation|
+  - GraphQL with Variables          |nurl.nvim-recipes-graphql-with-variables|
+  - File Upload with Picker        |nurl.nvim-recipes-file-upload-with-picker|
 A Lua-based HTTP client for Neovim. Define requests in Lua files, manage
 environments, add hooks, and view responses in beautiful split windows.
 
 Body tabHeaders tabInfo tabRaw tabRequest pickerHistory picker
-TABLE OF CONTENTS                      *nurl.nvim-nurl.nvim-table-of-contents*
+==============================================================================
+1. Table of Contents                             *nurl.nvim-table-of-contents*
 
 - |nurl.nvim-✨-features|
 - |nurl.nvim-📋-requirements|
@@ -53,7 +64,8 @@ TABLE OF CONTENTS                      *nurl.nvim-nurl.nvim-table-of-contents*
     - |nurl.nvim-file-upload-with-picker|
 
 
-FEATURES                                        *nurl.nvim-nurl.nvim-features*
+==============================================================================
+2. Features                                               *nurl.nvim-features*
 
 - **Lua-based requests** - Define HTTP requests as Lua tables with full language support
 - **Environments** - Manage variables per environment (dev, staging, prod)
@@ -63,7 +75,8 @@ FEATURES                                        *nurl.nvim-nurl.nvim-features*
 - **Picker integration** - Browse requests and history with snacks.nvim <https://github.com/folke/snacks.nvim> or telescope.nvim <https://github.com/nvim-telescope/telescope.nvim>
 
 
-REQUIREMENTS                                *nurl.nvim-nurl.nvim-requirements*
+==============================================================================
+3. Requirements                                       *nurl.nvim-requirements*
 
 - Neovim >= 0.10.0
 - `curl` in PATH
@@ -71,7 +84,8 @@ REQUIREMENTS                                *nurl.nvim-nurl.nvim-requirements*
 - Optional: `jq` for JSON formatting, `stylua` for environments file formatting
 
 
-INSTALLATION                                *nurl.nvim-nurl.nvim-installation*
+==============================================================================
+4. Installation                                       *nurl.nvim-installation*
 
 Using lazy.nvim <https://github.com/folke/lazy.nvim>:
 
@@ -88,10 +102,11 @@ Using lazy.nvim <https://github.com/folke/lazy.nvim>:
 <
 
 
-QUICK START                                  *nurl.nvim-nurl.nvim-quick-start*
+==============================================================================
+5. Quick Start                                         *nurl.nvim-quick-start*
 
 
-1. CREATE A REQUEST FILE ~
+1. CREATE A REQUEST FILE      *nurl.nvim-quick-start-1.-create-a-request-file*
 
 Create `.nurl/requests.lua` in your project:
 
@@ -116,7 +131,7 @@ Create `.nurl/requests.lua` in your project:
 <
 
 
-2. RUN A REQUEST ~
+2. RUN A REQUEST                      *nurl.nvim-quick-start-2.-run-a-request*
 
 Position cursor on a request and run:
 
@@ -131,7 +146,8 @@ Or use the picker:
 <
 
 
-CONFIGURATION                              *nurl.nvim-nurl.nvim-configuration*
+==============================================================================
+6. Configuration                                     *nurl.nvim-configuration*
 
 >lua
     require("nurl").setup({
@@ -204,7 +220,8 @@ CONFIGURATION                              *nurl.nvim-nurl.nvim-configuration*
 <
 
 
-COMMANDS                                        *nurl.nvim-nurl.nvim-commands*
+==============================================================================
+7. Commands                                               *nurl.nvim-commands*
 
   -----------------------------------------------------------------------
   Command                       Description
@@ -231,7 +248,8 @@ COMMANDS                                        *nurl.nvim-nurl.nvim-commands*
   :Nurl                         Show command picker
   -----------------------------------------------------------------------
 
-REQUEST FORMAT                            *nurl.nvim-nurl.nvim-request-format*
+==============================================================================
+8. Request Format                                   *nurl.nvim-request-format*
 
 >lua
     ---@class nurl.SuperRequest
@@ -277,7 +295,7 @@ REQUEST FORMAT                            *nurl.nvim-nurl.nvim-request-format*
 <
 
 
-DYNAMIC VALUES ~
+DYNAMIC VALUES                       *nurl.nvim-request-format-dynamic-values*
 
 Use functions for dynamic values:
 
@@ -297,7 +315,7 @@ Use functions for dynamic values:
 <
 
 
-LAZY VALUES ~
+LAZY VALUES                             *nurl.nvim-request-format-lazy-values*
 
 Use `Nurl.lazy()` for values that should only be resolved right before sending
 (not during picker preview):
@@ -316,7 +334,7 @@ Use `Nurl.lazy()` for values that should only be resolved right before sending
 <
 
 
-URL PARTS ~
+URL PARTS                                 *nurl.nvim-request-format-url-parts*
 
 Build URLs from parts:
 
@@ -337,7 +355,8 @@ Build URLs from parts:
 <
 
 
-ENVIRONMENTS                                *nurl.nvim-nurl.nvim-environments*
+==============================================================================
+9. Environments                                       *nurl.nvim-environments*
 
 Create `.nurl/environments.lua`:
 
@@ -394,7 +413,7 @@ Access variables in requests:
 Switch environments with `:Nurl env`.
 
 
-SETTING VARIABLES PROGRAMMATICALLY ~
+SETTING VARIABLES PROGRAMMATICALLY*nurl.nvim-environments-setting-variables-programmatically*
 
 Use `env.set()` to update environment variables from hooks:
 
@@ -415,7 +434,7 @@ Use `env.set()` to update environment variables from hooks:
 <
 
 
-ENVIRONMENT HOOKS ~
+ENVIRONMENT HOOKS                   *nurl.nvim-environments-environment-hooks*
 
 Add hooks inside each environment:
 
@@ -457,7 +476,8 @@ Add hooks inside each environment:
 <
 
 
-API                                                  *nurl.nvim-nurl.nvim-api*
+==============================================================================
+10. API                                                        *nurl.nvim-api*
 
 >lua
     local nurl = require("nurl")
@@ -487,7 +507,8 @@ API                                                  *nurl.nvim-nurl.nvim-api*
 <
 
 
-WINBAR                                            *nurl.nvim-nurl.nvim-winbar*
+==============================================================================
+11. Winbar                                                  *nurl.nvim-winbar*
 
 The response window includes a winbar showing status code, response time, and
 buffer tabs. Use these in your own winbar:
@@ -498,7 +519,8 @@ buffer tabs. Use these in your own winbar:
 <
 
 
-HIGHLIGHT GROUPS                        *nurl.nvim-nurl.nvim-highlight-groups*
+==============================================================================
+12. Highlight Groups                              *nurl.nvim-highlight-groups*
 
   Group                         Description
   ----------------------------- ------------------------
@@ -512,10 +534,11 @@ HIGHLIGHT GROUPS                        *nurl.nvim-nurl.nvim-highlight-groups*
   NurlWinbarTime                Response time
   NurlWinbarError               Error messages
 
-RECIPES                                          *nurl.nvim-nurl.nvim-recipes*
+==============================================================================
+13. Recipes                                                *nurl.nvim-recipes*
 
 
-1PASSWORD CLI FOR SECRETS ~
+1PASSWORD CLI FOR SECRETS        *nurl.nvim-recipes-1password-cli-for-secrets*
 
 Use the 1Password CLI (`op`) with `nurl.lazy()` to fetch secrets only when
 sending:
@@ -565,7 +588,7 @@ sending:
 <
 
 
-OAUTH2 TOKEN REFRESH ~
+OAUTH2 TOKEN REFRESH                  *nurl.nvim-recipes-oauth2-token-refresh*
 
 Auto-refresh expired tokens before requests using environment hooks:
 
@@ -622,7 +645,7 @@ Auto-refresh expired tokens before requests using environment hooks:
 <
 
 
-USING RESPONSE VALUES ~
+USING RESPONSE VALUES                *nurl.nvim-recipes-using-response-values*
 
 Store response data for use in subsequent requests:
 
@@ -654,7 +677,7 @@ Store response data for use in subsequent requests:
 <
 
 
-HMAC SIGNATURE ~
+HMAC SIGNATURE                              *nurl.nvim-recipes-hmac-signature*
 
 Sign requests with HMAC-SHA256:
 
@@ -694,7 +717,7 @@ Sign requests with HMAC-SHA256:
 <
 
 
-ENVIRONMENT-BASED CONFIRMATION ~
+ENVIRONMENT-BASED CONFIRMATION*nurl.nvim-recipes-environment-based-confirmation*
 
 Require confirmation before dangerous requests in production:
 
@@ -725,7 +748,7 @@ Require confirmation before dangerous requests in production:
 <
 
 
-RESPONSE VALIDATION ~
+RESPONSE VALIDATION                    *nurl.nvim-recipes-response-validation*
 
 Validate responses and notify on failure:
 
@@ -768,7 +791,7 @@ Validate responses and notify on failure:
 <
 
 
-GRAPHQL WITH VARIABLES ~
+GRAPHQL WITH VARIABLES              *nurl.nvim-recipes-graphql-with-variables*
 
 Build GraphQL queries programmatically:
 
@@ -826,7 +849,7 @@ Build GraphQL queries programmatically:
 <
 
 
-FILE UPLOAD WITH PICKER ~
+FILE UPLOAD WITH PICKER            *nurl.nvim-recipes-file-upload-with-picker*
 
 Select a file to upload using Neovim’s UI:
 
