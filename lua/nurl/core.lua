@@ -54,8 +54,8 @@ function M.send(request, opts)
             M.last_request_wins:push(win)
         end
 
-        local function default_on_response(response, curl)
-            response_window:update(response, curl)
+        local function default_on_response(response, _curl)
+            response_window:update(response, _curl)
         end
 
         curl:run(function(system_completed)

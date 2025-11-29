@@ -35,7 +35,7 @@ end
 ---@param item snacks.picker.Item
 ---@param picker snacks.Picker
 ---@return snacks.picker.Highlight[]
-local function format_project_request_item(item, picker)
+local function format_project_request_item(item)
     local ret = {}
 
     table.insert(ret, { "", "SnacksPickerIcon" })

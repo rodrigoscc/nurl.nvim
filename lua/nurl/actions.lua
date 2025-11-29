@@ -3,7 +3,7 @@ local M = {}
 M.builtin = {
     ---@param opts? table
     ---@return fun()
-    next_buffer = function(opts)
+    next_buffer = function(_)
         return function()
             local config = require("nurl.config")
 
@@ -40,7 +40,7 @@ M.builtin = {
     end,
     ---@param opts? table
     ---@return fun()
-    previous_buffer = function(opts)
+    previous_buffer = function(_)
         return function()
             local config = require("nurl.config")
 
@@ -79,7 +79,7 @@ M.builtin = {
     end,
     ---@param opts? table
     ---@return fun()
-    switch_buffer = function(opts)
+    switch_buffer = function(_)
         return function()
             local new_buffer = vim.b.nurl_buffers[opts.buffer]
             if new_buffer == nil then
@@ -91,9 +91,10 @@ M.builtin = {
     end,
     ---@param opts? table
     ---@return fun()
-    rerun = function(opts)
+    rerun = function(_)
         return function()
-            Nurl.send(
+            local nurl = require("nurl")
+            nurl.send(
                 vim.b.nurl_request,
                 { win = vim.api.nvim_get_current_win() }
             )
@@ -101,7 +102,7 @@ M.builtin = {
     end,
     ---@param opts? table
     ---@return fun()
-    close = function(opts)
+    close = function(_)
         return function()
             vim.cmd.close()
         end

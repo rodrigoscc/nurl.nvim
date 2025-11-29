@@ -77,12 +77,12 @@ function E:start()
                 return
             end
 
-            local pos = self:_get_centered_position()
+            local new_pos = self:_get_centered_position()
             vim.api.nvim_win_set_config(self.win, {
                 relative = "win",
                 win = self.ref_win,
-                row = pos.row,
-                col = pos.col,
+                row = new_pos.row,
+                col = new_pos.col,
             })
 
             local frame = self.spinner:frame()
