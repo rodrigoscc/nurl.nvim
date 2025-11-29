@@ -162,70 +162,43 @@ local function populate_raw_buffer(bufnr, curl)
 end
 
 ---@param bufnr integer
+---@param request nurl.Request
 ---@param response nurl.Response
 ---@param curl nurl.Curl
-local function populate_info_buffer(bufnr, response, curl)
+local function populate_info_buffer(bufnr, request, response, curl)
     local info_lines = {}
 
-    table.insert(info_lines, string.format("date: %s", curl.exec_datetime))
+    local function new_line(indent_level, format, ...)
+        local indent = string.rep(" ", indent_level * 2)
+        table.insert(info_lines, string.format("%s" .. format, indent, ...))
+    end
 
-    table.insert(
-        info_lines,
-        string.format("time_appconnect: %.4f", response.time.time_appconnect)
-    )
-    table.insert(
-        info_lines,
-        string.format("time_connect: %.4f", response.time.time_connect)
-    )
-    table.insert(
-        info_lines,
-        string.format("time_namelookup: %.4f", response.time.time_namelookup)
-    )
-    table.insert(
-        info_lines,
-        string.format("time_pretransfer: %.4f", response.time.time_pretransfer)
-    )
-    table.insert(
-        info_lines,
-        string.format("time_redirect: %.4f", response.time.time_redirect)
-    )
-    table.insert(
-        info_lines,
-        string.format(
-            "time_starttransfer: %.4f",
-            response.time.time_starttransfer
-        )
-    )
-    table.insert(
-        info_lines,
-        string.format("time_total: %.4f", response.time.time_total)
-    )
+    new_line(0, "date: %s", curl.exec_datetime)
 
-    table.insert(
-        info_lines,
-        string.format("size_download: %d", response.size.size_download)
-    )
-    table.insert(
-        info_lines,
-        string.format("size_header: %d", response.size.size_header)
-    )
-    table.insert(
-        info_lines,
-        string.format("size_request: %d", response.size.size_request)
-    )
-    table.insert(
-        info_lines,
-        string.format("size_upload: %d", response.size.size_upload)
-    )
+    new_line(0, "request:")
+    new_line(1, "method: %s", request.method)
+    new_line(1, "url: %s", request.url)
 
-    table.insert(
-        info_lines,
-        string.format("speed_download: %d", response.speed.speed_download)
-    )
-    table.insert(
-        info_lines,
-        string.format("speed_upload: %d", response.speed.speed_upload)
-    )
+    new_line(0, "response:")
+
+    new_line(1, "time:")
+    new_line(2, "appconnect: %.4f", response.time.time_appconnect)
+    new_line(2, "connect: %.4f", response.time.time_connect)
+    new_line(2, "namelookup: %.4f", response.time.time_namelookup)
+    new_line(2, "pretransfer: %.4f", response.time.time_pretransfer)
+    new_line(2, "redirect: %.4f", response.time.time_redirect)
+    new_line(2, "starttransfer: %.4f", response.time.time_starttransfer)
+    new_line(2, "total: %.4f", response.time.time_total)
+
+    new_line(1, "size:")
+    new_line(2, "download: %d", response.size.size_download)
+    new_line(2, "header: %d", response.size.size_header)
+    new_line(2, "request: %d", response.size.size_request)
+    new_line(2, "upload: %d", response.size.size_upload)
+
+    new_line(1, "speed:")
+    new_line(2, "download: %d", response.speed.speed_download)
+    new_line(2, "upload: %d", response.speed.speed_upload)
 
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, info_lines)
     vim.api.nvim_set_option_value("filetype", "yaml", { buf = bufnr })
@@ -251,7 +224,7 @@ function M.create_buffer(buffer, request, response, curl)
         end
     elseif type == "info" then
         if response ~= nil then
-            populate_info_buffer(buf, response, curl)
+            populate_info_buffer(buf, request, response, curl)
         end
     elseif type == "raw" then
         populate_raw_buffer(buf, curl)
@@ -281,7 +254,7 @@ function M.update_buffer(bufnr, buffer, request, response, curl)
         end
     elseif buffer[1] == "info" then
         if response ~= nil then
-            populate_info_buffer(bufnr, response, curl)
+            populate_info_buffer(bufnr, request, response, curl)
         end
     elseif buffer[1] == "raw" then
         populate_raw_buffer(bufnr, curl)
