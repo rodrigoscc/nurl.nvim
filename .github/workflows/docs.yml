@@ -1,0 +1,21 @@
+name: Generate docs
+on:
+  push:
+    branches: [main]
+    paths:
+      - README.md
+      - .github/workflows/docs.yml
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: kdheepak/panvimdoc@main
+        with:
+          vimdoc: ${{ github.event.repository.name }}
+          version: "Neovim >= 0.10.0"
+          toc: true
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: auto-generate vimdoc"
+          file_pattern: doc/*
