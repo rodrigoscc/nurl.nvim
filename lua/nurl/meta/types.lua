@@ -13,3 +13,4 @@
 ---@field get_active_env fun(): string|nil
 ---@field open_history fun()
 ---@field lazy fun(value: any)
+---@field env nurl.env

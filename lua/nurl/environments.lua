@@ -10,6 +10,7 @@ local file_parsing = require("nurl.utils.file_parsing")
 local variables = require("nurl.variables")
 local uv = vim.uv or vim.loop
 
+---@class nurl.env
 local M = {}
 
 ---@type string | nil
