@@ -13,7 +13,7 @@ local variables = require("nurl.variables")
 
 ---@class nurl.SuperRequest
 ---@field [1]? string
----@field url string | table<string, any> | fun(): string | table<string, any>
+---@field url? string | table<string, any> | fun(): string | table<string, any>
 ---@field method? string
 ---@field headers? table<string, string> | fun(): table<string, string>
 ---@field data? string | table<string, any> | fun(): string | table<string, any>
