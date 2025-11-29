@@ -79,7 +79,7 @@ M.builtin = {
     end,
     ---@param opts? table
     ---@return fun()
-    switch_buffer = function(_)
+    switch_buffer = function(opts)
         return function()
             local new_buffer = vim.b.nurl_buffers[opts.buffer]
             if new_buffer == nil then
