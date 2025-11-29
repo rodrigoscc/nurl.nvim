@@ -13,7 +13,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: mkdir -p doc
       - uses: kdheepak/panvimdoc@main
         with:
@@ -21,7 +21,7 @@ jobs:
           version: "Neovim >= 0.10.0"
           shiftheadinglevelby: -1 # remove README.md first nurl.nvim header from tags
           toc: false
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "docs: auto-generate vimdoc"
           file_pattern: doc/*
