@@ -4,6 +4,7 @@ local variables = require("nurl.variables")
 ---@class nurl.Request
 ---@field method string
 ---@field url string
+---@field title? string
 ---@field headers table<string, string>
 ---@field data? string | table<string, any>
 ---@field form? table<string, string>
@@ -14,6 +15,7 @@ local variables = require("nurl.variables")
 ---@class nurl.SuperRequest
 ---@field [1]? string
 ---@field url? string | table<string, any> | fun(): string | table<string, any>
+---@field title? string | fun(): string
 ---@field method? string
 ---@field headers? table<string, string> | fun(): table<string, string>
 ---@field data? string | table<string, any> | fun(): string | table<string, any>
@@ -84,6 +86,13 @@ function M.expand(request, opts)
     local form = variables.expand(request.form, opts)
     local data_urlencode = variables.expand(request.data_urlencode, opts)
 
+    local title = variables.expand(request.title, opts)
+
+    assert(
+        title == nil or type(title) == "string",
+        "Request title must be a string"
+    )
+
     local method = "GET"
     if request.method ~= nil then
         method = request.method:upper()
@@ -92,6 +101,7 @@ function M.expand(request, opts)
     ---@type nurl.Request|nurl.SuperRequest
     local req = {
         url = url,
+        title = title,
         method = method,
         headers = headers or {},
         data = data,
@@ -106,22 +116,29 @@ end
 
 ---@param request nurl.SuperRequest | nurl.Request
 function M.stringify_lazy(request)
-    local request_url = variables.stringify_lazy(request.url)
+    local super_url
+    if request[1] then
+        super_url = request[1]
+    else
+        super_url = variables.stringify_lazy(request.url)
+    end
 
-    assert(request_url ~= nil, "Request must have a URL")
+    assert(super_url ~= nil, "Request must have a URL")
 
     ---@type string
     local url
-    if type(request_url) == "string" then
-        url = request_url
+    if type(super_url) == "string" then
+        url = super_url
     else
-        url = build_url(request_url)
+        url = build_url(super_url)
     end
 
     local headers = variables.stringify_lazy(request.headers)
     local data = variables.stringify_lazy(request.data)
     local form = variables.stringify_lazy(request.form)
     local data_urlencode = variables.stringify_lazy(request.data_urlencode)
+
+    local title = variables.stringify_lazy(request.title)
 
     -- Make sure the fields that are expected to be tables are still tables after calling stringify_lazy
     if type(headers) == "string" then
@@ -143,6 +160,7 @@ function M.stringify_lazy(request)
     ---@type nurl.Request
     local req = {
         url = url,
+        title = title,
         method = method,
         headers = headers or {},
         data = data,
@@ -211,6 +229,37 @@ function M.build_curl(request)
     )
 
     return Curl:new({ args = args })
+end
+
+---@class nurl.RequestTextOpts
+---@field prefix? string
+---@field suffix? string
+
+--- text computes the string representation of the request parameter
+--- Assumes no lazy objects remain in the request.
+---@param request nurl.Request
+---@param opts? nurl.RequestTextOpts
+---@return string
+function M.text(request, opts)
+    opts = opts or {}
+
+    local title
+
+    if request.title then
+        title = request.title
+    else
+        title = string.format("%s %s", request.method, request.url)
+    end
+
+    if opts.suffix then
+        title = title .. " " .. opts.suffix
+    end
+
+    if opts.prefix then
+        title = opts.prefix .. " " .. title
+    end
+
+    return title
 end
 
 return M

@@ -65,11 +65,19 @@ function M.pick_request(title, super_requests, on_pick)
     })
 
     local make_display = function(entry)
-        return displayer({
-            { "", "TelescopeResultsIdentifier" },
-            { entry.method, "TelescopeResultsFunction" },
-            { entry.url, "TelescopeResultsTitle" },
-        })
+        if entry.title then
+            return displayer({
+                { "", "TelescopeResultsIdentifier" },
+                { "", "TelescopeResultsFunction" },
+                { entry.title, "TelescopeResultsTitle" },
+            })
+        else
+            return displayer({
+                { "", "TelescopeResultsIdentifier" },
+                { entry.method, "TelescopeResultsFunction" },
+                { entry.url, "TelescopeResultsTitle" },
+            })
+        end
     end
 
     pickers
@@ -83,9 +91,10 @@ function M.pick_request(title, super_requests, on_pick)
                     return {
                         value = expanded,
                         display = make_display,
-                        ordinal = lazy.method .. " " .. lazy.url,
+                        ordinal = requests.text(lazy),
                         method = lazy.method,
                         url = lazy.url,
+                        title = lazy.title,
                         preview = get_preview(lazy),
                     }
                 end,
@@ -121,12 +130,21 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
     })
 
     local make_display = function(entry)
-        return displayer({
-            { "", "TelescopeResultsIdentifier" },
-            { entry.method, "TelescopeResultsFunction" },
-            { entry.url, "TelescopeResultsTitle" },
-            { entry.file, "TelescopeResultsComment" },
-        })
+        if entry.title then
+            return displayer({
+                { "", "TelescopeResultsIdentifier" },
+                { "", "TelescopeResultsFunction" },
+                { entry.title, "TelescopeResultsTitle" },
+                { entry.file, "TelescopeResultsComment" },
+            })
+        else
+            return displayer({
+                { "", "TelescopeResultsIdentifier" },
+                { entry.method, "TelescopeResultsFunction" },
+                { entry.url, "TelescopeResultsTitle" },
+                { entry.file, "TelescopeResultsComment" },
+            })
+        end
     end
 
     pickers
@@ -142,13 +160,13 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
                     return {
                         value = request_item,
                         display = make_display,
-                        ordinal = lazy.method
-                            .. " "
-                            .. lazy.url
-                            .. " "
-                            .. request_item.file,
+                        ordinal = requests.text(
+                            lazy,
+                            { suffix = request_item.file }
+                        ),
                         method = lazy.method,
                         url = lazy.url,
+                        title = lazy.title,
                         file = request_item.file,
                         filename = request_item.file,
                         lnum = request_item.start_row,
@@ -197,13 +215,23 @@ function M.pick_request_history_item(title, history_items, on_pick)
     })
 
     local make_display = function(entry)
-        return displayer({
-            { "", "TelescopeResultsIdentifier" },
-            { entry.datetime, "TelescopeResultsComment" },
-            { entry.method, "TelescopeResultsFunction" },
-            { entry.url, "TelescopeResultsTitle" },
-            { tostring(entry.status_code), "TelescopeResultsConstant" },
-        })
+        if entry.title then
+            return displayer({
+                { "", "TelescopeResultsIdentifier" },
+                { entry.datetime, "TelescopeResultsComment" },
+                { "", "TelescopeResultsFunction" },
+                { entry.title, "TelescopeResultsTitle" },
+                { tostring(entry.status_code), "TelescopeResultsConstant" },
+            })
+        else
+            return displayer({
+                { "", "TelescopeResultsIdentifier" },
+                { entry.datetime, "TelescopeResultsComment" },
+                { entry.method, "TelescopeResultsFunction" },
+                { entry.url, "TelescopeResultsTitle" },
+                { tostring(entry.status_code), "TelescopeResultsConstant" },
+            })
+        end
     end
 
     pickers
@@ -216,16 +244,14 @@ function M.pick_request_history_item(title, history_items, on_pick)
                     return {
                         value = item,
                         display = make_display,
-                        ordinal = curl.exec_datetime
-                            .. " "
-                            .. request.method
-                            .. " "
-                            .. request.url
-                            .. " "
-                            .. response.status_code,
+                        ordinal = requests.text(request, {
+                            prefix = curl.exec_datetime,
+                            suffix = response.status_code,
+                        }),
                         datetime = curl.exec_datetime,
                         method = request.method,
                         url = request.url,
+                        title = request.title,
                         status_code = response.status_code,
                         preview = get_preview(request),
                     }

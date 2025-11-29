@@ -240,6 +240,10 @@ require("nurl").setup({
     url = { "https://api.example.com", "v1", "users" },
     url = function() return "https://api.example.com/users/id" end,
 
+    -- Optional: display name in pickers
+    title = "Get all users",
+    title = function() return "Dynamic title" end,
+
     -- Optional (defaults to GET)
     method = "POST",
 

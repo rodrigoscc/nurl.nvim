@@ -16,11 +16,16 @@ local function format_history_item(item)
     table.insert(ret, { curl.exec_datetime, "SnacksPickerComment" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { request.method, "SnacksPickerFileType" })
-    table.insert(ret, { " " })
+    if request.title then
+        table.insert(ret, { request.title, "SnacksPickerLabel" })
+        table.insert(ret, { " " })
+    else
+        table.insert(ret, { request.method, "SnacksPickerFileType" })
+        table.insert(ret, { " " })
 
-    table.insert(ret, { request.url, "SnacksPickerLabel" })
-    table.insert(ret, { " " })
+        table.insert(ret, { request.url, "SnacksPickerLabel" })
+        table.insert(ret, { " " })
+    end
 
     table.insert(ret, { tostring(response.status_code), "SnacksPickerIdx" })
 
@@ -36,11 +41,16 @@ local function format_project_request_item(item, picker)
     table.insert(ret, { "", "SnacksPickerIcon" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.lazy.method, "SnacksPickerFileType" })
-    table.insert(ret, { " " })
+    if item.lazy.title then
+        table.insert(ret, { item.lazy.title, "SnacksPickerLabel" })
+        table.insert(ret, { " " })
+    else
+        table.insert(ret, { item.lazy.method, "SnacksPickerFileType" })
+        table.insert(ret, { " " })
 
-    table.insert(ret, { item.lazy.url, "SnacksPickerLabel" })
-    table.insert(ret, { " " })
+        table.insert(ret, { item.lazy.url, "SnacksPickerLabel" })
+        table.insert(ret, { " " })
+    end
 
     table.insert(ret, { item.file, "SnacksPickerDir" })
     table.insert(ret, { " " })
@@ -56,11 +66,16 @@ local function format_request_item(item)
     table.insert(ret, { "", "SnacksPickerIcon" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { item.lazy.method, "SnacksPickerFileType" })
-    table.insert(ret, { " " })
+    if item.lazy.title then
+        table.insert(ret, { item.lazy.title, "SnacksPickerLabel" })
+        table.insert(ret, { " " })
+    else
+        table.insert(ret, { item.lazy.method, "SnacksPickerFileType" })
+        table.insert(ret, { " " })
 
-    table.insert(ret, { item.lazy.url, "SnacksPickerLabel" })
-    table.insert(ret, { " " })
+        table.insert(ret, { item.lazy.url, "SnacksPickerLabel" })
+        table.insert(ret, { " " })
+    end
 
     return ret
 end
@@ -98,13 +113,10 @@ local function history_items_to_snacks_items(history_items)
                 idx = i,
                 score = 1,
                 item = item,
-                text = string.format(
-                    "%s %s %s %s",
-                    curl.exec_datetime,
-                    request.method,
-                    request.url,
-                    response.status_code
-                ),
+                text = requests.text(request, {
+                    prefix = curl.exec_datetime,
+                    suffix = response.status_code,
+                }),
                 response = response,
                 curl = curl,
                 preview = get_preview(request),
@@ -125,7 +137,7 @@ local function super_requests_to_snacks_items(super_requests)
 
             local item = {
                 idx = i,
-                text = lazy.method .. " " .. lazy.url,
+                text = requests.text(lazy),
                 request = expanded,
                 lazy = lazy,
                 score = 1,
@@ -153,11 +165,7 @@ local function project_request_items_to_snacks_items(project_request_items)
                 item = request_item,
                 lazy = lazy,
                 score = 1,
-                text = lazy.method
-                    .. " "
-                    .. lazy.url
-                    .. " "
-                    .. request_item.file,
+                text = requests.text(lazy, { suffix = request_item.file }),
                 preview = get_preview(lazy),
                 file = request_item.file,
                 pos = { request_item.start_row, request_item.start_col },
