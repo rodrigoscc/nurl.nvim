@@ -355,7 +355,7 @@ return {
         url = { env.var("base_url"), "users" },
         headers = {
             ["Authorization"] = function()
-                return "Bearer " .. env.var("token")
+                return "Bearer " .. env.var("token")()
             end,
         },
     },
