@@ -1,36 +1,5 @@
 *nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 November 29
 
-==============================================================================
-Table of Contents                                *nurl.nvim-table-of-contents*
-
-1. Table of Contents                             |nurl.nvim-table-of-contents|
-2. Features                                               |nurl.nvim-features|
-3. Requirements                                       |nurl.nvim-requirements|
-4. Installation                                       |nurl.nvim-installation|
-5. Quick Start                                         |nurl.nvim-quick-start|
-  - 1. Create a request file  |nurl.nvim-quick-start-1.-create-a-request-file|
-  - 2. Run a request                  |nurl.nvim-quick-start-2.-run-a-request|
-6. Configuration                                     |nurl.nvim-configuration|
-7. Commands                                               |nurl.nvim-commands|
-8. Request Format                                   |nurl.nvim-request-format|
-  - Dynamic Values                   |nurl.nvim-request-format-dynamic-values|
-  - Lazy Values                         |nurl.nvim-request-format-lazy-values|
-  - URL Parts                             |nurl.nvim-request-format-url-parts|
-9. Environments                                       |nurl.nvim-environments|
-  - Setting Variables Programmatically|nurl.nvim-environments-setting-variables-programmatically|
-  - Environment Hooks               |nurl.nvim-environments-environment-hooks|
-10. API                                                        |nurl.nvim-api|
-11. Winbar                                                  |nurl.nvim-winbar|
-12. Highlight Groups                              |nurl.nvim-highlight-groups|
-13. Recipes                                                |nurl.nvim-recipes|
-  - 1Password CLI for secrets    |nurl.nvim-recipes-1password-cli-for-secrets|
-  - OAuth2 Token Refresh              |nurl.nvim-recipes-oauth2-token-refresh|
-  - Using Response Values            |nurl.nvim-recipes-using-response-values|
-  - HMAC Signature                          |nurl.nvim-recipes-hmac-signature|
-  - Environment-Based Confirmation|nurl.nvim-recipes-environment-based-confirmation|
-  - Response Validation                |nurl.nvim-recipes-response-validation|
-  - GraphQL with Variables          |nurl.nvim-recipes-graphql-with-variables|
-  - File Upload with Picker        |nurl.nvim-recipes-file-upload-with-picker|
 A Lua-based HTTP client for Neovim. Define requests in Lua files, manage
 environments, add hooks, and view responses in beautiful split windows.
 
