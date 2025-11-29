@@ -109,11 +109,10 @@ Create `.nurl/requests.lua` in your project:
 ```lua
 return {
     {
-        url = "https://jsonplaceholder.typicode.com/posts/1",
-        method = "GET",
+        "https://jsonplaceholder.typicode.com/posts/1",
     },
     {
-        url = "https://jsonplaceholder.typicode.com/posts",
+        "https://jsonplaceholder.typicode.com/posts",
         method = "POST",
         headers = {
             ["Content-Type"] = "application/json",
@@ -233,6 +232,9 @@ require("nurl").setup({
 ```lua
 ---@class nurl.SuperRequest
 {
+    -- Shorthand: URL as first element
+    "https://api.example.com/users",
+
     -- Required: string, table of parts, or function
     url = "https://api.example.com/users",
     url = { "https://api.example.com", "v1", "users" },
@@ -354,6 +356,22 @@ return {
         headers = {
             ["Authorization"] = function()
                 return "Bearer " .. env.get("token")
+            end,
+        },
+    },
+}
+```
+
+- `Nurl.env.var("name")` - Returns a function that resolves the variable (for direct use in the request object and lazy contexts)
+- `Nurl.env.get("name")` - Returns the variable value immediately (for use inside functions)
+
+```lua
+return {
+    {
+        url = { Nurl.env.var("base_url"), "users" },
+        headers = {
+            ["Authorization"] = function()
+                return "Bearer " .. Nurl.env.get("token")
             end,
         },
     },

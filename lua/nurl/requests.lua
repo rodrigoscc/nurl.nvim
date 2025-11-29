@@ -12,6 +12,7 @@ local variables = require("nurl.variables")
 ---@field post_hook? fun(request: nurl.Request, response: nurl.Response | nil) | nil
 
 ---@class nurl.SuperRequest
+---@field [1]? string
 ---@field url string | table<string, any> | fun(): string | table<string, any>
 ---@field method? string
 ---@field headers? table<string, string> | fun(): table<string, string>
@@ -56,17 +57,26 @@ function M.expand(request, opts)
         "Only a single body field at the time is allowed"
     )
 
-    local request_url = variables.expand(request.url, opts)
+    assert(
+        (request[1] and not request.url and type(request[1]) == "string")
+            or (request.url and not request[1]),
+        "The request must have one and only one URL field"
+    )
 
-    assert(request_url ~= nil, "Request must have a URL")
+    local super_url
+    if request[1] then
+        super_url = request[1]
+    else
+        super_url = variables.expand(request.url, opts)
+    end
+
+    assert(super_url ~= nil, "Request must have a URL")
 
     local url
-    if type(request_url) == "string" then
-        url = request_url
-    elseif not opts.lazy then
-        url = build_url(request_url)
+    if type(super_url) == "table" and not opts.lazy then
+        url = build_url(super_url)
     else
-        url = request_url
+        url = super_url
     end
 
     local headers = variables.expand(request.headers, opts)
