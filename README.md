@@ -287,17 +287,15 @@ return {
 
 ### Lazy Values
 
-Use `nurl.lazy()` for values that should only be resolved right before sending (not during picker preview):
+Use `Nurl.lazy()` for values that should only be resolved right before sending (not during picker preview):
 
 ```lua
-local nurl = require("nurl")
-
 return {
     url = "https://api.example.com/login",
     method = "POST",
     data = {
         username = "user",
-        password = nurl.lazy(function()
+        password = Nurl.lazy(function()
             return vim.fn.inputsecret("Password: ")
         end),
     },
@@ -486,11 +484,10 @@ vim.o.winbar =
 Use the 1Password CLI (`op`) with `nurl.lazy()` to fetch secrets only when sending:
 
 ```lua
-local nurl = require("nurl")
 local env = require("nurl.environments")
 
 local function op_get(item_id, field)
-    return nurl.lazy(function()
+    return Nurl.lazy(function()
         local result = vim.system({
             "op",
             "item",
@@ -536,7 +533,6 @@ Auto-refresh expired tokens before requests using environment hooks:
 
 ```lua
 -- .nurl/environments.lua
-local nurl = require("nurl")
 local var = require("nurl.environments").var
 local set = require("nurl.environments").set
 
@@ -546,7 +542,7 @@ local function is_token_expired()
 end
 
 local function refresh_token(next)
-    nurl.send({
+    Nurl.send({
         url = "https://auth.example.com/oauth/token",
         method = "POST",
         headers = { ["Content-Type"] = "application/json" },
