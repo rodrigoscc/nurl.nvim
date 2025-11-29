@@ -16,6 +16,8 @@ M.winbar = winbar
 
 M.lazy = variables.lazy
 
+M.env = environments
+
 ---@type nurl.Stack
 M.last_requests = Stack:new(5)
 ---@type nurl.Stack
