@@ -235,7 +235,7 @@ require("nurl").setup({
     -- Shorthand: URL as first element
     "https://api.example.com/users",
 
-    -- Required: string, table of parts, or function
+    -- or URL key as string, table of parts, or function
     url = "https://api.example.com/users",
     url = { "https://api.example.com", "v1", "users" },
     url = function() return "https://api.example.com/users/id" end,
