@@ -7,6 +7,7 @@
 local config = require("nurl.config")
 local fs = require("nurl.data.fs")
 local file_parsing = require("nurl.utils.file_parsing")
+local variables = require("nurl.variables")
 local uv = vim.uv or vim.loop
 
 local M = {}
@@ -199,6 +200,22 @@ function M.unset(variable_name)
     table.insert(operations_queue, { op = "unset", name = variable_name })
 
     safe_coroutine_resume(M.file_worker_coroutine)
+end
+
+function M.get(variable_name, use_env)
+    local env
+
+    if use_env == nil then
+        env = M.get_active()
+    else
+        env = M.project_envs[use_env]
+    end
+
+    if env == nil then
+        return nil
+    end
+
+    return variables.expand(env[variable_name])
 end
 
 function M.load()

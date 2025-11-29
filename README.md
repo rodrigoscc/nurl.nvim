@@ -353,7 +353,7 @@ return {
         url = { env.var("base_url"), "users" },
         headers = {
             ["Authorization"] = function()
-                return "Bearer " .. env.var("token")()
+                return "Bearer " .. env.get("token")
             end,
         },
     },
@@ -534,10 +534,11 @@ Auto-refresh expired tokens before requests using environment hooks:
 ```lua
 -- .nurl/environments.lua
 local var = require("nurl.environments").var
+local get = require("nurl.environments").get
 local set = require("nurl.environments").set
 
 local function is_token_expired()
-    local expires_at = var("expires_at")()
+    local expires_at = get("expires_at")
     return not expires_at or tonumber(expires_at) < os.time()
 end
 
@@ -640,7 +641,7 @@ return {
         headers = function()
             local timestamp = tostring(os.time())
             local signature =
-                hmac_sha256(env.var("api_secret")(), timestamp .. body)
+                hmac_sha256(env.get("api_secret"), timestamp .. body)
             return {
                 ["Content-Type"] = "application/json",
                 ["X-Timestamp"] = timestamp,
