@@ -7,22 +7,22 @@ Body tabHeaders tabInfo tabRaw tabRequest pickerHistory picker
 ==============================================================================
 1. Table of Contents                             *nurl.nvim-table-of-contents*
 
-- |nurl.nvim-✨-features|
-- |nurl.nvim-📋-requirements|
-- |nurl.nvim-📦-installation|
-- |nurl.nvim-🚀-quick-start|
-- |nurl.nvim-⚙️-configuration|
-- |nurl.nvim-💻-commands|
-- |nurl.nvim-📝-request-format|
+- |nurl.nvim-features|
+- |nurl.nvim-requirements|
+- |nurl.nvim-installation|
+- |nurl.nvim-quick-start|
+- |nurl.nvim-configuration|
+- |nurl.nvim-commands|
+- |nurl.nvim-request-format|
     - |nurl.nvim-dynamic-values|
     - |nurl.nvim-lazy-values|
     - |nurl.nvim-url-parts|
-- |nurl.nvim-🌍-environments|
+- |nurl.nvim-environments|
     - |nurl.nvim-environment-hooks|
-- |nurl.nvim-🔌-api|
-- |nurl.nvim-📊-winbar|
-- |nurl.nvim-🎨-highlight-groups|
-- |nurl.nvim-📖-recipes|
+- |nurl.nvim-api|
+- |nurl.nvim-winbar|
+- |nurl.nvim-highlight-groups|
+- |nurl.nvim-recipes|
     - |nurl.nvim-1password-cli-for-secrets|
     - |nurl.nvim-oauth2-token-refresh|
     - |nurl.nvim-using-response-values|
