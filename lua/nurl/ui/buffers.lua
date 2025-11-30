@@ -181,6 +181,10 @@ local function populate_info_buffer(bufnr, request, response, curl)
 
     new_line(0, "response:")
 
+    if response.body_file then
+        new_line(1, "body_file: %s", response.body_file)
+    end
+
     new_line(1, "time:")
     new_line(2, "appconnect: %.4f", response.time.time_appconnect)
     new_line(2, "connect: %.4f", response.time.time_connect)
