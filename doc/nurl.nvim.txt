@@ -1,4 +1,4 @@
-*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 November 29
+*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 November 30
 
 A Lua-based HTTP client for Neovim. Define requests in Lua files, manage
 environments, add hooks, and view responses in beautiful split windows.
@@ -484,7 +484,7 @@ buffer tabs. Use these in your own winbar:
 
 >lua
     vim.o.winbar =
-        "%{%v:lua.require('nurl').winbar.status_code()%} %{%v:lua.require('nurl').winbar.tabs()%}"
+        "%{%v:lua.Nurl.winbar.status_code()%}%<%{%v:lua.Nurl.winbar.request_title()%}%{%v:lua.Nurl.winbar.time()%} %=%{%v:lua.Nurl.winbar.tabs()%}"
 <
 
 
@@ -492,9 +492,10 @@ buffer tabs. Use these in your own winbar:
 12. Highlight Groups                              *nurl.nvim-highlight-groups*
 
   Group                         Description
-  ----------------------------- ------------------------
+  ----------------------------- -------------------------
   NurlSpinner                   Loading spinner
   NurlElapsedTime               Elapsed time display
+  NurlWinbarTitle               Request title in winbar
   NurlWinbarTabActive           Active tab in winbar
   NurlWinbarTabInactive         Inactive tab in winbar
   NurlWinbarSuccessStatusCode   2xx status codes
