@@ -480,7 +480,7 @@ The response window includes a winbar showing status code, response time, and bu
 
 ```lua
 vim.o.winbar =
-    "%{%v:lua.require('nurl').winbar.status_code()%} %{%v:lua.require('nurl').winbar.tabs()%}"
+    "%{%v:lua.Nurl.winbar.status_code()%}%<%{%v:lua.Nurl.winbar.request_title()%}%{%v:lua.Nurl.winbar.time()%} %=%{%v:lua.Nurl.winbar.tabs()%}"
 ```
 
 ## Highlight Groups
@@ -489,6 +489,7 @@ vim.o.winbar =
 |-------|-------------|
 | `NurlSpinner` | Loading spinner |
 | `NurlElapsedTime` | Elapsed time display |
+| `NurlWinbarTitle` | Request title in winbar |
 | `NurlWinbarTabActive` | Active tab in winbar |
 | `NurlWinbarTabInactive` | Inactive tab in winbar |
 | `NurlWinbarSuccessStatusCode` | 2xx status codes |
