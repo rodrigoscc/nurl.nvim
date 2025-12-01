@@ -36,9 +36,9 @@ function M.send(request, opts)
 
     local win = opts.win
 
-    local function next_function()
-        local expanded_request = requests.expand(request)
+    local expanded_request = requests.expand(request)
 
+    local function next_function()
         M.last_requests:push(expanded_request)
 
         local curl = requests.build_curl(expanded_request)
@@ -125,8 +125,8 @@ function M.send(request, opts)
     end
 
     local function env_next_function()
-        if request.pre_hook ~= nil then
-            request.pre_hook(next_function, request)
+        if expanded_request.pre_hook ~= nil then
+            expanded_request.pre_hook(next_function, expanded_request)
         else
             next_function()
         end
@@ -136,7 +136,7 @@ function M.send(request, opts)
     if env_pre_hook == nil then
         env_next_function()
     else
-        env_pre_hook(env_next_function, request)
+        env_pre_hook(env_next_function, expanded_request)
     end
 end
 
