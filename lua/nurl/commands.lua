@@ -119,7 +119,7 @@ function M.run(params)
     end
 end
 
-function M.complete(arg_lead, cmdline)
+function M.complete(_, cmdline)
     local args = vim.split(cmdline, "%s+", { trimempty = true })
     local num_args = #args
 
