@@ -1,4 +1,4 @@
-*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 November 30
+*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 02
 
 A Lua-based HTTP client for Neovim. Define requests in Lua files, manage
 environments, add hooks, and view responses in beautiful split windows.
@@ -206,7 +206,7 @@ Or use the picker:
 
   :Nurl history                 Browse request history
 
-  :Nurl env                     Switch active environment
+  :Nurl env [env]               Switch active environment
 
   :Nurl env_file                Open environments file
 
