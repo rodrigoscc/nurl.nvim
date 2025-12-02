@@ -55,4 +55,43 @@ function M.requests()
     return project_requests
 end
 
+---@param file_path string
+---@return nurl.ProjectRequestItem[]
+function M.file_requests(file_path)
+    local request_items = {}
+
+    local file, err = file_parsing.parse(file_path)
+    if file then
+        local request_ranges = file:list_requests_ranges()
+
+        local status, file_requests = pcall(dofile, file_path)
+        if not status then
+            vim.notify(
+                ("Skipping file %s: %s"):format(file_path, file_requests),
+                vim.log.levels.WARN
+            )
+        else
+            for i, request in ipairs(file_requests) do
+                local request_range = request_ranges[i]
+                local start_row, start_col, end_row, end_col =
+                    unpack(request_range)
+
+                table.insert(request_items, {
+                    file = file_path,
+                    request = request,
+                    start_row = start_row + 1,
+                    start_col = start_col,
+                    end_row = end_row + 1,
+                    end_col = end_col,
+                })
+            end
+        end
+    else
+        vim.notify("Skipping file: " .. err, vim.log.levels.WARN)
+        return {}
+    end
+
+    return request_items
+end
+
 return M

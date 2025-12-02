@@ -191,8 +191,8 @@ end
 
 function M.jump_to_file_request(filepath)
     filepath = vim.fn.expand(filepath)
-    local file_requests = dofile(filepath)
-    pickers.pick_request("Nurl: jump", file_requests)
+    local file_requests = projects.file_requests(filepath)
+    pickers.pick_project_request_item("Nurl: jump", file_requests)
 end
 
 ---@param cursor_row integer
