@@ -16,7 +16,7 @@ end
 -- Caches the key on M so subsequent accesses are direct.
 setmetatable(M, {
     __index = function(t, key)
-        local nurl = require("nurl.core")
+        local nurl = require("nurl.api")
         if nurl[key] ~= nil then
             t[key] = nurl[key]
             return t[key]
