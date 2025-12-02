@@ -17,8 +17,8 @@ M.commands = {
     history = function()
         require("nurl").open_history()
     end,
-    env = function()
-        require("nurl").activate_env()
+    env = function(args)
+        require("nurl").activate_env(args[1])
     end,
     env_file = function()
         require("nurl").open_environments_file()

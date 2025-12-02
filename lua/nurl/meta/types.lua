@@ -8,7 +8,7 @@
 ---@field jump_to_project_request fun()
 ---@field send_request_at_cursor fun()
 ---@field yank_curl_at_cursor fun()
----@field activate_env fun()
+---@field activate_env fun(env: string | nil)
 ---@field open_environments_file fun()
 ---@field get_active_env fun(): string|nil
 ---@field open_history fun()

@@ -230,17 +230,24 @@ function M.yank_curl_at_cursor()
     end
 end
 
-function M.activate_env()
-    vim.ui.select(
-        vim.tbl_keys(environments.project_envs),
-        { prompt = "Activate environment" },
-        function(choice)
-            if choice ~= nil then
-                environments.activate(choice)
-                vim.cmd.redrawstatus() -- in case the user is showing the active env in statusline
+---@param env? string to activate
+function M.activate_env(env)
+    if env == nil then
+        vim.ui.select(
+            vim.tbl_keys(environments.project_envs),
+            { prompt = "Activate environment" },
+            function(choice)
+                if choice ~= nil then
+                    environments.activate(choice)
+                    vim.cmd.redrawstatus() -- in case the user is showing the active env in statusline
+                end
             end
-        end
-    )
+        )
+        return
+    end
+
+    environments.activate(env)
+    vim.cmd.redrawstatus() -- in case the user is showing the active env in statusline
 end
 
 function M.open_environments_file()

@@ -127,7 +127,9 @@ function M.activate(env_name)
         end
     end
 
-    error("could not activate environment, not found")
+    error(
+        string.format("Could not activate environment %s, not found", env_name)
+    )
 end
 
 function M.get_active()
