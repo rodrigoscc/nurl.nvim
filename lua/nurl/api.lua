@@ -152,10 +152,15 @@ function M.resend_last_request(index)
     M.send(request, { win = M.last_request_wins:get(index) })
 end
 
-function M.send_buffer_request()
-    local buffer_requests = dofile(vim.fn.expand("%"))
+function M.pick_resend()
+    local recent_requests = M.last_requests.items
 
-    pickers.pick_request("Nurl: send", buffer_requests, function(request)
+    if #recent_requests == 0 then
+        vim.notify("No recent requests to resend", vim.log.levels.WARN)
+        return
+    end
+
+    pickers.pick_request("Nurl: resend", recent_requests, function(request)
         M.send(request)
     end)
 end
@@ -171,9 +176,23 @@ function M.send_project_request()
     )
 end
 
+function M.send_file_request(filepath)
+    filepath = vim.fn.expand(filepath)
+    local file_requests = dofile(filepath)
+    pickers.pick_request("Nurl: send", file_requests, function(request)
+        M.send(request)
+    end)
+end
+
 function M.jump_to_project_request()
     local project_requests = projects.requests()
     pickers.pick_project_request_item("Nurl: jump", project_requests)
+end
+
+function M.jump_to_file_request(filepath)
+    filepath = vim.fn.expand(filepath)
+    local file_requests = dofile(filepath)
+    pickers.pick_request("Nurl: jump", file_requests)
 end
 
 ---@param cursor_row integer
@@ -208,6 +227,13 @@ function M.send_request_at_cursor()
     end
 end
 
+local function yank_curl(request)
+    local expanded_request = requests.expand(request)
+    local curl = requests.build_curl(expanded_request)
+    vim.fn.setreg("+", curl:string())
+    vim.notify("Yanked curl command to clipboard")
+end
+
 function M.yank_curl_at_cursor()
     local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
 
@@ -218,34 +244,46 @@ function M.yank_curl_at_cursor()
             is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
 
         if request_contains_cursor then
-            local expanded_request = requests.expand(request.request)
-
-            local curl = requests.build_curl(expanded_request)
-
-            vim.fn.setreg("+", curl:string())
-            vim.notify("Yanked curl command to clipboard")
-
+            yank_curl(request.request)
             return
         end
     end
 end
 
----@param env? string to activate
-function M.activate_env(env)
-    if env == nil then
-        vim.ui.select(
-            vim.tbl_keys(environments.project_envs),
-            { prompt = "Activate environment" },
-            function(choice)
-                if choice ~= nil then
-                    environments.activate(choice)
-                    vim.cmd.redrawstatus() -- in case the user is showing the active env in statusline
-                end
-            end
-        )
-        return
-    end
+function M.yank_project_request()
+    local project_requests = projects.requests()
+    pickers.pick_project_request_item(
+        "Nurl: yank",
+        project_requests,
+        function(item)
+            yank_curl(item.request)
+        end
+    )
+end
 
+function M.yank_file_request(filepath)
+    filepath = vim.fn.expand(filepath)
+    local file_requests = dofile(filepath)
+    pickers.pick_request("Nurl: yank", file_requests, function(request)
+        yank_curl(request)
+    end)
+end
+
+function M.pick_env()
+    vim.ui.select(
+        vim.tbl_keys(environments.project_envs),
+        { prompt = "Nurl: activate environment" },
+        function(choice)
+            if choice ~= nil then
+                environments.activate(choice)
+                vim.cmd.redrawstatus() -- in case the user is showing the active env in statusline
+            end
+        end
+    )
+end
+
+---@param env string to activate
+function M.activate_env(env)
     environments.activate(env)
     vim.cmd.redrawstatus() -- in case the user is showing the active env in statusline
 end
