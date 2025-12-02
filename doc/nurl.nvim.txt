@@ -192,30 +192,25 @@ Or use the picker:
 ==============================================================================
 7. Commands                                               *nurl.nvim-commands*
 
-  -----------------------------------------------------------------------
-  Command                       Description
-  ----------------------------- -----------------------------------------
-  :Nurl send_at_cursor          Send request under cursor
-
-  :Nurl send                    Pick and send a project request
-
-  :Nurl send_from_buffer        Pick and send a request from current
-                                buffer
-
-  :Nurl jump                    Pick and jump to a request definition
-
-  :Nurl history                 Browse request history
-
-  :Nurl env [env]               Switch active environment
-
-  :Nurl env_file                Open environments file
-
-  :Nurl yank_at_cursor          Copy curl command to clipboard
-
-  :Nurl resend [n]              Resend last request (optional index)
-
-  :Nurl                         Show command picker
-  -----------------------------------------------------------------------
+  Command                 Description
+  ----------------------- -----------------------------------------------
+  :Nurl                   Project requests picker → send request
+  :Nurl .                 Send request at cursor
+  :Nurl %                 Current buffer requests picker → send request
+  :Nurl <filepath>        File requests picker → send request
+  :Nurl jump              Project requests picker → jump to definition
+  :Nurl jump %            Current buffer requests picker → jump
+  :Nurl jump <filepath>   File requests picker → jump
+  :Nurl history           History picker → view response
+  :Nurl resend            Recent requests picker → resend
+  :Nurl resend <-n>       Resend nth last request (-1 = last)
+  :Nurl env               Environment picker → activate
+  :Nurl env <name>        Activate environment directly
+  :Nurl env_file          Open environments file
+  :Nurl yank              Project requests picker → yank curl command
+  :Nurl yank .            Yank curl at cursor
+  :Nurl yank %            Current buffer requests picker → yank
+  :Nurl yank <filepath>   File requests picker → yank
 
 ==============================================================================
 8. Request Format                                   *nurl.nvim-request-format*
