@@ -221,7 +221,7 @@ require("nurl").setup({
 | `:Nurl send_from_buffer` | Pick and send a request from current buffer |
 | `:Nurl jump` | Pick and jump to a request definition |
 | `:Nurl history` | Browse request history |
-| `:Nurl env` | Switch active environment |
+| `:Nurl env [env]` | Switch active environment |
 | `:Nurl env_file` | Open environments file |
 | `:Nurl yank_at_cursor` | Copy curl command to clipboard |
 | `:Nurl resend [n]` | Resend last request (optional index) |
