@@ -214,9 +214,9 @@ end
 function M.send_request_at_cursor()
     local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
 
-    local project_requests = projects.requests()
+    local file_requests = projects.file_requests(vim.fn.expand("%"))
 
-    for _, request in ipairs(project_requests) do
+    for _, request in ipairs(file_requests) do
         local request_contains_cursor =
             is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
 
@@ -237,9 +237,9 @@ end
 function M.yank_curl_at_cursor()
     local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
 
-    local project_requests = projects.requests()
+    local file_requests = projects.file_requests(vim.fn.expand("%"))
 
-    for _, request in ipairs(project_requests) do
+    for _, request in ipairs(file_requests) do
         local request_contains_cursor =
             is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
 
