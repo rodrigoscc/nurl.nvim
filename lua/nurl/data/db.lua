@@ -232,6 +232,7 @@ function Db:new(path)
     request_data TEXT,
     request_form TEXT,
     request_data_urlencode TEXT,
+    request_curl_args TEXT,
     response_status_code INTEGER,
     response_reason_phrase TEXT,
     response_protocol TEXT,

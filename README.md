@@ -268,6 +268,10 @@ require("nurl").setup({
     form = { field = "value" },         -- multipart/form-data
     data_urlencode = { q = "search" },  -- URL encoded
 
+    -- Additional curl flags
+    curl_args = { "--insecure", "--compressed" },
+    curl_args = { "--proxy", "http://localhost:8080" },
+
     -- Hooks
     pre_hook = function(next, request)
         -- Called before request, must call next() to proceed

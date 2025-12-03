@@ -9,6 +9,7 @@ local variables = require("nurl.variables")
 ---@field data? string | table<string, any>
 ---@field form? table<string, string>
 ---@field data_urlencode? table<string, any>
+---@field curl_args? string[]
 ---@field pre_hook? fun(next: fun(), request: nurl.Request | nurl.SuperRequest) | nil
 ---@field post_hook? fun(request: nurl.Request, response: nurl.Response | nil) | nil
 
@@ -21,6 +22,7 @@ local variables = require("nurl.variables")
 ---@field data? string | table<string, any> | fun(): string | table<string, any>
 ---@field form? table<string, any> | fun(): table<string, any>
 ---@field data_urlencode? table<string, any> | fun(): table<string, any>
+---@field curl_args? string[] | fun(): string[]
 ---@field pre_hook? fun(next: fun(), request: nurl.Request | nurl.SuperRequest) | nil
 ---@field post_hook? fun(request: nurl.Request, response: nurl.Response) | nil
 
@@ -88,6 +90,8 @@ function M.expand(request, opts)
 
     local title = variables.expand(request.title, opts)
 
+    local curl_args = variables.expand(request.curl_args, opts)
+
     assert(
         title == nil or type(title) == "string",
         "Request title must be a string"
@@ -107,6 +111,7 @@ function M.expand(request, opts)
         data = data,
         form = form,
         data_urlencode = data_urlencode,
+        curl_args = curl_args,
         pre_hook = request.pre_hook,
         post_hook = request.post_hook,
     }
@@ -140,6 +145,8 @@ function M.stringify_lazy(request)
 
     local title = variables.stringify_lazy(request.title)
 
+    local curl_args = variables.stringify_lazy(request.curl_args)
+
     -- Make sure the fields that are expected to be tables are still tables after calling stringify_lazy
     if type(headers) == "string" then
         headers = { [variables.LAZY_PLACEHOLDER] = variables.LAZY_PLACEHOLDER }
@@ -166,11 +173,45 @@ function M.stringify_lazy(request)
         data = data,
         form = form,
         data_urlencode = data_urlencode,
+        curl_args = curl_args,
         pre_hook = request.pre_hook,
         post_hook = request.post_hook,
     }
 
     return req
+end
+
+local OUTPUT_FLAGS = {
+    -- Redirect output
+    "-o",
+    "--output",
+    "-O",
+    "--remote-name",
+    "-J",
+    "--remote-header-name",
+
+    -- Add extra output
+    "-v",
+    "--verbose",
+    "--trace",
+    "--trace-ascii",
+    "-D",
+    "--dump-header",
+
+    -- Conflict with internal flags
+    "-w",
+    "--write-out",
+    "--no-include",
+    "--progress-meter",
+}
+
+local function contains_output_flags(extra_args)
+    return vim.tbl_contains(OUTPUT_FLAGS, function(output_flag)
+        return vim.tbl_contains(extra_args, function(arg)
+            -- consider either --flag or --flag=something
+            return arg == output_flag or string.find(arg, output_flag .. "=")
+        end, { predicate = true })
+    end, { predicate = true })
 end
 
 ---@param request nurl.Request
@@ -227,6 +268,16 @@ function M.build_curl(request)
         args,
         "%{stderr}%{time_appconnect},%{time_connect},%{time_namelookup},%{time_pretransfer},%{time_redirect},%{time_starttransfer},%{time_total},%{size_download},%{size_header},%{size_request},%{size_upload},%{speed_download},%{speed_upload}"
     )
+
+    if request.curl_args ~= nil then
+        if contains_output_flags(request.curl_args) then
+            error(
+                "Blocked curl flags detected: these flags interfere with response parsing"
+            )
+        end
+
+        vim.list_extend(args, request.curl_args)
+    end
 
     return Curl:new({ args = args })
 end

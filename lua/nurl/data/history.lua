@@ -44,6 +44,7 @@ request_history (
     request_data,
     request_form,
     request_data_urlencode,
+    request_curl_args,
     response_status_code,
     response_reason_phrase,
     response_protocol,
@@ -102,6 +103,7 @@ VALUES
     ?,
     ?,
     ?,
+    ?,
     ?
 );]],
         {
@@ -114,6 +116,7 @@ VALUES
             request.form and vim.json.encode(request.form) or vim.NIL,
             request.data_urlencode and vim.json.encode(request.data_urlencode)
                 or vim.NIL,
+            request.curl_args and vim.json.encode(request.curl_args) or vim.NIL,
             response.status_code,
             response.reason_phrase,
             response.protocol,
@@ -179,6 +182,7 @@ function M.all()
     request_data,
     request_form,
     request_data_urlencode,
+    request_curl_args,
     response_status_code,
     response_reason_phrase,
     response_protocol,
@@ -222,30 +226,31 @@ ORDER BY time DESC]])
         local request_data = row:get_string(6)
         local request_form = row:get_string(7)
         local request_data_urlencode = row:get_string(8)
-        local response_status_code = row:get_number(9)
-        local response_reason_phrase = row:get_string(10)
-        local response_protocol = row:get_string(11)
-        local response_headers = row:get_string(12)
-        local response_body = row:get_string(13)
-        local response_body_file = row:get_string(14)
-        local response_time_appconnect = row:get_number(15)
-        local response_time_connect = row:get_number(16)
-        local response_time_namelookup = row:get_number(17)
-        local response_time_pretransfer = row:get_number(18)
-        local response_time_redirect = row:get_number(19)
-        local response_time_starttransfer = row:get_number(20)
-        local response_time_total = row:get_number(21)
-        local response_size_download = row:get_number(22)
-        local response_size_header = row:get_number(23)
-        local response_size_request = row:get_number(24)
-        local response_size_upload = row:get_number(25)
-        local response_speed_download = row:get_number(26)
-        local response_speed_upload = row:get_number(27)
-        local curl_args = row:get_string(28)
-        local curl_result_code = row:get_number(29)
-        local curl_result_signal = row:get_number(30)
-        local curl_result_stdout = row:get_string(31)
-        local curl_result_stderr = row:get_string(32)
+        local request_curl_args = row:get_string(9)
+        local response_status_code = row:get_number(10)
+        local response_reason_phrase = row:get_string(11)
+        local response_protocol = row:get_string(12)
+        local response_headers = row:get_string(13)
+        local response_body = row:get_string(14)
+        local response_body_file = row:get_string(15)
+        local response_time_appconnect = row:get_number(16)
+        local response_time_connect = row:get_number(17)
+        local response_time_namelookup = row:get_number(18)
+        local response_time_pretransfer = row:get_number(19)
+        local response_time_redirect = row:get_number(20)
+        local response_time_starttransfer = row:get_number(21)
+        local response_time_total = row:get_number(22)
+        local response_size_download = row:get_number(23)
+        local response_size_header = row:get_number(24)
+        local response_size_request = row:get_number(25)
+        local response_size_upload = row:get_number(26)
+        local response_speed_download = row:get_number(27)
+        local response_speed_upload = row:get_number(28)
+        local curl_args = row:get_string(29)
+        local curl_result_code = row:get_number(30)
+        local curl_result_signal = row:get_number(31)
+        local curl_result_stdout = row:get_string(32)
+        local curl_result_stderr = row:get_string(33)
 
         ---@type nurl.Request
         local request = {
@@ -257,6 +262,8 @@ ORDER BY time DESC]])
             form = request_form and vim.json.decode(request_form),
             data_urlencode = request_data_urlencode
                 and vim.json.decode(request_data_urlencode),
+            curl_args = request_curl_args
+                and vim.json.decode(request_curl_args),
         }
 
         ---@type nurl.Response
