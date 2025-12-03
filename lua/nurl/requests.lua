@@ -1,6 +1,15 @@
 local Curl = require("nurl.curl")
 local variables = require("nurl.variables")
 
+---@class nurl.RequestInput
+---@field request nurl.Request
+
+---@class nurl.RequestOut
+---@field curl nurl.Curl
+---@field request nurl.Request
+---@field response? nurl.Response
+---@field win? integer
+
 ---@class nurl.Request
 ---@field method string
 ---@field url string
@@ -10,8 +19,8 @@ local variables = require("nurl.variables")
 ---@field form? table<string, string>
 ---@field data_urlencode? table<string, any>
 ---@field curl_args? string[]
----@field pre_hook? fun(next: fun(), request: nurl.Request | nurl.SuperRequest) | nil
----@field post_hook? fun(request: nurl.Request, response: nurl.Response | nil) | nil
+---@field pre_hook? fun(next: fun(), input: nurl.RequestInput) | nil
+---@field post_hook? fun(out: nurl.RequestOut) | nil
 
 ---@class nurl.SuperRequest
 ---@field [1]? string
@@ -23,8 +32,8 @@ local variables = require("nurl.variables")
 ---@field form? table<string, any> | fun(): table<string, any>
 ---@field data_urlencode? table<string, any> | fun(): table<string, any>
 ---@field curl_args? string[] | fun(): string[]
----@field pre_hook? fun(next: fun(), request: nurl.Request | nurl.SuperRequest) | nil
----@field post_hook? fun(request: nurl.Request, response: nurl.Response) | nil
+---@field pre_hook? fun(next: fun(), input: nurl.RequestInput) | nil
+---@field post_hook? fun(out: nurl.RequestOut) | nil
 
 local M = {}
 

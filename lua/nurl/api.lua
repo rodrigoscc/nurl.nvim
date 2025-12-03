@@ -25,7 +25,7 @@ M.last_request_wins = Stack:new(5)
 
 ---@class nurl.RequestOpts
 ---@field win? integer | nil
----@field on_response? fun(response: nurl.Response | nil, curl: nurl.Curl) | nil
+---@field on_complete? fun(out: nurl.RequestOut) | nil
 
 ---@param request nurl.SuperRequest | nurl.Request
 ---@param opts? nurl.RequestOpts | nil
@@ -38,12 +38,18 @@ function M.send(request, opts)
 
     local expanded_request = requests.expand(request)
 
+    -- Request is already fully expanded here.
+    ---@cast expanded_request nurl.Request
+
+    ---@type nurl.RequestInput
+    local input = { request = expanded_request }
+
     local function next_function()
         M.last_requests:push(expanded_request)
 
         local curl = requests.build_curl(expanded_request)
 
-        local should_prepare_response_ui = opts.on_response == nil
+        local should_prepare_response_ui = opts.on_complete == nil
         if should_prepare_response_ui then
             response_window = ResponseWindow:new({
                 win = win,
@@ -54,8 +60,8 @@ function M.send(request, opts)
             M.last_request_wins:push(win)
         end
 
-        local function default_on_response(response, request_curl)
-            response_window:update(response, request_curl)
+        local function default_on_complete(out)
+            response_window:update(out.response, out.curl)
         end
 
         curl:run(function(system_completed)
@@ -68,12 +74,17 @@ function M.send(request, opts)
             end
 
             vim.schedule(function()
+                ---@type nurl.RequestOut
+                local out = {
+                    request = expanded_request,
+                    response = response,
+                    curl = curl,
+                    win = win,
+                }
+
                 if expanded_request.post_hook ~= nil then
-                    local status, result = pcall(
-                        expanded_request.post_hook,
-                        expanded_request,
-                        response
-                    )
+                    local status, result =
+                        pcall(expanded_request.post_hook, out)
 
                     if not status then
                         vim.notify(
@@ -85,8 +96,7 @@ function M.send(request, opts)
 
                 local env_post_hook = environments.get_post_hook()
                 if env_post_hook ~= nil then
-                    local status, result =
-                        pcall(env_post_hook, expanded_request, response)
+                    local status, result = pcall(env_post_hook, out)
 
                     if not status then
                         vim.notify(
@@ -96,10 +106,10 @@ function M.send(request, opts)
                     end
                 end
 
-                if opts.on_response then
-                    opts.on_response(response, curl)
+                if opts.on_complete then
+                    opts.on_complete(out)
                 else
-                    default_on_response(response, curl)
+                    default_on_complete(out)
                 end
 
                 local request_was_sent = response ~= nil
@@ -126,7 +136,7 @@ function M.send(request, opts)
 
     local function env_next_function()
         if expanded_request.pre_hook ~= nil then
-            expanded_request.pre_hook(next_function, expanded_request)
+            expanded_request.pre_hook(next_function, input)
         else
             next_function()
         end
@@ -136,7 +146,7 @@ function M.send(request, opts)
     if env_pre_hook == nil then
         env_next_function()
     else
-        env_pre_hook(env_next_function, expanded_request)
+        env_pre_hook(env_next_function, input)
     end
 end
 
@@ -229,6 +239,8 @@ end
 
 local function yank_curl(request)
     local expanded_request = requests.expand(request)
+    -- Request is already fully expanded here.
+    ---@cast expanded_request nurl.Request
     local curl = requests.build_curl(expanded_request)
     vim.fn.setreg("+", curl:string())
     vim.notify("Yanked curl command to clipboard")

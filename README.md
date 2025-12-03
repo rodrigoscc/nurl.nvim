@@ -273,12 +273,15 @@ require("nurl").setup({
     curl_args = { "--proxy", "http://localhost:8080" },
 
     -- Hooks
-    pre_hook = function(next, request)
-        -- Called before request, must call next() to proceed
+    pre_hook = function(next, input)
+        -- Called before sending, must call next() to proceed
+        -- Modify request fields before sending
         next()
     end,
-    post_hook = function(request, response)
-        -- Called after response received
+    post_hook = function(out)
+        -- Called after curl completes
+        -- out.request, out.response, out.curl, out.win
+        -- out.response is nil if curl failed
     end,
 }
 ```
@@ -407,8 +410,8 @@ return {
         url = "https://api.example.com/login",
         method = "POST",
         data = { username = "user", password = "pass" },
-        post_hook = function(request, response)
-            local body = vim.json.decode(response.body)
+        post_hook = function(out)
+            local body = vim.json.decode(out.response.body)
             env.set("token", body.access_token)
         end,
     },
@@ -426,9 +429,9 @@ return {
     },
     production = {
         base_url = "https://api.example.com",
-        pre_hook = function(next, request)
+        pre_hook = function(next, input)
             -- Confirm before production requests
-            if request.method ~= "GET" then
+            if input.request.method ~= "GET" then
                 vim.ui.select(
                     { "Yes", "No" },
                     { prompt = "Send to production?" },
@@ -442,14 +445,14 @@ return {
                 next()
             end
         end,
-        post_hook = function(request, response)
+        post_hook = function(out)
             -- Log all requests
             print(
-                request.method
+                out.request.method
                     .. " "
-                    .. request.url
+                    .. out.request.url
                     .. " -> "
-                    .. response.status_code
+                    .. out.response.status_code
             )
         end,
     },
@@ -466,9 +469,12 @@ nurl.send({
     url = "https://api.example.com/users",
     method = "GET",
 }, {
-    -- Optional: custom response handler (skips UI)
-    on_response = function(response, curl)
-        print(response.status_code)
+    -- Optional: custom handler (skips UI)
+    -- out.response is nil if curl failed
+    on_complete = function(out)
+        if out.response then
+            print(out.response.status_code)
+        end
     end,
 })
 
@@ -551,8 +557,8 @@ return {
             username = op_get("eeljppn94azg8iqq7rrdtd1g4u", "username"),
             password = op_get("eeljppn94azg8iqq7rrdtd1g4u", "password"),
         },
-        post_hook = function(request, response)
-            local body = vim.json.decode(response.body)
+        post_hook = function(out)
+            local body = vim.json.decode(out.response.body)
             env.set("token", body.access_token)
         end,
     },
@@ -574,7 +580,7 @@ local function is_token_expired()
     return not expires_at or tonumber(expires_at) < os.time()
 end
 
-local function refresh_token(next)
+local function refresh_token(next, input)
     Nurl.send({
         url = "https://auth.example.com/oauth/token",
         method = "POST",
@@ -584,12 +590,19 @@ local function refresh_token(next)
             refresh_token = var("refresh_token"),
         },
     }, {
-        on_response = function(response)
-            if response and response.status_code == 201 then
-                local body = vim.json.decode(response.body)
+        on_complete = function(out)
+            if out.response and out.response.status_code == 201 then
+                local body = vim.json.decode(out.response.body)
                 set("access_token", body.access_token)
                 set("refresh_token", body.refresh_token)
                 set("expires_at", os.time() + body.expires_in)
+
+                -- This request has already been expanded before the pre_hook,
+                -- so we need to update the header here so that it reflects the
+                -- above changes.
+                input.request.headers["Authorization"] = "Bearer "
+                    .. body.access_token
+
                 next()
             else
                 vim.notify("Failed to refresh token", vim.log.levels.ERROR)
@@ -604,9 +617,9 @@ return {
         access_token = nil,
         refresh_token = nil,
         expires_at = nil,
-        pre_hook = function(next, request)
+        pre_hook = function(next, input)
             if is_token_expired() then
-                refresh_token(next)
+                refresh_token(next, input)
             else
                 next()
             end
@@ -628,8 +641,8 @@ return {
         url = { env.var("base_url"), "users" },
         method = "POST",
         data = { name = "John Doe", email = "john@example.com" },
-        post_hook = function(request, response)
-            local user = vim.json.decode(response.body)
+        post_hook = function(out)
+            local user = vim.json.decode(out.response.body)
             env.set("last_user_id", user.id)
         end,
     },
@@ -697,8 +710,8 @@ return {
     },
     production = {
         base_url = "https://api.example.com",
-        pre_hook = function(next, request)
-            if request.method == "GET" then
+        pre_hook = function(next, input)
+            if input.request.method == "GET" then
                 next()
                 return
             end
@@ -749,9 +762,9 @@ end
 return {
     {
         url = { env.var("base_url"), "users", "123" },
-        post_hook = function(request, response)
-            expect_status({ 200, 201 })(request, response)
-            expect_json_field("id")(request, response)
+        post_hook = function(out)
+            expect_status({ 200, 201 })(out.request, out.response)
+            expect_json_field("id")(out.request, out.response)
         end,
     },
 }
@@ -819,12 +832,12 @@ return {
 Select a file to upload using Neovim's UI:
 
 ```lua
-local function choose_file(next, request)
+local function choose_file(next, input)
     vim.ui.input(
         { prompt = "File path: ", completion = "file" },
-        function(input)
-            if input then
-                request.form = { file = "@" .. vim.fn.expand(input) }
+        function(textj)
+            if text then
+                input.request.form = { file = "@" .. vim.fn.expand(text) }
                 next()
             end
         end
