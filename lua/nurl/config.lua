@@ -84,6 +84,12 @@ local defaults = {
                 return vim.fn.executable("jq") == 1
             end,
         },
+        lua = {
+            cmd = { "stylua", "-" },
+            available = function()
+                return vim.fn.executable("stylua") == 1
+            end,
+        },
     },
 }
 

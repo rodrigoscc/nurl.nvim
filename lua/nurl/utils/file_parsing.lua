@@ -1,4 +1,5 @@
 local fs = require("nurl.data.fs")
+local config = require("nurl.config")
 
 local M = {}
 
@@ -281,9 +282,14 @@ end
 
 ---@param on_save? fun(success: boolean)
 function File:save(on_save)
-    if vim.fn.executable("stylua") == 1 then
+    local formatter = config.formatters["lua"]
+
+    if
+        formatter ~= nil
+        and (formatter.available == nil or formatter.available())
+    then
         vim.system(
-            { "stylua", "-" },
+            formatter.cmd,
             { text = true, stdin = self.contents },
             function(out)
                 if out.code ~= 0 then
