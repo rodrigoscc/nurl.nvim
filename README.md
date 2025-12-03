@@ -143,6 +143,7 @@ Or use the picker:
 ## Configuration
 
 ```lua
+-- Default config:
 require("nurl").setup({
     -- Project directory for Nurl files
     dir = ".nurl",
@@ -166,6 +167,12 @@ require("nurl").setup({
             cmd = { "jq", "--sort-keys", "--indent", "2" },
             available = function()
                 return vim.fn.executable("jq") == 1
+            end,
+        },
+        lua = {
+            cmd = { "stylua", "-" },
+            available = function()
+                return vim.fn.executable("stylua") == 1
             end,
         },
     },
