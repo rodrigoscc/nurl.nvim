@@ -1,4 +1,4 @@
-*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 02
+*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 03
 
 A Lua-based HTTP client for Neovim. Define requests in Lua files, manage
 environments, add hooks, and view responses in beautiful split windows.
@@ -246,6 +246,10 @@ Or use the picker:
         data = function() return { ts = os.time() } end,
         form = { field = "value" },         -- multipart/form-data
         data_urlencode = { q = "search" },  -- URL encoded
+    
+        -- Additional curl flags
+        curl_args = { "--insecure", "--compressed" },
+        curl_args = { "--proxy", "http://localhost:8080" },
     
         -- Hooks
         pre_hook = function(next, request)
