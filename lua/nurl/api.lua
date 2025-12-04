@@ -141,8 +141,10 @@ function M.send(request, opts)
             end)
         end)
 
-        -- Update to add the curl PID
-        response_window:update(nil, curl)
+        if response_window ~= nil then
+            -- Update to add the curl PID
+            response_window:update(nil, curl)
+        end
     end
 
     local function env_next_function()
