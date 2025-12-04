@@ -44,4 +44,12 @@ function Curl:string()
     return "curl " .. table.concat(args, " ")
 end
 
+function Curl:replace_body(new_text)
+    -- Assuming stdout contains CRLF
+    local start_of_body = string.find(self.result.stdout, "\r\n\r\n")
+
+    self.result.stdout = self.result.stdout:sub(1, start_of_body + 3)
+        .. new_text
+end
+
 return Curl

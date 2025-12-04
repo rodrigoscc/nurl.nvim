@@ -77,7 +77,7 @@ function M.send(request, opts)
                 response = responses.parse(stdout, stderr)
 
                 if not responses.is_displayable(response) then
-                    response = responses.move_body_to_file(response)
+                    response, curl = responses.move_body_to_file(response, curl)
                 end
             end
 

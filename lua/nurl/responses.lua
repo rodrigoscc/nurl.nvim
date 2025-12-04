@@ -245,8 +245,9 @@ function M.parse(stdout, stderr)
 end
 
 ---@param response nurl.Response
----@return nurl.Response
-function M.move_body_to_file(response)
+---@param curl nurl.Curl
+---@return nurl.Response, nurl.Curl
+function M.move_body_to_file(response, curl)
     local extension = guess_extension(response.headers, "bin")
     local unique_path =
         fs.unique_path(config.responses_files_dir, "response", extension)
@@ -256,7 +257,9 @@ function M.move_body_to_file(response)
     response.body_file = unique_path
     response.body = ""
 
-    return response
+    curl:replace_body("@" .. unique_path)
+
+    return response, curl
 end
 
 return M
