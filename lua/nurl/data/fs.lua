@@ -33,27 +33,34 @@ function M.write(path, contents)
 
     local fd, err = uv.fs_open(path, "w+", 438)
     if fd == nil then
-        error("Could not open file: " .. path .. err)
+        error(("Could not open file %s: %s"):format(path, err))
     end
 
     uv.fs_write(fd, contents, -1)
     uv.fs_close(fd)
 end
 
-function M.write_temp(filename, contents)
-    local temp_dir = uv.fs_mkdtemp("/tmp/nurl.XXXXXX")
+function M.unique_path(dir, name, extension)
+    uv.fs_mkdir(dir, 493)
+    local full_path = vim.fs.joinpath(dir, "XXXXXXXXX")
+    local unique_dir = uv.fs_mkdtemp(full_path)
+    return vim.fs.joinpath(unique_dir, name .. "." .. extension)
+end
 
-    local path = vim.fs.joinpath(temp_dir, filename)
-
-    local fd, err = uv.fs_open(path, "w+", 438)
-    if fd == nil then
-        error("Could not open file: " .. path .. err)
+function M.delete_dir(dir)
+    for file in vim.fs.dir(dir) do
+        local status, err, err_name = uv.fs_unlink(vim.fs.joinpath(dir, file))
+        if not status and err_name ~= "ENOENT" then
+            return status, err
+        end
     end
 
-    uv.fs_write(fd, contents, -1)
-    uv.fs_close(fd)
+    local status, err, err_name = uv.fs_rmdir(dir)
+    if not status and err_name ~= "ENOENT" then
+        return status, err
+    end
 
-    return path
+    return true, nil, nil
 end
 
 return M

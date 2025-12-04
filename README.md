@@ -158,6 +158,9 @@ require("nurl").setup({
         max_history_items = 5000,
     },
 
+    -- Directory for non-displayable response bodies (images, xlsx, etc.)
+    responses_files_dir = vim.fn.stdpath("data") .. "/nurl/responses",
+
     -- Response window config (see :help nvim_open_win)
     win_config = { split = "right" },
 

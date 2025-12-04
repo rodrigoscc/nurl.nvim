@@ -1,3 +1,5 @@
+local config = require("nurl.config")
+
 local fs = require("nurl.data.fs")
 
 local M = {}
@@ -217,7 +219,11 @@ function M.parse(stdout, stderr)
     if not is_body_displayable then
         local extension = guess_extension(headers, "bin")
         -- TODO: what about too large files here?
-        body_file = fs.write_temp("response." .. extension, body)
+        local unique_path =
+            fs.unique_path(config.responses_files_dir, "response", extension)
+        fs.write(unique_path, body)
+
+        body_file = unique_path
         body = ""
     end
 

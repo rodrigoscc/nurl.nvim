@@ -1,5 +1,6 @@
 local config = require("nurl.config")
 local Curl = require("nurl.curl")
+local fs = require("nurl.data.fs")
 
 local M = {}
 
@@ -151,20 +152,36 @@ end
 
 function M.delete_old_items()
     local result = M.db:exec(
-        [[DELETE FROM request_history
+        [[WITH stats AS (
+    SELECT COUNT(*) AS total FROM request_history
+)
+DELETE FROM request_history
 WHERE id IN (
     SELECT id FROM request_history
     ORDER BY time ASC
     LIMIT ?
 )
-AND (SELECT COUNT(*) FROM request_history) >= ?;]],
+AND (SELECT total FROM stats) >= ?
+RETURNING response_body_file;]],
         {
             config.history.history_buffer,
             config.history.max_history_items + config.history.history_buffer,
         }
     )
 
+    local rows = result:all()
     result:close()
+
+    for _, row in ipairs(rows) do
+        local body_file = row:get_string(1)
+
+        if body_file then
+            local success, err = fs.delete_dir(vim.fs.dirname(body_file))
+            if not success then
+                vim.notify(("Could not delete %s: %s"):format(body_file, err))
+            end
+        end
+    end
 end
 
 ---@return nurl.HistoryItem[]

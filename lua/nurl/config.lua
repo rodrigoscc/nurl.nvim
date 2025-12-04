@@ -10,6 +10,7 @@ local defaults = {
     dir = ".nurl",
     environments_file = "environments.lua",
     active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
+    responses_files_dir = vim.fn.stdpath("data") .. "/nurl/responses_files",
     history = {
         ---@type boolean
         enabled = true,
