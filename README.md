@@ -277,14 +277,12 @@ Hooks let you run code before/after requests. They can be defined per-request or
                               v
                     +-----------------------+
                     |  Environment pre_hook |
-                    |  (if env is active)   |
                     +-----------------------+
                               |
                               | calls next()
                               v
                     +-----------------------+
                     |   Request pre_hook    |
-                    |  (if defined)         |
                     +-----------------------+
                               |
                               | calls next()
@@ -296,24 +294,17 @@ Hooks let you run code before/after requests. They can be defined per-request or
                               v
                     +-----------------------+
                     |   Request post_hook   |
-                    |  (if defined)         |
                     +-----------------------+
                               |
                               v
                     +-----------------------+
                     | Environment post_hook |
-                    |  (if env is active)   |
                     +-----------------------+
                               |
                               v
                     +-----------------------+
-                    |  on_complete callback |
-                    |  (if using Nurl.send) |
-                    +-----------------------+
-                              |
-                              v
-                    +-----------------------+
-                    |  Response displayed   |
+                    | Response is displayed |
+                    | or on_complete func   |
                     +-----------------------+
 ```
 
