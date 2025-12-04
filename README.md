@@ -510,35 +510,35 @@ require("nurl").setup({
                 ["<C-x>"] = "cancel",
                 q = "close",
             },
-            {
-                "headers",
-                keys = {
-                    ["<Tab>"] = "next_buffer",
-                    ["<S-Tab>"] = "previous_buffer",
-                    ["<C-r>"] = "rerun",
-                    ["<C-x>"] = "cancel",
-                    q = "close",
-                },
+        },
+        {
+            "headers",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
             },
-            {
-                "info",
-                keys = {
-                    ["<Tab>"] = "next_buffer",
-                    ["<S-Tab>"] = "previous_buffer",
-                    ["<C-r>"] = "rerun",
-                    ["<C-x>"] = "cancel",
-                    q = "close",
-                },
+        },
+        {
+            "info",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
             },
-            {
-                "raw",
-                keys = {
-                    ["<Tab>"] = "next_buffer",
-                    ["<S-Tab>"] = "previous_buffer",
-                    ["<C-r>"] = "rerun",
-                    ["<C-x>"] = "cancel",
-                    q = "close",
-                },
+        },
+        {
+            "raw",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
             },
         },
     },
