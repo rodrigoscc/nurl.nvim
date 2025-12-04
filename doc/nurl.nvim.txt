@@ -3,7 +3,10 @@
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
 
-Body tabHeaders tabInfo tabRaw tabRequest pickerHistory picker
+
+https://github.com/user-attachments/assets/02493743-033a-431b-8357-2939f7878813
+
+
 ==============================================================================
 1. Table of Contents                             *nurl.nvim-table-of-contents*
 
