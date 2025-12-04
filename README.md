@@ -263,7 +263,7 @@ Hooks let you run code before/after requests. They can be defined per-request or
 
 ### Execution Order
 
-```
+```text
                     +-----------------------+
                     |   User calls :Nurl    |
                     +-----------------------+
