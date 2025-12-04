@@ -255,7 +255,7 @@ or per-environment.
 
 EXECUTION ORDER                *nurl.nvim-hooks-and-callbacks-execution-order*
 
->
+>text
                         +-----------------------+
                         |   User calls :Nurl    |
                         +-----------------------+
