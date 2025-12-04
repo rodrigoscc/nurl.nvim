@@ -2,6 +2,26 @@ local uv = vim.uv or vim.loop
 
 local M = {}
 
+function M.mkdir(path)
+    local parents = {}
+
+    for parent in vim.fs.parents(path) do
+        table.insert(parents, 1, parent)
+    end
+
+    for _, parent in ipairs(parents) do
+        local success, err, err_name = uv.fs_mkdir(parent, tonumber("755", 8))
+        if not success and err_name ~= "EEXIST" then
+            error(("Could not mkdir %s: %s"):format(parent, err))
+        end
+    end
+
+    local success, err, err_name = uv.fs_mkdir(path, tonumber("755", 8))
+    if not success and err_name ~= "EEXIST" then
+        error(("Could not mkdir %s: %s"):format(path, err))
+    end
+end
+
 function M.exists(path)
     local stat = uv.fs_stat(path)
     return stat ~= nil
@@ -29,7 +49,7 @@ function M.read(path)
 end
 
 function M.write(path, contents)
-    uv.fs_mkdir(vim.fs.dirname(path), 493)
+    M.mkdir(vim.fs.dirname(path))
 
     local fd, err = uv.fs_open(path, "w+", 438)
     if fd == nil then
@@ -41,26 +61,13 @@ function M.write(path, contents)
 end
 
 function M.unique_path(dir, name, extension)
-    uv.fs_mkdir(dir, 493)
-    local full_path = vim.fs.joinpath(dir, "XXXXXXXXX")
-    local unique_dir = uv.fs_mkdtemp(full_path)
+    M.mkdir(dir)
+    local unique_dir = uv.fs_mkdtemp(vim.fs.joinpath(dir, "XXXXXXXXX"))
     return vim.fs.joinpath(unique_dir, name .. "." .. extension)
 end
 
 function M.delete_dir(dir)
-    for file in vim.fs.dir(dir) do
-        local status, err, err_name = uv.fs_unlink(vim.fs.joinpath(dir, file))
-        if not status and err_name ~= "ENOENT" then
-            return status, err
-        end
-    end
-
-    local status, err, err_name = uv.fs_rmdir(dir)
-    if not status and err_name ~= "ENOENT" then
-        return status, err
-    end
-
-    return true, nil, nil
+    vim.fs.rm(dir, { recursive = true, force = true })
 end
 
 return M

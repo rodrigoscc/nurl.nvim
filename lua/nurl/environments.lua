@@ -51,60 +51,65 @@ local function safe_coroutine_resume(my_coroutine)
     end
 end
 
-M.file_worker_coroutine = coroutine.create(function()
-    while true do
-        if M.project_env_file == nil then
-            error("Environment file wasn't loaded. Stopping worker...")
-        end
-
-        while #operations_queue == 0 do
-            coroutine.yield()
-        end
-
-        ---@type nurl.EnvOperation
-        local op = table.remove(operations_queue, 1)
-
-        if op.op == "set" then
-            local new_text
-            if type(op.value) == "string" then
-                new_text = string.format([["%s"]], op.value)
-            elseif
-                type(op.value) == "number" or type(op.value) == "boolean"
-            then
-                new_text = tostring(op.value)
-            elseif op.value == nil then
-                new_text = "nil"
-            else
-                error("value type " .. type(op.value) .. " not supported")
+local function create_coroutine()
+    return coroutine.create(function()
+        while true do
+            if M.project_env_file == nil then
+                error("Environment file wasn't loaded. Stopping worker...")
             end
 
-            M.project_env_file:set_environment_variable(
-                M.project_active_env,
-                op.name,
-                new_text
-            )
-        elseif op.op == "unset" then
-            M.project_env_file:unset_environment_variable(
-                M.project_active_env,
-                op.name
-            )
-        end
+            while #operations_queue == 0 do
+                coroutine.yield()
+            end
 
-        local saved = false
+            ---@type nurl.EnvOperation
+            local op = table.remove(operations_queue, 1)
 
-        M.project_env_file:save(function()
-            saved = true
-            vim.schedule(function()
-                -- running inside vim.schedule just in case
-                safe_coroutine_resume(M.file_worker_coroutine)
+            if op.op == "set" then
+                local new_text
+                if type(op.value) == "string" then
+                    new_text = string.format([["%s"]], op.value)
+                elseif
+                    type(op.value) == "number"
+                    or type(op.value) == "boolean"
+                then
+                    new_text = tostring(op.value)
+                elseif op.value == nil then
+                    new_text = "nil"
+                else
+                    error("value type " .. type(op.value) .. " not supported")
+                end
+
+                M.project_env_file:set_environment_variable(
+                    M.project_active_env,
+                    op.name,
+                    new_text
+                )
+            elseif op.op == "unset" then
+                M.project_env_file:unset_environment_variable(
+                    M.project_active_env,
+                    op.name
+                )
+            end
+
+            local saved = false
+
+            M.project_env_file:save(function()
+                saved = true
+                vim.schedule(function()
+                    -- running inside vim.schedule just in case
+                    safe_coroutine_resume(M.file_worker_coroutine)
+                end)
             end)
-        end)
 
-        while not saved do
-            coroutine.yield()
+            while not saved do
+                coroutine.yield()
+            end
         end
-    end
-end)
+    end)
+end
+
+M.file_worker_coroutine = create_coroutine()
 
 function M.activate(env_name)
     for name in pairs(M.project_envs) do
@@ -137,23 +142,30 @@ function M.get_active()
         return nil
     end
 
-    return M.project_envs[M.project_active_env]
+    local env = M.project_envs[M.project_active_env]
+    if env == nil then
+        error(("Active env does not exist: %s"):format(M.project_active_env))
+    end
+
+    return env
 end
 
 function M.get_pre_hook()
-    if M.project_active_env == nil then
+    local active_env = M.get_active()
+    if active_env == nil then
         return nil
     end
 
-    return M.project_envs[M.project_active_env].pre_hook
+    return active_env.pre_hook
 end
 
 function M.get_post_hook()
-    if M.project_active_env == nil then
+    local active_env = M.get_active()
+    if active_env == nil then
         return nil
     end
 
-    return M.project_envs[M.project_active_env].post_hook
+    return active_env.post_hook
 end
 
 function M.var(variable_name, use_env)
@@ -225,33 +237,26 @@ function M.load()
     local environments_path =
         vim.fs.joinpath(config.dir, config.environments_file)
 
-    if not fs.exists(environments_path) then
-        return
+    if fs.exists(environments_path) then
+        local environments = dofile(environments_path)
+        M.project_envs = environments
+
+        local file, err = file_parsing.parse(environments_path)
+        if not file then
+            vim.notify(
+                "Could not parse environments file: " .. err,
+                vim.log.levels.ERROR
+            )
+        else
+            M.project_env_file = file
+        end
     end
 
-    local environments = dofile(environments_path)
-
-    M.project_envs = environments
-
-    if not fs.exists(config.active_environments_file) then
-        return
+    if fs.exists(config.active_environments_file) then
+        local content = fs.read(config.active_environments_file)
+        local active_environments = vim.json.decode(content)
+        M.project_active_env = active_environments[uv.cwd()]
     end
-
-    local content = fs.read(config.active_environments_file)
-    local active_environments = vim.json.decode(content)
-
-    M.project_active_env = active_environments[uv.cwd()]
-
-    local file, err = file_parsing.parse(environments_path)
-    if not file then
-        vim.notify(
-            "Could not parse environments file: " .. err,
-            vim.log.levels.ERROR
-        )
-        return
-    end
-
-    M.project_env_file = file
 end
 
 local reload_group_id = vim.api.nvim_create_augroup(

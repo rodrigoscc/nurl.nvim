@@ -12,6 +12,7 @@ M.db = nil
 function M.setup()
     local Db = require("nurl.data.db")
 
+    fs.mkdir(vim.fs.dirname(config.history.db_file))
     M.db = Db:new(config.history.db_file)
 
     local group = vim.api.nvim_create_augroup("nurl.history", {})
@@ -176,10 +177,7 @@ RETURNING response_body_file;]],
         local body_file = row:get_string(1)
 
         if body_file then
-            local success, err = fs.delete_dir(vim.fs.dirname(body_file))
-            if not success then
-                vim.notify(("Could not delete %s: %s"):format(body_file, err))
-            end
+            fs.delete_dir(vim.fs.dirname(body_file))
         end
     end
 end
