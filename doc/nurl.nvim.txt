@@ -1,4 +1,4 @@
-*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 03
+*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 04
 
 A Lua-based HTTP client for Neovim. Define requests in Lua files, manage
 environments, add hooks, and view responses in beautiful split windows.
@@ -161,6 +161,7 @@ Or use the picker:
                     ["<Tab>"] = "next_buffer",
                     ["<S-Tab>"] = "previous_buffer",
                     ["<C-r>"] = "rerun",
+                    ["<C-x>"] = "cancel",
                     q = "close",
                 },
             },
@@ -170,6 +171,7 @@ Or use the picker:
                     ["<Tab>"] = "next_buffer",
                     ["<S-Tab>"] = "previous_buffer",
                     ["<C-r>"] = "rerun",
+                    ["<C-x>"] = "cancel",
                     q = "close",
                 },
             },
@@ -179,6 +181,7 @@ Or use the picker:
                     ["<Tab>"] = "next_buffer",
                     ["<S-Tab>"] = "previous_buffer",
                     ["<C-r>"] = "rerun",
+                    ["<C-x>"] = "cancel",
                     q = "close",
                 },
             },
@@ -188,6 +191,7 @@ Or use the picker:
                     ["<Tab>"] = "next_buffer",
                     ["<S-Tab>"] = "previous_buffer",
                     ["<C-r>"] = "rerun",
+                    ["<C-x>"] = "cancel",
                     q = "close",
                 },
             },
