@@ -110,6 +110,15 @@ local function populate_body_buffer(bufnr, response)
                         content = out.stdout or ""
                     else
                         content = response.body
+                        vim.notify(
+                            ('Formatter "%s" for "%s" failed: %s\n%s'):format(
+                                formatter.cmd[1],
+                                file_type,
+                                out.stdout,
+                                out.stderr
+                            ),
+                            vim.log.levels.ERROR
+                        )
                     end
                     set_body_buffer(bufnr, content, file_type)
                 end)
