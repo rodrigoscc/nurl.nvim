@@ -2,44 +2,7 @@
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable, extensible.
 
-<table>
-  <tr>
-    <th>Body tab</th>
-    <th>Headers tab</th>
-  </tr>
-  <tr>
-    <td>
-      <img width="1473" height="962" alt="Screenshot 2025-11-27 at 12 09 35" src="https://github.com/user-attachments/assets/a2404ab0-ff9a-4bdf-8e0f-29b3e9818a79" />
-    </td>
-    <td>
-      <img width="1473" height="962" alt="Screenshot 2025-11-27 at 12 09 41" src="https://github.com/user-attachments/assets/fbe8f2f4-24a0-4aec-af9f-eae946b18c89" />
-    </td>
-  </tr>
-  <tr>
-    <th>Info tab</th>
-    <th>Raw tab</th>
-  </tr>
-  <tr>
-    <td>
-      <img width="1473" height="962" alt="Screenshot 2025-11-27 at 12 09 50" src="https://github.com/user-attachments/assets/fa17652b-6556-4f86-a27a-7f1d57537cad" />
-    </td>
-    <td>
-    <img width="1473" height="962" alt="Screenshot 2025-11-27 at 12 09 54" src="https://github.com/user-attachments/assets/2d9f0aa8-9b3d-4d1e-aadd-2a1f2c3551af" />
-    </td>
-  </tr>
-  <tr>
-    <th>Request picker</th>
-    <th>History picker</th>
-  </tr>
-  <tr>
-    <td>
-      <img width="1473" height="962" alt="Screenshot 2025-11-27 at 12 10 12" src="https://github.com/user-attachments/assets/61bf5e49-7a0a-43fd-b5c8-4b421d5ba114" />
-    </td>
-    <td>
-    <img width="1473" height="962" alt="Screenshot 2025-11-27 at 12 10 18" src="https://github.com/user-attachments/assets/c436684e-8ed4-468b-8f89-51dce7742028" />
-    </td>
-  </tr>
-</table>
+https://github.com/user-attachments/assets/02493743-033a-431b-8357-2939f7878813
 
 ## Table of Contents
 
