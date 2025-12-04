@@ -75,6 +75,10 @@ function M.send(request, opts)
 
             if curl_success then
                 response = responses.parse(stdout, stderr)
+
+                if not responses.is_displayable(response) then
+                    response = responses.move_body_to_file(response)
+                end
             end
 
             vim.schedule(function()

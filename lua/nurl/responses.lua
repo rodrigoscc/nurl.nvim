@@ -150,10 +150,10 @@ local content_type_to_ext = {
     ["application/octet-stream"] = "bin",
 }
 
----@param headers table<string, string>
+---@param response nurl.Response
 ---@return boolean
-local function is_displayable(headers)
-    local content_type = M.get_content_type(headers)
+function M.is_displayable(response)
+    local content_type = M.get_content_type(response.headers)
     if not content_type then
         return false
     end
@@ -212,20 +212,8 @@ function M.parse(stdout, stderr)
             end)
             :totable())
 
-    local body_file = nil
+    local body_file = nil -- should be populated later
     local body = table.concat(body_lines, "\n")
-
-    local is_body_displayable = is_displayable(headers)
-    if not is_body_displayable then
-        local extension = guess_extension(headers, "bin")
-        -- TODO: what about too large files here?
-        local unique_path =
-            fs.unique_path(config.responses_files_dir, "response", extension)
-        fs.write(unique_path, body)
-
-        body_file = unique_path
-        body = ""
-    end
 
     return {
         protocol = protocol,
@@ -254,6 +242,21 @@ function M.parse(stdout, stderr)
             speed_upload = speed_upload,
         },
     }
+end
+
+---@param response nurl.Response
+---@return nurl.Response
+function M.move_body_to_file(response)
+    local extension = guess_extension(response.headers, "bin")
+    local unique_path =
+        fs.unique_path(config.responses_files_dir, "response", extension)
+    -- TODO: what about too large files here?
+    fs.write(unique_path, response.body)
+
+    response.body_file = unique_path
+    response.body = ""
+
+    return response
 end
 
 return M
