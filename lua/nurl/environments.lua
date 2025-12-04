@@ -21,6 +21,7 @@ M.project_envs = {}
 
 ---@class nurl.EnvOperation
 ---@field op "set" | "unset"
+---@field env string
 ---@field name string
 ---@field value? any
 
@@ -81,15 +82,12 @@ local function create_coroutine()
                 end
 
                 M.project_env_file:set_environment_variable(
-                    M.project_active_env,
+                    op.env,
                     op.name,
                     new_text
                 )
             elseif op.op == "unset" then
-                M.project_env_file:unset_environment_variable(
-                    M.project_active_env,
-                    op.name
-                )
+                M.project_env_file:unset_environment_variable(op.env, op.name)
             end
 
             local saved = false
@@ -186,33 +184,44 @@ function M.var(variable_name, use_env)
     end
 end
 
-function M.set(variable_name, value)
-    local active_env = M.get_active()
-    if active_env == nil then
-        error("no active env")
-        return
+function M.set(variable_name, value, use_env)
+    local env_name = use_env or M.project_active_env
+    if env_name == nil then
+        error("No active env")
     end
 
-    active_env[variable_name] = value
+    local env = M.project_envs[env_name]
+    if env == nil then
+        error(('Env "%s" not found'):format(env_name))
+    end
+
+    env[variable_name] = value
 
     table.insert(
         operations_queue,
-        { op = "set", name = variable_name, value = value }
+        { op = "set", env = env_name, name = variable_name, value = value }
     )
 
     safe_coroutine_resume(M.file_worker_coroutine)
 end
 
-function M.unset(variable_name)
-    local active_env = M.get_active()
-    if active_env == nil then
-        error("no active env")
-        return
+function M.unset(variable_name, use_env)
+    local env_name = use_env or M.project_active_env
+    if env_name == nil then
+        error("No active env")
     end
 
-    active_env[variable_name] = nil
+    local env = M.project_envs[env_name]
+    if env == nil then
+        error(('Env "%s" not found'):format(env_name))
+    end
 
-    table.insert(operations_queue, { op = "unset", name = variable_name })
+    env[variable_name] = nil
+
+    table.insert(
+        operations_queue,
+        { op = "unset", env = env_name, name = variable_name }
+    )
 
     safe_coroutine_resume(M.file_worker_coroutine)
 end

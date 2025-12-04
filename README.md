@@ -214,11 +214,14 @@ return {
 
 | Function | Description |
 |----------|-------------|
-| `Nurl.env.var("name")` | Returns a function that resolves the variable (for use in tables) |
-| `Nurl.env.get("name")` | Returns the value immediately (for use inside functions) |
-| `Nurl.env.set("name", value)` | Updates the variable in the active environment |
+| `Nurl.env.var("name", env?)` | Returns a function that resolves the variable (for use in tables) |
+| `Nurl.env.get("name", env?)` | Returns the value immediately (for use inside functions) |
+| `Nurl.env.set("name", value, env?)` | Updates the variable |
+| `Nurl.env.unset("name", env?)` | Removes the variable |
 
-Switch environments with `:Nurl env`.
+By default, all functions operate on the active environment. Pass an optional `env` argument to target a specific environment instead.
+
+Switch the active environment with `:Nurl env`.
 
 ## Hooks and Callbacks
 
