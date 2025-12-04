@@ -46,13 +46,20 @@ function M.status_code()
 
     if curl.result and curl.result.code ~= 0 then
         return string.format(
-            "%%#%s#Error%%*",
+            "%%#%s#[Error]%%*",
             config.highlight.groups.winbar_error
         )
     end
 
+    if curl.result and curl.result.signal ~= 0 then
+        return string.format(
+            "%%#%s#[Cancelled]%%*",
+            config.highlight.groups.winbar_warning
+        )
+    end
+
     return string.format(
-        "%%#%s#Loading...%%*",
+        "%%#%s#[Loading]%%*",
         config.highlight.groups.winbar_loading
     )
 end

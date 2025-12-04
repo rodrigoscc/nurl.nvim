@@ -79,14 +79,17 @@ function ResponseWindow:open(opts)
 end
 
 function ResponseWindow:update(response, curl)
-    if self.elapsed_time ~= nil then
+    local curl_completed = curl.result ~= nil
+    if curl_completed and self.elapsed_time ~= nil then
         self.elapsed_time:stop()
     end
 
     assert(self.buffers ~= nil, "Buffers must already exist")
     buffers.update(self.request, response, curl, self.buffers)
+    vim.cmd.redrawstatus() -- make sure the winbar updates
 
-    if curl.result.code ~= 0 and self.buffers[buffers.Buffer.Raw] then
+    local curl_failed = curl_completed and curl.result.code ~= 0
+    if curl_failed and self.buffers[buffers.Buffer.Raw] then
         assert(self.win ~= nil, "Window should have been created already")
         vim.api.nvim_win_set_buf(self.win, self.buffers[buffers.Buffer.Raw])
     end

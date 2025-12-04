@@ -10,7 +10,8 @@ M.highlights = {
     NurlWinbarErrorStatusCode = "@diff.minus",
     NurlWinbarLoading = "@constructor",
     NurlWinbarTime = "@comment",
-    NurlWinbarError = "Error",
+    NurlWinbarWarning = "WarningMsg",
+    NurlWinbarError = "ErrorMsg",
 }
 
 function M.setup_highlights()

@@ -1,3 +1,5 @@
+local uv = vim.uv or vim.loop
+
 local M = {}
 
 M.builtin = {
@@ -105,6 +107,26 @@ M.builtin = {
     close = function(_)
         return function()
             vim.cmd.close()
+        end
+    end,
+    ---@param opts? table
+    ---@return fun()
+    cancel = function(_)
+        return function()
+            local curl = vim.b.nurl_curl
+            local pid = curl.pid
+
+            if pid ~= nil then
+                local code, msg = uv.kill(pid, "sigterm")
+                if code ~= 0 then
+                    vim.notify(
+                        "Could not kill curl: " .. msg,
+                        vim.log.levels.ERROR
+                    )
+                end
+            else
+                vim.notify("Curl PID not available", vim.log.levels.ERROR)
+            end
         end
     end,
 }

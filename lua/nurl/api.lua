@@ -69,7 +69,11 @@ function M.send(request, opts)
             local stderr = vim.split(system_completed.stderr, "\n")
 
             local response = nil
-            if system_completed.code == 0 then
+
+            local curl_success = system_completed.code == 0
+                and system_completed.signal == 0
+
+            if curl_success then
                 response = responses.parse(stdout, stderr)
             end
 
@@ -132,6 +136,9 @@ function M.send(request, opts)
                 end
             end)
         end)
+
+        -- Update to add the curl PID
+        response_window:update(nil, curl)
     end
 
     local function env_next_function()

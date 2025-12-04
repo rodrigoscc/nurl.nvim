@@ -1,7 +1,8 @@
 ---@class nurl.Curl
 ---@field args string[]
----@field result vim.SystemCompleted | nil
----@field exec_datetime string | nil
+---@field result? vim.SystemCompleted
+---@field exec_datetime string
+---@field pid? integer
 local Curl = {}
 
 function Curl:new(o)
@@ -25,10 +26,12 @@ function Curl:run(on_exit)
         self.result = result
         return result
     else
-        vim.system(cmd, {}, function(out)
+        local handle = vim.system(cmd, {}, function(out)
             self.result = out
             on_exit(out)
         end)
+
+        self.pid = handle.pid
     end
 end
 
