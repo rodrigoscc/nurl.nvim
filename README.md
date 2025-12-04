@@ -1,6 +1,6 @@
 # nurl.nvim
 
-A Lua-based HTTP client for Neovim. Define requests in Lua files, manage environments, add hooks, and view responses in beautiful split windows.
+HTTP client for Neovim. Requests in pure Lua. Programmable, composable, extensible.
 
 <table>
   <tr>
@@ -47,26 +47,16 @@ A Lua-based HTTP client for Neovim. Define requests in Lua files, manage environ
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-- [Configuration](#configuration)
 - [Commands](#commands)
 - [Request Format](#request-format)
-  - [Dynamic Values](#dynamic-values)
-  - [Lazy Values](#lazy-values)
-  - [URL Parts](#url-parts)
 - [Environments](#environments)
-  - [Environment Hooks](#environment-hooks)
+- [Hooks and Callbacks](#hooks-and-callbacks)
+- [Type Reference](#type-reference)
 - [API](#api)
+- [Configuration](#configuration)
 - [Winbar](#winbar)
 - [Highlight Groups](#highlight-groups)
 - [Recipes](#recipes)
-  - [1Password CLI for secrets](#1password-cli-for-secrets)
-  - [OAuth2 Token Refresh](#oauth2-token-refresh)
-  - [Using Response Values](#using-response-values)
-  - [HMAC Signature](#hmac-signature)
-  - [Environment-Based Confirmation](#environment-based-confirmation)
-  - [Response Validation](#response-validation)
-  - [GraphQL with Variables](#graphql-with-variables)
-  - [File Upload with Picker](#file-upload-with-picker)
 
 ## Features
 
@@ -91,11 +81,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
     "rodrigoscc/nurl.nvim",
-    dependencies = { "folke/snacks.nvim" }, -- Optional
-    dependencies = { -- Optional
-        'nvim-telescope/telescope.nvim', tag = 'v0.1.9',
-        dependencies = { 'nvim-lua/plenary.nvim' }
-    },
+    dependencies = { "folke/snacks.nvim" }, -- or telescope.nvim
     opts = {},
 }
 ```
@@ -128,28 +114,407 @@ return {
 
 ### 2. Run a request
 
-Position cursor on a request and run:
+Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
 
-```vim
-:Nurl send_at_cursor
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `:Nurl` | Project picker -> send request |
+| `:Nurl .` | Send request at cursor |
+| `:Nurl %` | Current buffer picker -> send request |
+| `:Nurl <filepath>` | File picker -> send request |
+| `:Nurl jump` | Project picker -> jump to definition |
+| `:Nurl jump %` | Current buffer picker -> jump |
+| `:Nurl jump <filepath>` | File picker -> jump |
+| `:Nurl history` | History picker -> view response |
+| `:Nurl resend` | Recent requests picker -> resend |
+| `:Nurl resend <-n>` | Resend nth last request (-1 = last) |
+| `:Nurl env` | Environment picker -> activate |
+| `:Nurl env <name>` | Activate environment directly |
+| `:Nurl env_file` | Open environments file |
+| `:Nurl yank` | Project picker -> yank curl command |
+| `:Nurl yank .` | Yank curl at cursor |
+| `:Nurl yank %` | Current buffer picker -> yank |
+| `:Nurl yank <filepath>` | File picker -> yank |
+
+## Request Format
+
+A request file returns a list of request tables:
+
+```lua
+return {
+    {
+        -- URL (required): string, table of parts, or function
+        "https://api.example.com/users", -- shorthand
+        url = "https://api.example.com/users", -- explicit
+        url = { "https://api.example.com", "v1" }, -- parts joined with /
+        url = function()
+            return "https://..."
+        end, -- dynamic
+
+        -- Method (optional, defaults to GET)
+        method = "POST",
+
+        -- Title (optional): display name in pickers
+        title = "Create user",
+
+        -- Headers (optional): table or function
+        headers = {
+            ["Authorization"] = "Bearer token",
+            ["Content-Type"] = "application/json",
+        },
+
+        -- Body (optional, use only one)
+        data = { key = "value" }, -- table: JSON encoded
+        data = '{"raw": "json"}', -- string: sent as-is
+        form = { field = "value" }, -- multipart/form-data
+        data_urlencode = { q = "search" }, -- URL encoded
+
+        -- Additional curl flags (optional)
+        curl_args = { "--insecure", "--compressed" },
+
+        -- Hooks (optional)
+        pre_hook = function(next, input)
+            next()
+        end,
+        post_hook = function(out) end,
+    },
+}
 ```
 
-Or use the picker:
+### Dynamic Values
 
-```vim
-:Nurl send
+Use functions for values computed at request time:
+
+```lua
+return {
+    {
+        url = "https://api.example.com/users/",
+        headers = function()
+            return { ["X-Timestamp"] = tostring(os.time()) }
+        end,
+    },
+}
+```
+
+### Lazy Values
+
+Use `Nurl.lazy()` to defer evaluation until send time (skipped during picker preview):
+
+```lua
+return {
+    {
+        url = "https://api.example.com/login",
+        method = "POST",
+        data = {
+            username = "user",
+            password = Nurl.lazy(function()
+                return vim.fn.inputsecret("Password: ")
+            end),
+        },
+    },
+}
+```
+
+## Environments
+
+Create `.nurl/environments.lua`:
+
+```lua
+return {
+    staging = {
+        base_url = "https://staging.example.com",
+        token = "staging-token",
+    },
+    production = {
+        base_url = "https://prod.example.com",
+        token = "prod-token",
+    },
+}
+```
+
+Access variables in requests:
+
+```lua
+return {
+    {
+        url = { Nurl.env.var("base_url"), "users" },
+        headers = {
+            ["Authorization"] = function()
+                return "Bearer " .. Nurl.env.get("token")
+            end,
+        },
+    },
+}
+```
+
+| Function | Description |
+|----------|-------------|
+| `Nurl.env.var("name")` | Returns a function that resolves the variable (for use in tables) |
+| `Nurl.env.get("name")` | Returns the value immediately (for use inside functions) |
+| `Nurl.env.set("name", value)` | Updates the variable in the active environment |
+
+Switch environments with `:Nurl env`.
+
+## Hooks and Callbacks
+
+Hooks let you run code before/after requests. They can be defined per-request or per-environment.
+
+### Execution Order
+
+```
+                    +-----------------------+
+                    |   User calls :Nurl    |
+                    +-----------------------+
+                              |
+                              v
+                    +-----------------------+
+                    |  Request is expanded  |
+                    | (functions evaluated) |
+                    +-----------------------+
+                              |
+                              v
+                    +-----------------------+
+                    |  Environment pre_hook |
+                    |  (if env is active)   |
+                    +-----------------------+
+                              |
+                              | calls next()
+                              v
+                    +-----------------------+
+                    |   Request pre_hook    |
+                    |  (if defined)         |
+                    +-----------------------+
+                              |
+                              | calls next()
+                              v
+                    +-----------------------+
+                    |   curl executes       |
+                    +-----------------------+
+                              |
+                              v
+                    +-----------------------+
+                    |   Request post_hook   |
+                    |  (if defined)         |
+                    +-----------------------+
+                              |
+                              v
+                    +-----------------------+
+                    | Environment post_hook |
+                    |  (if env is active)   |
+                    +-----------------------+
+                              |
+                              v
+                    +-----------------------+
+                    |  on_complete callback |
+                    |  (if using Nurl.send) |
+                    +-----------------------+
+                              |
+                              v
+                    +-----------------------+
+                    |  Response displayed   |
+                    +-----------------------+
+```
+
+### pre_hook
+
+Called before sending. Must call `next()` to proceed.
+
+```lua
+---@param next fun() Call to continue the request
+---@param input nurl.RequestInput
+pre_hook = function(next, input)
+    -- input.request contains the expanded request
+    -- Modify input.request fields if needed
+    input.request.headers["X-Custom"] = "value"
+    next()
+end
+```
+
+### post_hook
+
+Called after curl completes.
+
+```lua
+---@param out nurl.RequestOut
+post_hook = function(out)
+    -- out.request: the request that was sent
+    -- out.response: the parsed response (nil if curl failed)
+    -- out.curl: curl execution details
+    -- out.win: the response window id
+    if out.response then
+        print("Status: " .. out.response.status_code)
+    end
+end
+```
+
+### Environment Hooks
+
+Apply to all requests when an environment is active:
+
+```lua
+-- .nurl/environments.lua
+return {
+    production = {
+        base_url = "https://prod.example.com",
+        pre_hook = function(next, input)
+            vim.ui.select({ "Yes", "No" }, {
+                prompt = "Send to production?",
+            }, function(choice)
+                if choice == "Yes" then
+                    next()
+                end
+            end)
+        end,
+        post_hook = function(out)
+            print("Prod request completed")
+        end,
+    },
+}
+```
+
+### on_complete Callback
+
+Used with `Nurl.send()` for programmatic requests:
+
+```lua
+Nurl.send(request, {
+    ---@param out nurl.RequestOut
+    on_complete = function(out)
+        if out.response then
+            local body = vim.json.decode(out.response.body)
+            Nurl.env.set("token", body.access_token)
+        end
+    end,
+})
+```
+
+The response window won't be opened if on_complete callback is defined.
+
+## Type Reference
+
+### nurl.Request
+
+The expanded request object (all functions resolved):
+
+```lua
+---@class nurl.Request
+---@field method string              HTTP method (GET, POST, etc.)
+---@field url string                 Full URL
+---@field title? string              Display name
+---@field headers table<string,string>  Headers
+---@field data? string|table         Request body
+---@field form? table<string,string> Form data
+---@field data_urlencode? table      URL-encoded data
+---@field curl_args? string[]        Extra curl flags
+---@field pre_hook? fun(next: fun(), input: nurl.RequestInput)
+---@field post_hook? fun(out: nurl.RequestOut)
+```
+
+### nurl.RequestInput
+
+Passed to `pre_hook`:
+
+```lua
+---@class nurl.RequestInput
+---@field request nurl.Request   The request about to be sent
+```
+
+### nurl.RequestOut
+
+Passed to `post_hook` and `on_complete`:
+
+```lua
+---@class nurl.RequestOut
+---@field request nurl.Request The request that was sent
+---@field response? nurl.Response Parsed response (nil if curl failed)
+---@field curl nurl.Curl Curl execution details
+---@field win? integer Response window id
+```
+
+### nurl.Response
+
+Parsed HTTP response:
+
+```lua
+---@class nurl.Response
+---@field status_code integer HTTP status code
+---@field reason_phrase string Status text (e.g., "OK")
+---@field protocol string Protocol (e.g., "HTTP/2")
+---@field headers table<string,string> Response headers
+---@field body string Response body
+---@field body_file? string Path if body saved to file
+---@field time nurl.ResponseTime Timing breakdown
+---@field size nurl.ResponseSize Size breakdown
+---@field speed nurl.ResponseSpeed Speed metrics
+```
+
+### nurl.ResponseTime
+
+```lua
+---@class nurl.ResponseTime
+---@field time_total number Total time in seconds
+---@field time_namelookup number DNS lookup time
+---@field time_connect number TCP connect time
+---@field time_appconnect number TLS handshake time
+---@field time_pretransfer number Pre-transfer time
+---@field time_starttransfer number Time to first byte
+---@field time_redirect number Redirect time
+```
+
+### nurl.Curl
+
+Curl execution details:
+
+```lua
+---@class nurl.Curl
+---@field args string[] Curl arguments
+---@field result? vim.SystemCompleted Execution result
+---@field exec_datetime string Execution timestamp
+---@field pid? integer Process ID
+```
+
+## API
+
+```lua
+local Nurl = require("nurl")
+
+-- Send a request programmatically
+Nurl.send(request, {
+    on_complete = function(out) end, -- optional callback
+})
+
+-- Resend from history
+Nurl.resend_last_request() -- resend last
+Nurl.resend_last_request(-2) -- resend second to last
+
+-- Environment
+Nurl.get_active_env() -- returns active env name or nil
+Nurl.activate_env("production")
+Nurl.env.get("variable") -- get variable value
+Nurl.env.set("variable", val) -- set variable value
+Nurl.env.var("variable") -- get resolver function
+
+-- Winbar components
+Nurl.winbar.status_code()
+Nurl.winbar.time()
+Nurl.winbar.tabs()
+Nurl.winbar.request_title()
 ```
 
 ## Configuration
 
 ```lua
--- Default config:
 require("nurl").setup({
-    -- Project directory for Nurl files
+    -- Project directory for request files
     dir = ".nurl",
 
-    -- Environments file name
+    -- Environments file name (in dir)
     environments_file = "environments.lua",
+
+    -- Active environments per working directory file name (in dir)
+    active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
 
     -- History settings
     history = {
@@ -158,7 +523,7 @@ require("nurl").setup({
         max_history_items = 5000,
     },
 
-    -- Directory for non-displayable response bodies (images, xlsx, etc.)
+    -- Directory for non-displayable response bodies (images, etc.)
     responses_files_dir = vim.fn.stdpath("data") .. "/nurl/responses",
 
     -- Response window config (see :help nvim_open_win)
@@ -191,327 +556,66 @@ require("nurl").setup({
                 ["<C-x>"] = "cancel",
                 q = "close",
             },
-        },
-        {
-            "headers",
-            keys = {
-                ["<Tab>"] = "next_buffer",
-                ["<S-Tab>"] = "previous_buffer",
-                ["<C-r>"] = "rerun",
-                ["<C-x>"] = "cancel",
-                q = "close",
+            {
+                "headers",
+                keys = {
+                    ["<Tab>"] = "next_buffer",
+                    ["<S-Tab>"] = "previous_buffer",
+                    ["<C-r>"] = "rerun",
+                    ["<C-x>"] = "cancel",
+                    q = "close",
+                },
+            },
+            {
+                "info",
+                keys = {
+                    ["<Tab>"] = "next_buffer",
+                    ["<S-Tab>"] = "previous_buffer",
+                    ["<C-r>"] = "rerun",
+                    ["<C-x>"] = "cancel",
+                    q = "close",
+                },
+            },
+            {
+                "raw",
+                keys = {
+                    ["<Tab>"] = "next_buffer",
+                    ["<S-Tab>"] = "previous_buffer",
+                    ["<C-r>"] = "rerun",
+                    ["<C-x>"] = "cancel",
+                    q = "close",
+                },
             },
         },
-        {
-            "info",
-            keys = {
-                ["<Tab>"] = "next_buffer",
-                ["<S-Tab>"] = "previous_buffer",
-                ["<C-r>"] = "rerun",
-                ["<C-x>"] = "cancel",
-                q = "close",
-            },
-        },
-        {
-            "raw",
-            keys = {
-                ["<Tab>"] = "next_buffer",
-                ["<S-Tab>"] = "previous_buffer",
-                ["<C-r>"] = "rerun",
-                ["<C-x>"] = "cancel",
-                q = "close",
-            },
+    },
+
+    highlight = {
+        groups = {
+            spinner = "NurlSpinner",
+            elapsed_time = "NurlElapsedTime",
+            winbar_title = "NurlWinbarTitle",
+            winbar_tab_active = "NurlWinbarTabActive",
+            winbar_tab_inactive = "NurlWinbarTabInactive",
+            winbar_success_status_code = "NurlWinbarSuccessStatusCode",
+            winbar_error_status_code = "NurlWinbarErrorStatusCode",
+            winbar_loading = "NurlWinbarLoading",
+            winbar_time = "NurlWinbarTime",
+            winbar_warning = "NurlWinbarWarning",
+            winbar_error = "NurlWinbarError",
         },
     },
 })
-```
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `:Nurl` | Project requests picker → send request |
-| `:Nurl .` | Send request at cursor |
-| `:Nurl %` | Current buffer requests picker → send request |
-| `:Nurl <filepath>` | File requests picker → send request |
-| `:Nurl jump` | Project requests picker → jump to definition |
-| `:Nurl jump %` | Current buffer requests picker → jump |
-| `:Nurl jump <filepath>` | File requests picker → jump |
-| `:Nurl history` | History picker → view response |
-| `:Nurl resend` | Recent requests picker → resend |
-| `:Nurl resend <-n>` | Resend nth last request (-1 = last) |
-| `:Nurl env` | Environment picker → activate |
-| `:Nurl env <name>` | Activate environment directly |
-| `:Nurl env_file` | Open environments file |
-| `:Nurl yank` | Project requests picker → yank curl command |
-| `:Nurl yank .` | Yank curl at cursor |
-| `:Nurl yank %` | Current buffer requests picker → yank |
-| `:Nurl yank <filepath>` | File requests picker → yank |
-
-## Request Format
-
-```lua
----@class nurl.SuperRequest
-{
-    -- Shorthand: URL as first element
-    "https://api.example.com/users",
-
-    -- or URL key as string, table of parts, or function
-    url = "https://api.example.com/users",
-    url = { "https://api.example.com", "v1", "users" },
-    url = function() return "https://api.example.com/users/id" end,
-
-    -- Optional: display name in pickers
-    title = "Get all users",
-    title = function() return "Dynamic title" end,
-
-    -- Optional (defaults to GET)
-    method = "POST",
-
-    -- Optional headers: table or function
-    headers = {
-        ["Authorization"] = "Bearer token",
-        ["Content-Type"] = "application/json",
-    },
-    headers = function() return { ["X-Request-Id"] = tostring(os.time()) } end,
-
-    -- Body (use only one): table, string, or function
-    data = { key = "value" },           -- Table: JSON encoded
-    data = '{"raw": "json"}',           -- String: sent as-is
-    data = function() return { ts = os.time() } end,
-    form = { field = "value" },         -- multipart/form-data
-    data_urlencode = { q = "search" },  -- URL encoded
-
-    -- Additional curl args
-    curl_args = { "--insecure", "--compressed" },
-    curl_args = { "--proxy", "http://localhost:8080" },
-
-    -- Hooks
-    pre_hook = function(next, input)
-        -- Called before sending, must call next() to proceed
-        -- Modify request fields before sending
-        next()
-    end,
-    post_hook = function(out)
-        -- Called after curl completes
-        -- out.request, out.response, out.curl, out.win
-        -- out.response is nil if curl failed
-    end,
-}
-```
-
-### Dynamic Values
-
-Use functions for dynamic values:
-
-```lua
-return {
-    {
-        url = function()
-            return "https://api.example.com/users/" .. vim.fn.input("User ID: ")
-        end,
-        headers = function()
-            return {
-                ["X-Request-Id"] = tostring(os.time()),
-            }
-        end,
-    },
-}
-```
-
-### Lazy Values
-
-Use `Nurl.lazy()` for values that should only be resolved right before sending (not during picker preview):
-
-```lua
-return {
-    url = "https://api.example.com/login",
-    method = "POST",
-    data = {
-        username = "user",
-        password = Nurl.lazy(function()
-            return vim.fn.inputsecret("Password: ")
-        end),
-    },
-}
-```
-
-### URL Parts
-
-Build URLs from parts:
-
-```lua
-return {
-    {
-        url = {
-            env.var("base_url"),
-            "v1",
-            "users",
-            function()
-                return vim.fn.input("ID: ")
-            end,
-        },
-        method = "GET",
-    },
-}
-```
-
-## Environments
-
-Create `.nurl/environments.lua`:
-
-```lua
-return {
-    default = {
-        base_url = "https://api.example.com",
-        token = "dev-token",
-    },
-    staging = {
-        base_url = "https://staging.example.com",
-        token = "staging-token",
-    },
-    production = {
-        base_url = "https://api.example.com",
-        token = "prod-token",
-    },
-}
-```
-
-Access variables in requests:
-
-```lua
-local env = require("nurl.environments")
-
-return {
-    {
-        url = { env.var("base_url"), "users" },
-        headers = {
-            ["Authorization"] = function()
-                return "Bearer " .. env.get("token")
-            end,
-        },
-    },
-}
-```
-
-- `Nurl.env.var("name")` - Returns a function that resolves the variable (for direct use in the request object and lazy contexts)
-- `Nurl.env.get("name")` - Returns the variable value immediately (for use inside functions)
-
-```lua
-return {
-    {
-        url = { Nurl.env.var("base_url"), "users" },
-        headers = {
-            ["Authorization"] = function()
-                return "Bearer " .. Nurl.env.get("token")
-            end,
-        },
-    },
-}
-```
-
-Switch environments with `:Nurl env`.
-
-### Setting Variables Programmatically
-
-Use `env.set()` to update environment variables from hooks:
-
-```lua
-local env = require("nurl.environments")
-
-return {
-    {
-        url = "https://api.example.com/login",
-        method = "POST",
-        data = { username = "user", password = "pass" },
-        post_hook = function(out)
-            local body = vim.json.decode(out.response.body)
-            env.set("token", body.access_token)
-        end,
-    },
-}
-```
-
-### Environment Hooks
-
-Add hooks inside each environment:
-
-```lua
-return {
-    default = {
-        base_url = "https://api.example.com",
-    },
-    production = {
-        base_url = "https://api.example.com",
-        pre_hook = function(next, input)
-            -- Confirm before production requests
-            if input.request.method ~= "GET" then
-                vim.ui.select(
-                    { "Yes", "No" },
-                    { prompt = "Send to production?" },
-                    function(choice)
-                        if choice == "Yes" then
-                            next()
-                        end
-                    end
-                )
-            else
-                next()
-            end
-        end,
-        post_hook = function(out)
-            -- Log all requests
-            print(
-                out.request.method
-                    .. " "
-                    .. out.request.url
-                    .. " -> "
-                    .. out.response.status_code
-            )
-        end,
-    },
-}
-```
-
-## API
-
-```lua
-local nurl = require("nurl")
-
--- Send a request programmatically
-nurl.send({
-    url = "https://api.example.com/users",
-    method = "GET",
-}, {
-    -- Optional: custom handler (skips UI)
-    -- out.response is nil if curl failed
-    on_complete = function(out)
-        if out.response then
-            print(out.response.status_code)
-        end
-    end,
-})
-
--- Resend last request
-nurl.resend_last_request()
-nurl.resend_last_request(-2) -- second to last
-
--- Get active environment
-local env_name = nurl.get_active_env()
-
--- Winbar components (for statusline/winbar)
-nurl.winbar.status_code()
-nurl.winbar.time()
-nurl.winbar.tabs()
 ```
 
 ## Winbar
 
-The response window includes a winbar showing status code, response time, and buffer tabs. Use these in your own winbar:
+The response window includes a winbar. Use it in your own winbar:
 
 ```lua
-vim.o.winbar =
-    "%{%v:lua.Nurl.winbar.status_code()%}%<%{%v:lua.Nurl.winbar.request_title()%}%{%v:lua.Nurl.winbar.time()%} %=%{%v:lua.Nurl.winbar.tabs()%}"
+vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
+    .. "%<%{%v:lua.Nurl.winbar.request_title()%}"
+    .. "%{%v:lua.Nurl.winbar.time()%}"
+    .. " %=%{%v:lua.Nurl.winbar.tabs()%}"
 ```
 
 ## Highlight Groups
@@ -521,8 +625,8 @@ vim.o.winbar =
 | `NurlSpinner` | Loading spinner |
 | `NurlElapsedTime` | Elapsed time display |
 | `NurlWinbarTitle` | Request title in winbar |
-| `NurlWinbarTabActive` | Active tab in winbar |
-| `NurlWinbarTabInactive` | Inactive tab in winbar |
+| `NurlWinbarTabActive` | Active tab |
+| `NurlWinbarTabInactive` | Inactive tab |
 | `NurlWinbarSuccessStatusCode` | 2xx status codes |
 | `NurlWinbarErrorStatusCode` | 4xx/5xx status codes |
 | `NurlWinbarLoading` | Loading state |
@@ -531,13 +635,9 @@ vim.o.winbar =
 
 ## Recipes
 
-### 1Password CLI for secrets
-
-Use the 1Password CLI (`op`) with `nurl.lazy()` to fetch secrets only when sending:
+### 1Password CLI for Secrets
 
 ```lua
-local env = require("nurl.environments")
-
 local function op_get(item_id, field)
     return Nurl.lazy(function()
         local result = vim.system({
@@ -562,124 +662,65 @@ end
 
 return {
     {
-        url = { env.var("base_url"), "auth", "login" },
+        url = "https://api.example.com/login",
         method = "POST",
-        headers = {
-            ["Content-Type"] = "application/json",
-        },
         data = {
-            username = op_get("eeljppn94azg8iqq7rrdtd1g4u", "username"),
-            password = op_get("eeljppn94azg8iqq7rrdtd1g4u", "password"),
+            username = op_get("item-id", "username"),
+            password = op_get("item-id", "password"),
         },
-        post_hook = function(out)
-            local body = vim.json.decode(out.response.body)
-            env.set("token", body.access_token)
-        end,
     },
 }
 ```
 
 ### OAuth2 Token Refresh
 
-Auto-refresh expired tokens before requests using environment hooks:
-
 ```lua
 -- .nurl/environments.lua
-local var = require("nurl.environments").var
-local get = require("nurl.environments").get
-local set = require("nurl.environments").set
-
-local function is_token_expired()
-    local expires_at = get("expires_at")
-    return not expires_at or tonumber(expires_at) < os.time()
-end
-
-local function refresh_token(next, input)
-    Nurl.send({
-        url = "https://auth.example.com/oauth/token",
-        method = "POST",
-        headers = { ["Content-Type"] = "application/json" },
-        data = {
-            grant_type = "refresh_token",
-            refresh_token = var("refresh_token"),
-        },
-    }, {
-        on_complete = function(out)
-            if out.response and out.response.status_code == 201 then
-                local body = vim.json.decode(out.response.body)
-                set("access_token", body.access_token)
-                set("refresh_token", body.refresh_token)
-                set("expires_at", os.time() + body.expires_in)
-
-                -- This request has already been expanded before the pre_hook,
-                -- so we need to update the header here so that it reflects the
-                -- above changes.
-                input.request.headers["Authorization"] = "Bearer "
-                    .. body.access_token
-
-                next()
-            else
-                vim.notify("Failed to refresh token", vim.log.levels.ERROR)
-            end
-        end,
-    })
-end
-
-return {
-    default = {
-        base_url = "https://api.example.com",
-        access_token = nil,
-        refresh_token = nil,
-        expires_at = nil,
-        pre_hook = function(next, input)
-            if is_token_expired() then
-                refresh_token(next, input)
-            else
-                next()
-            end
-        end,
-    },
-}
-```
-
-### Using Response Values
-
-Store response data for use in subsequent requests:
-
-```lua
-local nurl = require("nurl")
 local env = require("nurl.environments")
 
 return {
-    {
-        url = { env.var("base_url"), "users" },
-        method = "POST",
-        data = { name = "John Doe", email = "john@example.com" },
-        post_hook = function(out)
-            local user = vim.json.decode(out.response.body)
-            env.set("last_user_id", user.id)
+    default = {
+        access_token = nil,
+        refresh_token = "initial-refresh-token",
+        expires_at = nil,
+        pre_hook = function(next, input)
+            local expires = env.get("expires_at")
+            if expires and tonumber(expires) > os.time() then
+                next()
+                return
+            end
+
+            Nurl.send({
+                url = "https://auth.example.com/token",
+                method = "POST",
+                data = {
+                    grant_type = "refresh_token",
+                    refresh_token = env.get("refresh_token"),
+                },
+            }, {
+                on_complete = function(out)
+                    if out.response and out.response.status_code == 200 then
+                        local body = vim.json.decode(out.response.body)
+                        env.set("access_token", body.access_token)
+                        env.set("expires_at", os.time() + body.expires_in)
+
+                        -- This request has already been expanded before the pre_hook,
+                        -- so we need to update the header here so that it reflects the
+                        -- above changes.
+                        input.request.headers["Authorization"] = "Bearer "
+                            .. body.access_token
+                        next()
+                    end
+                end,
+            })
         end,
-    },
-    {
-        url = {
-            env.var("base_url"),
-            "users",
-            env.var("last_user_id"),
-            "profile",
-        },
-        method = "PUT",
-        data = { bio = "Software Developer" },
     },
 }
 ```
 
 ### HMAC Signature
 
-Sign requests with HMAC-SHA256:
-
 ```lua
-local env = require("nurl.environments")
-
 local function hmac_sha256(key, message)
     local result = vim.fn.system({
         "openssl",
@@ -695,16 +736,13 @@ local body = '{"action":"test"}'
 
 return {
     {
-        url = { env.var("base_url"), "api", "secure" },
+        url = "https://api.example.com/secure",
         method = "POST",
         headers = function()
             local timestamp = tostring(os.time())
-            local signature =
-                hmac_sha256(env.get("api_secret"), timestamp .. body)
             return {
-                ["Content-Type"] = "application/json",
                 ["X-Timestamp"] = timestamp,
-                ["X-Signature"] = signature,
+                ["X-Signature"] = hmac_sha256("secret", timestamp .. body),
             }
         end,
         data = body,
@@ -712,28 +750,20 @@ return {
 }
 ```
 
-### Environment-Based Confirmation
-
-Require confirmation before dangerous requests in production:
+### File Upload with Picker
 
 ```lua
--- .nurl/environments.lua
 return {
-    development = {
-        base_url = "https://dev.example.com",
-    },
-    production = {
-        base_url = "https://api.example.com",
+    {
+        url = "https://api.example.com/upload",
+        method = "POST",
         pre_hook = function(next, input)
-            if input.request.method == "GET" then
-                next()
-                return
-            end
-
-            vim.ui.select({ "Yes", "No" }, {
-                prompt = "Send to PRODUCTION?",
-            }, function(choice)
-                if choice == "Yes" then
+            vim.ui.input({
+                prompt = "File: ",
+                completion = "file",
+            }, function(path)
+                if path then
+                    input.request.form = { file = "@" .. vim.fn.expand(path) }
                     next()
                 end
             end)
@@ -742,66 +772,15 @@ return {
 }
 ```
 
-### Response Validation
-
-Validate responses and notify on failure:
+### GraphQL Helper
 
 ```lua
-local env = require("nurl.environments")
-
-local function expect_status(codes)
-    return function(request, response)
-        if not vim.tbl_contains(codes, response.status_code) then
-            vim.notify(
-                string.format(
-                    "Unexpected status %d for %s",
-                    response.status_code,
-                    request.url
-                ),
-                vim.log.levels.ERROR
-            )
-        end
-    end
-end
-
-local function expect_json_field(field)
-    return function(request, response)
-        local ok, body = pcall(vim.json.decode, response.body)
-        if not ok or body[field] == nil then
-            vim.notify("Missing field: " .. field, vim.log.levels.ERROR)
-        end
-    end
-end
-
-return {
-    {
-        url = { env.var("base_url"), "users", "123" },
-        post_hook = function(out)
-            expect_status({ 200, 201 })(out.request, out.response)
-            expect_json_field("id")(out.request, out.response)
-        end,
-    },
-}
-```
-
-### GraphQL with Variables
-
-Build GraphQL queries programmatically:
-
-```lua
-local env = require("nurl.environments")
-
 local function graphql(query, variables)
     return {
-        url = { env.var("base_url"), "graphql" },
+        url = { Nurl.env.var("base_url"), "graphql" },
         method = "POST",
-        headers = {
-            ["Content-Type"] = "application/json",
-        },
-        data = {
-            query = query,
-            variables = variables,
-        },
+        headers = { ["Content-Type"] = "application/json" },
+        data = { query = query, variables = variables },
     }
 end
 
@@ -809,60 +788,10 @@ return {
     graphql(
         [[
         query GetUser($id: ID!) {
-            user(id: $id) {
-                id
-                name
-                email
-            }
+            user(id: $id) { id name }
         }
     ]],
-        {
-            id = function()
-                return vim.fn.input("User ID: ")
-            end,
-        }
+        { id = "123" }
     ),
-    graphql(
-        [[
-        mutation CreateUser($input: CreateUserInput!) {
-            createUser(input: $input) {
-                id
-                name
-            }
-        }
-    ]],
-        {
-            input = {
-                name = "John Doe",
-                email = "john@example.com",
-            },
-        }
-    ),
-}
-```
-
-### File Upload with Picker
-
-Select a file to upload using Neovim's UI:
-
-```lua
-local function choose_file(next, input)
-    vim.ui.input(
-        { prompt = "File path: ", completion = "file" },
-        function(textj)
-            if text then
-                input.request.form = { file = "@" .. vim.fn.expand(text) }
-                next()
-            end
-        end
-    )
-end
-
-return {
-    {
-        url = { "https://api.example.com/files/upload" },
-        method = "POST",
-        pre_hook = choose_file,
-    },
 }
 ```
