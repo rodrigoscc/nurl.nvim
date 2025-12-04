@@ -269,14 +269,12 @@ EXECUTION ORDER                *nurl.nvim-hooks-and-callbacks-execution-order*
                                   v
                         +-----------------------+
                         |  Environment pre_hook |
-                        |  (if env is active)   |
                         +-----------------------+
                                   |
                                   | calls next()
                                   v
                         +-----------------------+
                         |   Request pre_hook    |
-                        |  (if defined)         |
                         +-----------------------+
                                   |
                                   | calls next()
@@ -288,24 +286,17 @@ EXECUTION ORDER                *nurl.nvim-hooks-and-callbacks-execution-order*
                                   v
                         +-----------------------+
                         |   Request post_hook   |
-                        |  (if defined)         |
                         +-----------------------+
                                   |
                                   v
                         +-----------------------+
                         | Environment post_hook |
-                        |  (if env is active)   |
                         +-----------------------+
                                   |
                                   v
                         +-----------------------+
-                        |  on_complete callback |
-                        |  (if using Nurl.send) |
-                        +-----------------------+
-                                  |
-                                  v
-                        +-----------------------+
-                        |  Response displayed   |
+                        | Response is displayed |
+                        | or on_complete func   |
                         +-----------------------+
 <
 
