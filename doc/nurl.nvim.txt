@@ -1,4 +1,4 @@
-*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 04
+*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 05
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -384,7 +384,20 @@ Used with `Nurl.send()` for programmatic requests:
     })
 <
 
-The response window won’t be opened if on_complete callback is defined.
+The response window won’t be opened if `on_complete` is defined.
+
+
+WIN OPTION                          *nurl.nvim-hooks-and-callbacks-win-option*
+
+Reuse an existing response window instead of opening a new one:
+
+>lua
+    Nurl.send(request, {
+        win = existing_win_id,
+    })
+<
+
+Useful for updating a response in place, like when resending a request.
 
 
 ==============================================================================
