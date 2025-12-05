@@ -765,3 +765,36 @@ return {
     ),
 }
 ```
+
+### Send request to URL at cursor
+
+Follow URLs directly from response bodies, especially useful for paginated APIs where the response includes `next` links. Map `gx` to send a request to the URL under the cursor:
+
+```lua
+local function super_gx()
+    local cursor_url = vim.fn.expand("<cfile>")
+    if not vim.b.nurl_data then
+        -- Default gx implementation if cursor isn't in a Nurl response buffer.
+        vim.ui.open(cursor_url)
+        return
+    end
+
+    local nurl_data = vim.b.nurl_data
+
+    -- Will send the same headers, since they may include authentication.
+    local orig_headers = nurl_data.request.headers
+
+    if vim.v.count == 0 then
+        -- Display response in the current window
+        Nurl.send(
+            { cursor_url, headers = orig_headers },
+            { win = vim.api.nvim_get_current_win() }
+        )
+    else
+        -- Create new window if a count is given before pressing `gx`.
+        Nurl.send({ cursor_url, headers = orig_headers })
+    end
+end
+
+vim.keymap.set("n", "gx", super_gx, { desc = "Super gx" })
+```
