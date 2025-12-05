@@ -114,10 +114,9 @@ M.builtin = {
     cancel = function(_)
         return function()
             local curl = vim.b.nurl_curl
-            local pid = curl.pid
 
-            if pid ~= nil then
-                local code, msg = uv.kill(pid, "sigterm")
+            if curl and curl.pid then
+                local code, msg = uv.kill(curl.pid, "sigterm")
                 if code ~= 0 then
                     vim.notify(
                         "Could not kill curl: " .. msg,

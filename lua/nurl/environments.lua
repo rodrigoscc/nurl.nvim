@@ -56,7 +56,7 @@ local function create_coroutine()
     return coroutine.create(function()
         while true do
             if M.project_env_file == nil then
-                error("Environment file wasn't loaded. Stopping worker...")
+                error("Environment file wasn't loaded. Worker stopped.")
             end
 
             while #operations_queue == 0 do

@@ -73,7 +73,7 @@ function M.expand(request, opts)
     assert(
         (request[1] and not request.url and type(request[1]) == "string")
             or (request.url and not request[1]),
-        "The request must have one and only one URL field"
+        "The request must have one and at most one URL field"
     )
 
     local super_url
