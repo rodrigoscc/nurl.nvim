@@ -44,6 +44,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
     "rodrigoscc/nurl.nvim",
+    version = "*",
     dependencies = { "folke/snacks.nvim" }, -- or telescope.nvim
     opts = {},
 }
