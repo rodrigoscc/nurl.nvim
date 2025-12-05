@@ -347,7 +347,19 @@ Nurl.send(request, {
 })
 ```
 
-The response window won't be opened if on_complete callback is defined.
+The response window won't be opened if `on_complete` is defined.
+
+### win Option
+
+Reuse an existing response window instead of opening a new one:
+
+```lua
+Nurl.send(request, {
+    win = existing_win_id,
+})
+```
+
+Useful for updating a response in place, like when resending a request.
 
 ## Type Reference
 
