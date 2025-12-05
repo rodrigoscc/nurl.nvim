@@ -4,7 +4,7 @@ local strings = require("nurl.utils.strings")
 local M = {}
 
 function M.request_title()
-    local request = vim.b[0].nurl_request
+    local request = vim.b[0].nurl_data.request
 
     if request and request.title then
         return string.format(
@@ -24,7 +24,7 @@ function M.request_title()
 end
 
 function M.status_code()
-    local response = vim.b[0].nurl_response
+    local response = vim.b[0].nurl_data.response
 
     if response ~= nil then
         if response.status_code <= 299 then
@@ -42,7 +42,7 @@ function M.status_code()
         end
     end
 
-    local curl = vim.b[0].nurl_curl
+    local curl = vim.b[0].nurl_data.curl
 
     if curl.result and curl.result.code ~= 0 then
         return string.format(
@@ -65,7 +65,7 @@ function M.status_code()
 end
 
 function M.time()
-    local response = vim.b[0].nurl_response
+    local response = vim.b[0].nurl_data.response
 
     if response ~= nil then
         local seconds = string.format("%.2f", response.time.time_total)
@@ -80,7 +80,7 @@ function M.time()
 end
 
 function M.buffer_tab(type)
-    local buffer_type = vim.b[0].nurl_buffer_type
+    local buffer_type = vim.b[0].nurl_data.buffer_type
 
     local is_active = buffer_type == type
 

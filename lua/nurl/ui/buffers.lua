@@ -20,6 +20,13 @@ M.Buffer = {
 ---@field [1] nurl.BufferType
 ---@field keys table<string, string|nurl.BufferAction>
 
+---@class nurl.BufferData
+---@field buffer_type nurl.BufferType
+---@field request nurl.Request
+---@field curl nurl.Curl
+---@field buffers table<nurl.BufferType, integer>
+---@field response? nurl.Response
+
 ---@param action string|nurl.BufferAction
 ---@return fun()
 local function expand_keymap_rhs(action)
@@ -291,18 +298,18 @@ function M.create(request, response, curl)
 
     for _, buffer in ipairs(config.buffers) do
         local buf = M.create_buffer(buffer, request, response, curl)
-
         local type = buffer[1]
-
-        vim.b[buf].nurl_buffer_type = type
         buffers[type] = buf
     end
 
-    for _, bufnr in pairs(buffers) do
-        vim.b[bufnr].nurl_request = request
-        vim.b[bufnr].nurl_response = response
-        vim.b[bufnr].nurl_curl = curl
-        vim.b[bufnr].nurl_buffers = buffers
+    for type, bufnr in pairs(buffers) do
+        vim.b[bufnr].nurl_data = {
+            request = request,
+            response = response,
+            curl = curl,
+            buffers = buffers,
+            buffer_type = type,
+        }
     end
 
     return buffers
@@ -319,11 +326,14 @@ function M.update(request, response, curl, buffers)
         M.update_buffer(bufnr, buffer, request, response, curl)
     end
 
-    for _, bufnr in pairs(buffers) do
-        vim.b[bufnr].nurl_request = request
-        vim.b[bufnr].nurl_response = response
-        vim.b[bufnr].nurl_curl = curl
-        vim.b[bufnr].nurl_buffers = buffers
+    for type, bufnr in pairs(buffers) do
+        vim.b[bufnr].nurl_data = {
+            request = request,
+            response = response,
+            curl = curl,
+            buffers = buffers,
+            buffer_type = type,
+        }
     end
 end
 

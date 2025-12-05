@@ -12,7 +12,7 @@ M.builtin = {
             local buffer_index = vim.iter(config.buffers)
                 :enumerate()
                 :filter(function(_, buffer)
-                    return buffer[1] == vim.b.nurl_buffer_type
+                    return buffer[1] == vim.b.nurl_data.buffer_type
                 end)
                 :map(function(i)
                     return i
@@ -28,7 +28,7 @@ M.builtin = {
             local next_buffer_type = config.buffers[next_buffer_index][1]
             assert(next_buffer_type, "Next response buffer missing")
 
-            local next_buffer = vim.b.nurl_buffers[next_buffer_type]
+            local next_buffer = vim.b.nurl_data.buffers[next_buffer_type]
 
             if next_buffer == nil then
                 return
@@ -49,7 +49,7 @@ M.builtin = {
             local buffer_index = vim.iter(config.buffers)
                 :enumerate()
                 :filter(function(_, buffer)
-                    return buffer[1] == vim.b.nurl_buffer_type
+                    return buffer[1] == vim.b.nurl_data.buffer_type
                 end)
                 :map(function(i)
                     return i
@@ -67,7 +67,8 @@ M.builtin = {
                 config.buffers[previous_buffer_index][1]
             assert(previous_buffer_type, "Previous response buffer missing")
 
-            local previous_buffer = vim.b.nurl_buffers[previous_buffer_type]
+            local previous_buffer =
+                vim.b.nurl_data.buffers[previous_buffer_type]
 
             if previous_buffer == nil then
                 return
@@ -83,7 +84,7 @@ M.builtin = {
     ---@return fun()
     switch_buffer = function(opts)
         return function()
-            local new_buffer = vim.b.nurl_buffers[opts.buffer]
+            local new_buffer = vim.b.nurl_data.buffers[opts.buffer]
             if new_buffer == nil then
                 return
             end
@@ -97,7 +98,7 @@ M.builtin = {
         return function()
             local nurl = require("nurl")
             nurl.send(
-                vim.b.nurl_request,
+                vim.b.nurl_data.request,
                 { win = vim.api.nvim_get_current_win() }
             )
         end
@@ -113,7 +114,7 @@ M.builtin = {
     ---@return fun()
     cancel = function(_)
         return function()
-            local curl = vim.b.nurl_curl
+            local curl = vim.b.nurl_data.curl
 
             if curl and curl.pid then
                 local code, msg = uv.kill(curl.pid, "sigterm")
