@@ -102,6 +102,8 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
 | `:Nurl yank %` | Current buffer picker -> yank |
 | `:Nurl yank <filepath>` | File picker -> yank |
 
+When using `%` or `<filepath>`, if the file contains only one request, the action runs immediately without opening a picker.
+
 ## Request Format
 
 A request file returns a list of request tables:

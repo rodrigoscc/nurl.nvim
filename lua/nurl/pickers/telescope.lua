@@ -6,6 +6,7 @@ local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 local entry_display = require("telescope.pickers.entry_display")
 local previewers = require("telescope.previewers")
+local projects = require("nurl.projects")
 
 local M = {}
 
@@ -185,11 +186,7 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
                         if on_pick then
                             on_pick(selection.value)
                         else
-                            vim.cmd("edit " .. selection.filename)
-                            vim.api.nvim_win_set_cursor(
-                                0,
-                                { selection.lnum, selection.col + 1 }
-                            )
+                            projects.jump_to(selection.value)
                         end
                     end
                 end)

@@ -201,10 +201,14 @@ end
 
 function M.send_file_request(filepath)
     filepath = vim.fn.expand(filepath)
-    local file_requests = dofile(filepath)
-    pickers.pick_request("Nurl: send", file_requests, function(request)
-        M.send(request)
-    end)
+    local file_requests = projects.dofile(filepath)
+    if #file_requests == 1 then
+        M.send(file_requests[1])
+    else
+        pickers.pick_request("Nurl: send", file_requests, function(request)
+            M.send(request)
+        end)
+    end
 end
 
 function M.jump_to_project_request()
@@ -215,7 +219,11 @@ end
 function M.jump_to_file_request(filepath)
     filepath = vim.fn.expand(filepath)
     local file_requests = projects.file_requests(filepath)
-    pickers.pick_project_request_item("Nurl: jump", file_requests)
+    if #file_requests == 1 then
+        projects.jump_to(file_requests[1])
+    else
+        pickers.pick_project_request_item("Nurl: jump", file_requests)
+    end
 end
 
 ---@param cursor_row integer
@@ -288,10 +296,14 @@ end
 
 function M.yank_file_request(filepath)
     filepath = vim.fn.expand(filepath)
-    local file_requests = dofile(filepath)
-    pickers.pick_request("Nurl: yank", file_requests, function(request)
-        yank_curl(request)
-    end)
+    local file_requests = projects.dofile(filepath)
+    if #file_requests == 1 then
+        yank_curl(file_requests[1])
+    else
+        pickers.pick_request("Nurl: yank", file_requests, function(request)
+            yank_curl(request)
+        end)
+    end
 end
 
 function M.pick_env()
