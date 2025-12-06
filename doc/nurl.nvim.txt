@@ -1,4 +1,4 @@
-*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 05
+*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 06
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -117,6 +117,9 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
   :Nurl yank .            Yank curl at cursor
   :Nurl yank %            Current buffer picker -> yank
   :Nurl yank <filepath>   File picker -> yank
+When using `%` or `<filepath>`, if the file contains only one request, the
+action runs immediately without opening a picker.
+
 
 ==============================================================================
 7. Request Format                                   *nurl.nvim-request-format*
