@@ -184,7 +184,7 @@ function M.resend_last_request(index, overrides)
         win = nil
     end
 
-    override(request, overrides)
+    request = override(request, overrides)
     -- TODO: previous on_complete won't be passed
     M.send(request, { win = win })
 end
@@ -200,7 +200,7 @@ function M.pick_resend(overrides)
     end
 
     pickers.pick_request("Nurl: resend", recent_requests, function(request)
-        override(request, overrides)
+        request = override(request, overrides)
         M.send(request)
     end)
 end
@@ -213,8 +213,8 @@ function M.send_project_request(overrides)
         "Nurl: send",
         project_requests,
         function(item)
-            override(item.request, overrides)
-            M.send(item.request)
+            local request = override(item.request, overrides)
+            M.send(request)
         end
     )
 end
@@ -225,11 +225,11 @@ function M.send_file_request(filepath, overrides)
 
     local file_requests = dofile(filepath)
     if #file_requests == 1 then
-        override(file_requests[1], overrides)
-        M.send(file_requests[1])
+        local request = override(file_requests[1], overrides)
+        M.send(request)
     else
         pickers.pick_request("Nurl: send", file_requests, function(request)
-            override(request, overrides)
+            request = override(request, overrides)
             M.send(request)
         end)
     end
@@ -269,18 +269,29 @@ end
 function M.send_request_at_cursor(overrides)
     overrides = overrides or {}
 
-    local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
+    local at_nurl_buffer = vim.b.nurl_data ~= nil
 
-    local file_requests = projects.file_requests(vim.fn.expand("%"))
+    if at_nurl_buffer then
+        local buffer_request = vim.b.nurl_data.request
+        buffer_request = override(buffer_request, overrides)
+        M.send(buffer_request, { win = vim.api.nvim_get_current_win() })
+    else
+        local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
 
-    for _, request in ipairs(file_requests) do
-        local request_contains_cursor =
-            is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
+        local file_requests = projects.file_requests(vim.fn.expand("%"))
 
-        if request_contains_cursor then
-            override(request.request, overrides)
-            M.send(request.request)
-            return
+        for _, item in ipairs(file_requests) do
+            local request_contains_cursor = is_cursor_contained_in_request_item(
+                cursor_row,
+                cursor_col,
+                item
+            )
+
+            if request_contains_cursor then
+                local request = override(item.request, overrides)
+                M.send(request)
+                return
+            end
         end
     end
 end
@@ -297,18 +308,29 @@ end
 function M.yank_curl_at_cursor(overrides)
     overrides = overrides or {}
 
-    local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
+    local is_at_nurl_buffer = vim.b.nurl_data ~= nil
 
-    local file_requests = projects.file_requests(vim.fn.expand("%"))
+    if is_at_nurl_buffer then
+        local buffer_request = vim.b.nurl_data.request
+        buffer_request = override(buffer_request, overrides)
+        yank_curl(buffer_request)
+    else
+        local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
 
-    for _, request in ipairs(file_requests) do
-        local request_contains_cursor =
-            is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
+        local file_requests = projects.file_requests(vim.fn.expand("%"))
 
-        if request_contains_cursor then
-            override(request.request, overrides)
-            yank_curl(request.request)
-            return
+        for _, item in ipairs(file_requests) do
+            local request_contains_cursor = is_cursor_contained_in_request_item(
+                cursor_row,
+                cursor_col,
+                item
+            )
+
+            if request_contains_cursor then
+                local request = override(item.request, overrides)
+                yank_curl(request)
+                return
+            end
         end
     end
 end
@@ -321,8 +343,8 @@ function M.yank_project_request(overrides)
         "Nurl: yank",
         project_requests,
         function(item)
-            override(item.request, overrides)
-            yank_curl(item.request)
+            local request = override(item.request, overrides)
+            yank_curl(request)
         end
     )
 end
@@ -333,11 +355,11 @@ function M.yank_file_request(filepath, overrides)
 
     local file_requests = dofile(filepath)
     if #file_requests == 1 then
-        override(file_requests[1], overrides)
-        yank_curl(file_requests[1])
+        local request = override(file_requests[1], overrides)
+        yank_curl(request)
     else
         pickers.pick_request("Nurl: yank", file_requests, function(request)
-            override(request, overrides)
+            request = override(request, overrides)
             yank_curl(request)
         end)
     end

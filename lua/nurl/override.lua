@@ -22,8 +22,12 @@ end
 ---@param tbl table
 ---@param overrides nurl.Override[]
 return function(tbl, overrides)
+    local copy = vim.deepcopy(tbl)
+
     for _, override in ipairs(overrides) do
         local path, value = unpack(override)
-        set_path(tbl, path, value)
+        set_path(copy, path, value)
     end
+
+    return copy
 end
