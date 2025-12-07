@@ -9,6 +9,8 @@ local history = require("nurl.data.history")
 local Stack = require("nurl.utils.stack")
 local pickers = require("nurl.pickers")
 local variables = require("nurl.variables")
+local override = require("nurl.override")
+local util = require("nurl.util")
 
 local M = {}
 
@@ -17,6 +19,8 @@ M.winbar = winbar
 M.lazy = variables.lazy
 
 M.env = environments
+
+M.util = util
 
 ---@type nurl.Stack
 M.last_requests = Stack:new(5)
@@ -57,8 +61,10 @@ function M.send(request, opts)
                 curl = curl,
             })
             win = response_window:open()
-            M.last_request_wins:push(win)
         end
+
+        -- Push vim.NIL in case no window was opened
+        M.last_request_wins:push(win or vim.NIL)
 
         local function default_on_complete(out)
             response_window:update(out.response, out.curl)
@@ -163,8 +169,9 @@ function M.send(request, opts)
     end
 end
 
-function M.resend_last_request(index)
+function M.resend_last_request(index, overrides)
     index = index or -1
+    overrides = overrides or {}
 
     local request = M.last_requests:get(index)
     if not request then
@@ -172,10 +179,19 @@ function M.resend_last_request(index)
         return
     end
 
-    M.send(request, { win = M.last_request_wins:get(index) })
+    local win = M.last_request_wins:get(index)
+    if win == vim.NIL then -- vim.NIL is pushed when no window was opened
+        win = nil
+    end
+
+    override(request, overrides)
+    -- TODO: previous on_complete won't be passed
+    M.send(request, { win = win })
 end
 
-function M.pick_resend()
+function M.pick_resend(overrides)
+    overrides = overrides or {}
+
     local recent_requests = M.last_requests.items
 
     if #recent_requests == 0 then
@@ -184,28 +200,36 @@ function M.pick_resend()
     end
 
     pickers.pick_request("Nurl: resend", recent_requests, function(request)
+        override(request, overrides)
         M.send(request)
     end)
 end
 
-function M.send_project_request()
+function M.send_project_request(overrides)
+    overrides = overrides or {}
+
     local project_requests = projects.requests()
     pickers.pick_project_request_item(
         "Nurl: send",
         project_requests,
         function(item)
+            override(item.request, overrides)
             M.send(item.request)
         end
     )
 end
 
-function M.send_file_request(filepath)
+function M.send_file_request(filepath, overrides)
     filepath = vim.fn.expand(filepath)
-    local file_requests = projects.dofile(filepath)
+    overrides = overrides or {}
+
+    local file_requests = dofile(filepath)
     if #file_requests == 1 then
+        override(file_requests[1], overrides)
         M.send(file_requests[1])
     else
         pickers.pick_request("Nurl: send", file_requests, function(request)
+            override(request, overrides)
             M.send(request)
         end)
     end
@@ -242,7 +266,9 @@ local function is_cursor_contained_in_request_item(
     )
 end
 
-function M.send_request_at_cursor()
+function M.send_request_at_cursor(overrides)
+    overrides = overrides or {}
+
     local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
 
     local file_requests = projects.file_requests(vim.fn.expand("%"))
@@ -252,6 +278,7 @@ function M.send_request_at_cursor()
             is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
 
         if request_contains_cursor then
+            override(request.request, overrides)
             M.send(request.request)
             return
         end
@@ -267,7 +294,9 @@ local function yank_curl(request)
     vim.notify("Yanked curl command to clipboard")
 end
 
-function M.yank_curl_at_cursor()
+function M.yank_curl_at_cursor(overrides)
+    overrides = overrides or {}
+
     local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
 
     local file_requests = projects.file_requests(vim.fn.expand("%"))
@@ -277,30 +306,38 @@ function M.yank_curl_at_cursor()
             is_cursor_contained_in_request_item(cursor_row, cursor_col, request)
 
         if request_contains_cursor then
+            override(request.request, overrides)
             yank_curl(request.request)
             return
         end
     end
 end
 
-function M.yank_project_request()
+function M.yank_project_request(overrides)
+    overrides = overrides or {}
+
     local project_requests = projects.requests()
     pickers.pick_project_request_item(
         "Nurl: yank",
         project_requests,
         function(item)
+            override(item.request, overrides)
             yank_curl(item.request)
         end
     )
 end
 
-function M.yank_file_request(filepath)
+function M.yank_file_request(filepath, overrides)
     filepath = vim.fn.expand(filepath)
-    local file_requests = projects.dofile(filepath)
+    overrides = overrides or {}
+
+    local file_requests = dofile(filepath)
     if #file_requests == 1 then
+        override(file_requests[1], overrides)
         yank_curl(file_requests[1])
     else
         pickers.pick_request("Nurl: yank", file_requests, function(request)
+            override(request, overrides)
             yank_curl(request)
         end)
     end
@@ -335,7 +372,7 @@ function M.get_active_env()
     return environments.project_active_env
 end
 
-function M.open_history()
+function M.pick_history()
     local history_items = history.all()
 
     pickers.pick_request_history_item(

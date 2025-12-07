@@ -1,6 +1,7 @@
 local config = require("nurl.config")
 local Curl = require("nurl.curl")
 local fs = require("nurl.data.fs")
+local requests = require("nurl.requests")
 
 local M = {}
 
@@ -40,6 +41,7 @@ function M.insert_history_entry(request, response, curl)
 request_history (
     time,
     request_url,
+    request_url_raw,
     request_title,
     request_method,
     request_headers,
@@ -106,11 +108,13 @@ VALUES
     ?,
     ?,
     ?,
+    ?,
     ?
 );]],
         {
             curl.exec_datetime,
-            request.url,
+            vim.json.encode(request.url),
+            requests.build_url(request.url),
             request.title or vim.NIL,
             request.method,
             request.headers and vim.json.encode(request.headers) or vim.NIL,
@@ -270,7 +274,7 @@ ORDER BY time DESC]])
         ---@type nurl.Request
         local request = {
             title = request_title,
-            url = request_url,
+            url = vim.json.decode(request_url),
             method = request_method,
             headers = request_headers and vim.json.decode(request_headers),
             data = request_data and vim.json.decode(request_data),

@@ -11,20 +11,6 @@ local M = {}
 ---@field end_row integer
 ---@field end_col integer
 
-local function returned_single_request(returned)
-    -- Assuming a table returned is a single request if it has the URL field
-    return type(returned[1]) == "string" or returned.url ~= nil
-end
-
-function M.dofile(filename)
-    local returned = dofile(filename)
-    if returned_single_request(returned) then
-        return { returned }
-    else
-        return returned
-    end
-end
-
 ---@return nurl.ProjectRequestItem[]
 function M.requests()
     local lua_files = vim.fs.find(function(name)
@@ -39,7 +25,7 @@ function M.requests()
         if file then
             local request_ranges = file:list_requests_ranges()
 
-            local status, file_requests = pcall(M.dofile, file_path)
+            local status, file_requests = pcall(dofile, file_path)
             if not status then
                 vim.notify(
                     ("Skipping file %s: %s"):format(file_path, file_requests),
@@ -78,7 +64,7 @@ function M.file_requests(file_path)
     if file then
         local request_ranges = file:list_requests_ranges()
 
-        local status, file_requests = pcall(M.dofile, file_path)
+        local status, file_requests = pcall(dofile, file_path)
         if not status then
             vim.notify(
                 ("Skipping file %s: %s"):format(file_path, file_requests),

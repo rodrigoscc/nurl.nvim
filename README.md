@@ -104,6 +104,42 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
 
 When using `%` or `<filepath>`, if the file contains only one request, the action runs immediately without opening a picker.
 
+### Overrides
+
+Override request fields directly from the command line for quick one-off changes.
+
+```vim
+:Nurl . data.id=42
+:Nurl . data.name="John Doe" data.active=true
+:Nurl % headers["X-Debug"]=true
+:Nurl requests/login.lua data.user=admin
+```
+
+The syntax mirrors Lua table access:
+- `data.user.name=value`
+- `headers["Content-Type"]="application/json"`
+- `url[2]=users`
+
+Types are inferred: `42` (number), `true`/`false` (boolean), `"quoted"` (string with spaces).
+
+Overrides are useful for quickly replacing IDs in REST URLs:
+
+```lua
+return {
+    { url = { "https://api.example.com/users", "1" } },
+}
+```
+
+```vim
+:Nurl . url[2]=42
+```
+
+Or adding a curl flag on the fly:
+
+```vim
+:Nurl . curl_args[1]="--insecure"
+```
+
 ## Request Format
 
 A request file returns a list of request tables:

@@ -1,5 +1,6 @@
 local config = require("nurl.config")
 local strings = require("nurl.utils.strings")
+local requests = require("nurl.requests")
 
 local M = {}
 
@@ -16,7 +17,7 @@ function M.request_title()
         return string.format(
             "%%#%s# %s %%*",
             config.highlight.groups.winbar_title,
-            request.url
+            requests.build_url(request.url)
         )
     end
 

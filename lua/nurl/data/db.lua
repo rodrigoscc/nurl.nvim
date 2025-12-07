@@ -226,6 +226,7 @@ function Db:new(path)
     id INTEGER PRIMARY KEY,
     time TEXT,
     request_url TEXT,
+    request_url_raw TEXT,
     request_title TEXT,
     request_method TEXT,
     request_headers TEXT,

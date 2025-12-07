@@ -12,7 +12,7 @@ local variables = require("nurl.variables")
 
 ---@class nurl.Request
 ---@field method string
----@field url string
+---@field url string | (string | number)[]
 ---@field title? string
 ---@field headers table<string, string>
 ---@field data? string | table<string, any>
@@ -24,7 +24,7 @@ local variables = require("nurl.variables")
 
 ---@class nurl.SuperRequest
 ---@field [1]? string
----@field url? string | table<string, any> | fun(): string | table<string, any>
+---@field url? string | (string | number | fun(): string | number)[] | fun(): string | (string | number)[]
 ---@field title? string | fun(): string
 ---@field method? string
 ---@field headers? table<string, string> | fun(): table<string, string>
@@ -37,11 +37,15 @@ local variables = require("nurl.variables")
 
 local M = {}
 
----@param parts table<string, string | fun(): string>
-local function build_url(parts)
+---@param url string | (string | number)[]
+function M.build_url(url)
+    if type(url) == "string" then
+        return url
+    end
+
     local expanded_parts = {}
 
-    for _, v in pairs(parts) do
+    for _, v in ipairs(url) do
         if type(v) == "string" then
             local part = v:gsub("^/+", ""):gsub("/+$", "")
             table.insert(expanded_parts, part)
@@ -76,21 +80,19 @@ function M.expand(request, opts)
         "The request must have one and at most one URL field"
     )
 
-    local super_url
-    if request[1] then
-        super_url = request[1]
-    else
-        super_url = variables.expand(request.url, opts)
-    end
-
-    assert(super_url ~= nil, "Request must have a URL")
+    assert(
+        type(request.url) ~= "table" or vim.islist(request.url),
+        "A table url must be a list, not a dict"
+    )
 
     local url
-    if type(super_url) == "table" and not opts.lazy then
-        url = build_url(super_url)
+    if request[1] then
+        url = request[1]
     else
-        url = super_url
+        url = variables.expand(request.url, opts)
     end
+
+    assert(url ~= nil, "Request must have a URL")
 
     local headers = variables.expand(request.headers, opts)
     local data = variables.expand(request.data, opts)
@@ -139,13 +141,7 @@ function M.stringify_lazy(request)
 
     assert(super_url ~= nil, "Request must have a URL")
 
-    ---@type string
-    local url
-    if type(super_url) == "string" then
-        url = super_url
-    else
-        url = build_url(super_url)
-    end
+    local url = M.build_url(super_url)
 
     local headers = variables.stringify_lazy(request.headers)
     local data = variables.stringify_lazy(request.data)
@@ -226,7 +222,8 @@ end
 ---@param request nurl.Request
 ---@return nurl.Curl
 function M.build_curl(request)
-    local args = { "--request", request.method, request.url }
+    local url = M.build_url(request.url)
+    local args = { "--request", request.method, url }
 
     if request.data then
         local data
@@ -308,7 +305,7 @@ function M.text(request, opts)
     if request.title then
         title = request.title
     else
-        title = string.format("%s %s", request.method, request.url)
+        title = string.format("%s %s", request.method, M.build_url(request.url))
     end
 
     if opts.suffix then

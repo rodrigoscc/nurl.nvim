@@ -23,7 +23,10 @@ local function format_history_item(item)
         table.insert(ret, { request.method, "SnacksPickerFileType" })
         table.insert(ret, { " " })
 
-        table.insert(ret, { request.url, "SnacksPickerLabel" })
+        table.insert(
+            ret,
+            { requests.build_url(request.url), "SnacksPickerLabel" }
+        )
         table.insert(ret, { " " })
     end
 

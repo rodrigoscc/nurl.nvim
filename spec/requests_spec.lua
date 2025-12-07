@@ -21,24 +21,6 @@ describe("requests", function()
             assert.are.equal("https://dynamic.com", result.url)
         end)
 
-        it("expands url table parts", function()
-            local request = {
-                url = { "https://example.com", "api", "v1", "users" },
-            }
-            local result = requests.expand(request)
-
-            assert.are.equal("https://example.com/api/v1/users", result.url)
-        end)
-
-        it("strips leading/trailing slashes from url parts", function()
-            local request = {
-                url = { "https://example.com/", "/api/", "/users/" },
-            }
-            local result = requests.expand(request)
-
-            assert.are.equal("https://example.com/api/users", result.url)
-        end)
-
         it("expands method to uppercase", function()
             local request = { url = "https://example.com", method = "post" }
             local result = requests.expand(request)

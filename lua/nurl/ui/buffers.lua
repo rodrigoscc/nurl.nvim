@@ -1,6 +1,7 @@
 local actions = require("nurl.actions")
 local config = require("nurl.config")
 local responses = require("nurl.responses")
+local requests = require("nurl.requests")
 
 local M = {}
 
@@ -193,7 +194,7 @@ local function populate_info_buffer(bufnr, request, response, curl)
 
     new_line(0, "request:")
     new_line(1, "method: %s", request.method)
-    new_line(1, "url: %s", request.url)
+    new_line(1, "url: %s", requests.build_url(request.url))
 
     new_line(0, "response:")
 

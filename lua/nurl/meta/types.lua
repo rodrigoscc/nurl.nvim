@@ -2,15 +2,21 @@
 
 ---@class nurl.api
 ---@field send fun(request: nurl.SuperRequest | nurl.Request, opts?: nurl.RequestOpts)
----@field resend_last_request fun(index?: integer)
----@field send_buffer_request fun()
----@field send_project_request fun()
+---@field pick_resend fun(overrides?: nurl.Override[])
+---@field resend_last_request fun(index?: integer, overrides?: nurl.Override[])
+---@field send_file_request fun(filepath: string, overrides?: nurl.Override[])
+---@field send_project_request fun(overrides?: nurl.Override[])
+---@field send_request_at_cursor fun(overrides?: nurl.Override[])
+---@field yank_curl_at_cursor fun(overrides?: nurl.Override[])
+---@field yank_project_request fun(overrides?: nurl.Override[])
+---@field yank_file_request fun(filepath: string, overrides?: nurl.Override[])
 ---@field jump_to_project_request fun()
----@field send_request_at_cursor fun()
----@field yank_curl_at_cursor fun()
----@field activate_env fun(env: string | nil)
+---@field jump_to_file_request fun(filepath: string)
+---@field activate_env fun(env: string)
+---@field pick_env fun()
 ---@field open_environments_file fun()
 ---@field get_active_env fun(): string|nil
----@field open_history fun()
+---@field pick_history fun()
 ---@field lazy fun(value: any)
 ---@field env nurl.env
+---@field util nurl.util
