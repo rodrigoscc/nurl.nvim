@@ -293,6 +293,8 @@ function M.send_request_at_cursor(overrides)
                 return
             end
         end
+
+        vim.notify("No request found at cursor", vim.log.levels.ERROR)
     end
 end
 
@@ -332,6 +334,8 @@ function M.yank_curl_at_cursor(overrides)
                 return
             end
         end
+
+        vim.notify("No request found at cursor", vim.log.levels.ERROR)
     end
 end
 
