@@ -87,7 +87,16 @@ function M.pick_request(title, super_requests, on_pick)
             finder = finders.new_table({
                 results = super_requests,
                 entry_maker = function(request)
-                    local expanded = requests.expand(request, { lazy = true })
+                    local status, expanded =
+                        pcall(requests.expand, request, { lazy = true })
+                    if not status then
+                        vim.notify(
+                            ("Skipped request after error: %s"):format(expanded),
+                            vim.log.levels.WARN
+                        )
+                        return nil -- filter out
+                    end
+
                     local lazy = requests.stringify_lazy(expanded)
                     return {
                         value = expanded,
@@ -154,8 +163,23 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
             finder = finders.new_table({
                 results = project_request_items,
                 entry_maker = function(request_item)
-                    local expanded =
-                        requests.expand(request_item.request, { lazy = true })
+                    local status, expanded = pcall(
+                        requests.expand,
+                        request_item.request,
+                        { lazy = true }
+                    )
+                    if not status then
+                        vim.notify(
+                            ("Skipped request in %s:%s after error: %s"):format(
+                                request_item.file,
+                                request_item.start_row,
+                                expanded
+                            ),
+                            vim.log.levels.WARN
+                        )
+                        return nil -- fitler out
+                    end
+
                     local lazy = requests.stringify_lazy(expanded)
                     request_item.request = expanded
                     return {

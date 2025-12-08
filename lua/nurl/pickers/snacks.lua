@@ -135,7 +135,16 @@ end
 local function super_requests_to_snacks_items(super_requests)
     return vim.iter(ipairs(super_requests))
         :map(function(i, request)
-            local expanded = requests.expand(request, { lazy = true })
+            local status, expanded =
+                pcall(requests.expand, request, { lazy = true })
+            if not status then
+                vim.notify(
+                    ("Skipped request after error: %s"):format(expanded),
+                    vim.log.levels.WARN
+                )
+                return nil -- filter out
+            end
+
             local lazy = requests.stringify_lazy(expanded)
 
             local item = {
@@ -157,8 +166,20 @@ end
 local function project_request_items_to_snacks_items(project_request_items)
     return vim.iter(ipairs(project_request_items))
         :map(function(i, request_item)
-            local expanded =
-                requests.expand(request_item.request, { lazy = true })
+            local status, expanded =
+                pcall(requests.expand, request_item.request, { lazy = true })
+            if not status then
+                vim.notify(
+                    ("Skipped request in %s:%s after error: %s"):format(
+                        request_item.file,
+                        request_item.start_row,
+                        expanded
+                    ),
+                    vim.log.levels.WARN
+                )
+                return nil -- filter out
+            end
+
             local lazy = requests.stringify_lazy(expanded)
 
             request_item.request = expanded
