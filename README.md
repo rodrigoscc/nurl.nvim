@@ -106,7 +106,7 @@ When using `%` or `<filepath>`, if the file contains only one request, the actio
 
 ### Overrides
 
-Override request fields directly from the command line for quick one-off changes.
+Override request fields directly from the command-line for quick one-off changes.
 
 ```vim
 :Nurl . data.id=42
