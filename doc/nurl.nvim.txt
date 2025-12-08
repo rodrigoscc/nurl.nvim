@@ -123,7 +123,7 @@ action runs immediately without opening a picker.
 
 OVERRIDES                                       *nurl.nvim-commands-overrides*
 
-Override request fields directly from the command line for quick one-off
+Override request fields directly from the command-line for quick one-off
 changes.
 
 >vim
