@@ -321,6 +321,26 @@ describe("commands_parsing", function()
                     overrides = { { { "Content-Type" }, "json" } },
                 }, result)
             end)
+
+            it("parses single-quoted string value", function()
+                local result =
+                    commands_parsing.parse_command(". data.name='John Doe'")
+                assert.are.same({
+                    subcommand = nil,
+                    arg = ".",
+                    overrides = { { { "data", "name" }, "John Doe" } },
+                }, result)
+            end)
+
+            it("parses single-quoted key", function()
+                local result =
+                    commands_parsing.parse_command(". headers['Content-Type']=json")
+                assert.are.same({
+                    subcommand = nil,
+                    arg = ".",
+                    overrides = { { { "headers", "Content-Type" }, "json" } },
+                }, result)
+            end)
         end)
     end)
 end)

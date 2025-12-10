@@ -50,9 +50,11 @@ local grammar = P({
     key = V("quoted_key") + V("number_key") + V("ident_key"),
     ident_key = C(R("az", "AZ", "__") * R("az", "AZ", "09", "__", "--") ^ 0),
     number_key = C(R("09") ^ 1) / tonumber,
-    quoted_key = P('"') * C((1 - P('"')) ^ 0) * P('"'),
+    quoted_key = P('"') * C((1 - P('"')) ^ 0) * P('"')
+        + P("'") * C((1 - P("'")) ^ 0) * P("'"),
     value = V("quoted_value") + V("raw_value"),
-    quoted_value = P('"') * C((1 - P('"')) ^ 0) * P('"'),
+    quoted_value = P('"') * C((1 - P('"')) ^ 0) * P('"')
+        + P("'") * C((1 - P("'")) ^ 0) * P("'"),
     raw_value = C((1 - S(" \t")) ^ 1) / infer_type,
 })
 
