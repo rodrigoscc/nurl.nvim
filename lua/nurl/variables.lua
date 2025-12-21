@@ -106,4 +106,36 @@ function M.stringify_lazy(value)
     return value
 end
 
+local function uri_encode_table(tbl)
+    local encoded = {}
+
+    for k, v in pairs(tbl) do
+        if type(v) == "table" then
+            encoded[k] = uri_encode_table(v)
+        elseif type(v) == "string" then
+            encoded[k] = vim.uri_encode(vim.uri_decode(v))
+        else
+            encoded[k] = v
+        end
+    end
+
+    return encoded
+end
+
+--- URI-Encodes a string using percentage escapes.
+--- This decodes the value first so that already encoded values are not encoded twice.
+---@param value any
+---@return any encoded string
+function M.uri_encode(value)
+    if value == nil then
+        return nil
+    elseif type(value) == "table" then
+        return uri_encode_table(value)
+    elseif type(value) == "string" then
+        return vim.uri_encode(vim.uri_decode(value))
+    end
+
+    return value
+end
+
 return M

@@ -1,5 +1,6 @@
 local Curl = require("nurl.curl")
 local variables = require("nurl.variables")
+local tables = require("nurl.utils.tables")
 
 ---@class nurl.RequestInput
 ---@field request nurl.Request
@@ -13,6 +14,7 @@ local variables = require("nurl.variables")
 ---@class nurl.Request
 ---@field method string
 ---@field url string | (string | number)[]
+---@field query? table<string, any>
 ---@field title? string
 ---@field headers table<string, string>
 ---@field data? string | table<string, any>
@@ -25,6 +27,7 @@ local variables = require("nurl.variables")
 ---@class nurl.SuperRequest
 ---@field [1]? string
 ---@field url? string | (string | number | fun(): string | number)[] | fun(): string | (string | number)[]
+---@field query? table<string, any> | fun(): table<string, any>
 ---@field title? string | fun(): string
 ---@field method? string
 ---@field headers? table<string, string> | fun(): table<string, string>
@@ -57,6 +60,28 @@ function M.build_url(url)
     return table.concat(expanded_parts, "/")
 end
 
+---@param url string
+---@return string, table<string, any>?
+function M.extract_query(url)
+    local query_start = url:find("?")
+    if not query_start then
+        return url, nil
+    end
+
+    local url_only = url:sub(1, query_start - 1)
+    local query_str = url:sub(query_start + 1)
+
+    local query_items = vim.split(query_str, "&")
+
+    local query = {}
+    for _, item in ipairs(query_items) do
+        local k, v = unpack(vim.split(item, "="))
+        query = tables.collect_value(query, k, v)
+    end
+
+    return url_only, query
+end
+
 ---@param request nurl.SuperRequest | nurl.Request
 ---@param opts? nurl.ExpandOpts
 function M.expand(request, opts)
@@ -85,12 +110,26 @@ function M.expand(request, opts)
         "A table url must be a list, not a dict"
     )
 
-    local url
+    local url, url_query
     if request[1] then
         url = request[1]
+        ---@cast url string
+        url, url_query = M.extract_query(url)
+
+        url_query = variables.uri_encode(url_query)
     else
         url = variables.expand(request.url, opts)
     end
+
+    url = variables.uri_encode(url)
+
+    local query = variables.expand(request.query, opts)
+
+    if url_query then
+        query = tables.shallow_extend(url_query, query)
+    end
+
+    query = variables.uri_encode(query)
 
     assert(url ~= nil, "Request must have a URL")
 
@@ -116,6 +155,7 @@ function M.expand(request, opts)
     ---@type nurl.Request|nurl.SuperRequest
     local req = {
         url = url,
+        query = query,
         title = title,
         method = method,
         headers = headers or {},
@@ -142,6 +182,10 @@ function M.stringify_lazy(request)
     assert(super_url ~= nil, "Request must have a URL")
 
     local url = M.build_url(super_url)
+    ---@cast url string
+
+    local query = variables.stringify_lazy(request.query)
+    query = variables.uri_encode(query)
 
     local headers = variables.stringify_lazy(request.headers)
     local data = variables.stringify_lazy(request.data)
@@ -149,6 +193,7 @@ function M.stringify_lazy(request)
     local data_urlencode = variables.stringify_lazy(request.data_urlencode)
 
     local title = variables.stringify_lazy(request.title)
+    ---@cast title string
 
     local curl_args = variables.stringify_lazy(request.curl_args)
 
@@ -172,6 +217,7 @@ function M.stringify_lazy(request)
     ---@type nurl.Request
     local req = {
         url = url,
+        query = query,
         title = title,
         method = method,
         headers = headers or {},
@@ -225,6 +271,24 @@ function M.build_curl(request)
     local url = M.build_url(request.url)
     local args = { "--request", request.method, url }
 
+    if request.query then
+        local query_items = {}
+        for k, v in pairs(request.query) do
+            if type(v) == "table" then
+                for _, value_item in ipairs(v) do
+                    table.insert(query_items, k .. "=" .. value_item)
+                end
+            else
+                table.insert(query_items, k .. "=" .. v)
+            end
+        end
+
+        for _, item in ipairs(query_items) do
+            table.insert(args, "--url-query")
+            table.insert(args, item)
+        end
+    end
+
     if request.data then
         local data
 
@@ -251,7 +315,7 @@ function M.build_curl(request)
         local data_items = {}
 
         for k, v in pairs(request.data_urlencode) do
-            table.insert(data_items, k .. "=" .. vim.uri_encode(v))
+            table.insert(data_items, k .. "=" .. variables.uri_encode(v))
         end
 
         for _, item in ipairs(data_items) do
@@ -317,6 +381,40 @@ function M.text(request, opts)
     end
 
     return title
+end
+
+---@param request nurl.Request
+---@return string
+function M.title(request)
+    if request.title then
+        return request.title
+    else
+        local url = M.build_url(request.url)
+
+        if request.query then
+            if url:match("?") then
+                url = url .. "&"
+            else
+                url = url .. "?"
+            end
+
+            local query_items = {}
+
+            for k, v in pairs(request.query) do
+                if type(v) == "table" then
+                    for _, value_item in ipairs(v) do
+                        table.insert(query_items, k .. "=" .. value_item)
+                    end
+                else
+                    table.insert(query_items, k .. "=" .. v)
+                end
+            end
+
+            url = url .. table.concat(query_items, "&")
+        end
+
+        return url
+    end
 end
 
 return M

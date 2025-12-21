@@ -227,6 +227,7 @@ function Db:new(path)
     time TEXT,
     request_url TEXT,
     request_url_raw TEXT,
+    request_query TEXT,
     request_title TEXT,
     request_method TEXT,
     request_headers TEXT,

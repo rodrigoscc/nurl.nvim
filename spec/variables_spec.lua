@@ -237,4 +237,66 @@ describe("variables", function()
             assert.are.equal(variables.LAZY_PLACEHOLDER, result.fn)
         end)
     end)
+
+    describe("uri_encode", function()
+        it("returns nil for nil input", function()
+            assert.is_nil(variables.uri_encode(nil))
+        end)
+
+        it("encodes spaces in strings", function()
+            assert.are.equal("hello%20world", variables.uri_encode("hello world"))
+        end)
+
+        it("encodes special characters", function()
+            assert.are.equal("test%23hash", variables.uri_encode("test#hash"))
+        end)
+
+        it("does not double-encode already encoded strings", function()
+            assert.are.equal("hello%20world", variables.uri_encode("hello%20world"))
+        end)
+
+        it("returns numbers unchanged", function()
+            assert.are.equal(42, variables.uri_encode(42))
+        end)
+
+        it("returns booleans unchanged", function()
+            assert.is_true(variables.uri_encode(true))
+        end)
+
+        it("encodes string values in tables", function()
+            local tbl = { key = "hello world" }
+            local result = variables.uri_encode(tbl)
+            assert.are.equal("hello%20world", result.key)
+        end)
+
+        it("preserves number values in tables", function()
+            local tbl = { count = 42 }
+            local result = variables.uri_encode(tbl)
+            assert.are.equal(42, result.count)
+        end)
+
+        it("encodes nested table values", function()
+            local tbl = {
+                nested = {
+                    value = "hello world",
+                },
+            }
+            local result = variables.uri_encode(tbl)
+            assert.are.equal("hello%20world", result.nested.value)
+        end)
+
+        it("handles mixed table values", function()
+            local tbl = {
+                str = "hello world",
+                num = 123,
+                nested = {
+                    inner = "foo bar",
+                },
+            }
+            local result = variables.uri_encode(tbl)
+            assert.are.equal("hello%20world", result.str)
+            assert.are.equal(123, result.num)
+            assert.are.equal("foo%20bar", result.nested.inner)
+        end)
+    end)
 end)

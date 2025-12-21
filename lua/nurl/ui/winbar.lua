@@ -7,21 +7,22 @@ local M = {}
 function M.request_title()
     local request = vim.b[0].nurl_data.request
 
+    local title = ""
+
     if request and request.title then
-        return string.format(
-            "%%#%s# %s %%*",
-            config.highlight.groups.winbar_title,
-            request.title
-        )
+        title = request.title
     elseif request.url then
-        return string.format(
-            "%%#%s# %s %%*",
-            config.highlight.groups.winbar_title,
-            requests.build_url(request.url)
-        )
+        title = requests.title(request)
     end
 
-    return ""
+    -- % in statusline is special
+    title = strings.escape_percentage(title)
+
+    return string.format(
+        "%%#%s# %s %%*",
+        config.highlight.groups.winbar_title,
+        title
+    )
 end
 
 function M.status_code()

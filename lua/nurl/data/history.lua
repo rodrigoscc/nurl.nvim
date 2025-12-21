@@ -42,6 +42,7 @@ request_history (
     time,
     request_url,
     request_url_raw,
+    request_query,
     request_title,
     request_method,
     request_headers,
@@ -109,12 +110,14 @@ VALUES
     ?,
     ?,
     ?,
+    ?,
     ?
 );]],
         {
             curl.exec_datetime,
             vim.json.encode(request.url),
             requests.build_url(request.url),
+            request.query and vim.json.encode(request.query) or vim.NIL,
             request.title or vim.NIL,
             request.method,
             request.headers and vim.json.encode(request.headers) or vim.NIL,
@@ -195,6 +198,7 @@ function M.all()
     local result = M.db:exec([[SELECT
     time,
     request_url,
+    request_query,
     request_title,
     request_method,
     request_headers,
@@ -239,42 +243,44 @@ ORDER BY time DESC]])
     for _, row in ipairs(rows) do
         local time = row:get_string(1)
         local request_url = row:get_string(2)
-        local request_title = row:get_string(3)
-        local request_method = row:get_string(4)
-        local request_headers = row:get_string(5)
-        local request_data = row:get_string(6)
-        local request_form = row:get_string(7)
-        local request_data_urlencode = row:get_string(8)
-        local request_curl_args = row:get_string(9)
-        local response_status_code = row:get_number(10)
-        local response_reason_phrase = row:get_string(11)
-        local response_protocol = row:get_string(12)
-        local response_headers = row:get_string(13)
-        local response_body = row:get_string(14)
-        local response_body_file = row:get_string(15)
-        local response_time_appconnect = row:get_number(16)
-        local response_time_connect = row:get_number(17)
-        local response_time_namelookup = row:get_number(18)
-        local response_time_pretransfer = row:get_number(19)
-        local response_time_redirect = row:get_number(20)
-        local response_time_starttransfer = row:get_number(21)
-        local response_time_total = row:get_number(22)
-        local response_size_download = row:get_number(23)
-        local response_size_header = row:get_number(24)
-        local response_size_request = row:get_number(25)
-        local response_size_upload = row:get_number(26)
-        local response_speed_download = row:get_number(27)
-        local response_speed_upload = row:get_number(28)
-        local curl_args = row:get_string(29)
-        local curl_result_code = row:get_number(30)
-        local curl_result_signal = row:get_number(31)
-        local curl_result_stdout = row:get_string(32)
-        local curl_result_stderr = row:get_string(33)
+        local request_query = row:get_string(3)
+        local request_title = row:get_string(4)
+        local request_method = row:get_string(5)
+        local request_headers = row:get_string(6)
+        local request_data = row:get_string(7)
+        local request_form = row:get_string(8)
+        local request_data_urlencode = row:get_string(9)
+        local request_curl_args = row:get_string(10)
+        local response_status_code = row:get_number(11)
+        local response_reason_phrase = row:get_string(12)
+        local response_protocol = row:get_string(13)
+        local response_headers = row:get_string(14)
+        local response_body = row:get_string(15)
+        local response_body_file = row:get_string(16)
+        local response_time_appconnect = row:get_number(17)
+        local response_time_connect = row:get_number(18)
+        local response_time_namelookup = row:get_number(19)
+        local response_time_pretransfer = row:get_number(20)
+        local response_time_redirect = row:get_number(21)
+        local response_time_starttransfer = row:get_number(22)
+        local response_time_total = row:get_number(23)
+        local response_size_download = row:get_number(24)
+        local response_size_header = row:get_number(25)
+        local response_size_request = row:get_number(26)
+        local response_size_upload = row:get_number(27)
+        local response_speed_download = row:get_number(28)
+        local response_speed_upload = row:get_number(29)
+        local curl_args = row:get_string(30)
+        local curl_result_code = row:get_number(31)
+        local curl_result_signal = row:get_number(32)
+        local curl_result_stdout = row:get_string(33)
+        local curl_result_stderr = row:get_string(34)
 
         ---@type nurl.Request
         local request = {
             title = request_title,
             url = vim.json.decode(request_url),
+            query = request_query and vim.json.decode(request_query),
             method = request_method,
             headers = request_headers and vim.json.decode(request_headers),
             data = request_data and vim.json.decode(request_data),

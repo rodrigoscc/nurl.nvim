@@ -148,12 +148,21 @@ A request file returns a list of request tables:
 return {
     {
         -- URL (required): string, table of parts, or function
-        "https://api.example.com/users", -- shorthand
+        "https://api.example.com/users?active=true", -- shorthand (supports query params)
         url = "https://api.example.com/users", -- explicit
         url = { "https://api.example.com", "v1" }, -- parts joined with /
         url = function()
             return "https://..."
         end, -- dynamic
+
+        -- Query parameters (optional): table or function
+        -- Values are URI-encoded automatically. Use functions for dynamic values.
+        query = {
+            page = 1,
+            limit = 10,
+            search = "hello world", -- becomes search=hello%20world
+            token = Nurl.env.var("api_token"),
+        },
 
         -- Method (optional, defaults to GET)
         method = "POST",
@@ -184,6 +193,13 @@ return {
     },
 }
 ```
+
+### URL Field Differences
+
+The shorthand `[1]` field and `url` field handle query parameters differently:
+
+- **Shorthand `[1]`**: Supports inline query parameters (e.g., `"https://api.example.com?foo=bar"`). Query params are extracted and merged with the `query` field.
+- **`url` as table**: Parts are joined with `/`, so query params should go in the `query` field instead.
 
 ### Dynamic Values
 
@@ -410,6 +426,7 @@ The expanded request object (all functions resolved):
 ---@class nurl.Request
 ---@field method string              HTTP method (GET, POST, etc.)
 ---@field url string                 Full URL
+---@field query? table<string,any>   Query parameters (URI-encoded)
 ---@field title? string              Display name
 ---@field headers table<string,string>  Headers
 ---@field data? string|table         Request body
