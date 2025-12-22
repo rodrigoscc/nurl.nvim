@@ -81,6 +81,23 @@ local defaults = {
             winbar_time = "NurlWinbarTime",
             winbar_warning = "NurlWinbarWarning",
             winbar_error = "NurlWinbarError",
+
+            info_icon = "NurlInfoIcon",
+            info_label = "NurlInfoLabel",
+            info_value = "NurlInfoValue",
+            info_highlight = "NurlInfoHighlight",
+            info_url = "NurlInfoUrl",
+            info_query_key = "NurlInfoQueryKey",
+            info_query_value = "NurlInfoQueryValue",
+            info_separator = "NurlInfoSeparator",
+
+            info_method = "NurlInfoMethod",
+
+            info_status = "NurlInfoStatus",
+            info_status_success = "NurlInfoStatusSuccess",
+            info_status_redirect = "NurlInfoStatusRedirect",
+            info_status_client_error = "NurlInfoStatusClientError",
+            info_status_server_error = "NurlInfoStatusServerError",
         },
     },
     ---@type table<string, nurl.ResponseFormatter>

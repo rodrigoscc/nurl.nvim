@@ -32,13 +32,13 @@ function M.status_code()
     if response ~= nil then
         if response.status_code <= 299 then
             return string.format(
-                "%%#%s# %s %%*",
+                "%%#%s#󰄬 %s%%*",
                 config.highlight.groups.winbar_success_status_code,
                 response.status_code
             )
         else
             return string.format(
-                "%%#%s# %s %%*",
+                "%%#%s#󰅚 %s%%*",
                 config.highlight.groups.winbar_error_status_code,
                 response.status_code
             )
@@ -49,20 +49,20 @@ function M.status_code()
 
     if curl.result and curl.result.code ~= 0 then
         return string.format(
-            "%%#%s#[Error]%%*",
+            "%%#%s#󰅚 Error%%*",
             config.highlight.groups.winbar_error
         )
     end
 
     if curl.result and curl.result.signal ~= 0 then
         return string.format(
-            "%%#%s#[Cancelled]%%*",
+            "%%#%s#󰜺 Cancelled%%*",
             config.highlight.groups.winbar_warning
         )
     end
 
     return string.format(
-        "%%#%s#[Loading]%%*",
+        "%%#%s#󰦖 Loading%%*",
         config.highlight.groups.winbar_loading
     )
 end
@@ -81,38 +81,38 @@ function M.time()
     return ""
 end
 
-function M.buffer_tab(type)
-    local buffer_type = vim.b[0].nurl_data.buffer_type
-
-    local is_active = buffer_type == type
-
-    if is_active then
-        return string.format(
-            "%%#%s# %s %%*",
-            config.highlight.groups.winbar_tab_active,
-            strings.title(type)
-        )
-    else
-        return string.format(
-            "%%#%s# %s %%*",
-            config.highlight.groups.winbar_tab_inactive,
-            strings.title(type)
-        )
-    end
-end
-
 function M.tabs()
-    local tabs = ""
+    local buffer_type = vim.b[0].nurl_data.buffer_type
+    local active_name = strings.title(buffer_type)
 
-    for _, buffer in pairs(config.buffers) do
-        tabs = tabs
-            .. string.format(
-                '%%{%%v:lua.Nurl.winbar.buffer_tab("%s")%%}',
-                buffer[1]
+    local dots = {}
+    for _, buffer in ipairs(config.buffers) do
+        local is_active = buffer[1] == buffer_type
+        if is_active then
+            table.insert(
+                dots,
+                string.format(
+                    "%%#%s#●%%*",
+                    config.highlight.groups.winbar_tab_active
+                )
             )
+        else
+            table.insert(
+                dots,
+                string.format(
+                    "%%#%s#○%%*",
+                    config.highlight.groups.winbar_tab_inactive
+                )
+            )
+        end
     end
 
-    return tabs
+    return string.format(
+        "%%#%s#%s%%* %s",
+        config.highlight.groups.winbar_tab_active,
+        active_name,
+        table.concat(dots, " ")
+    )
 end
 
 function M.winbar()

@@ -1,3 +1,4 @@
+local config = require("nurl.config")
 local strings = require("nurl.utils.strings")
 local requests = require("nurl.requests")
 local numbers = require("nurl.utils.numbers")
@@ -14,34 +15,19 @@ local icons = {
     query_next = "&",
 }
 
----@param method string
----@return string
-local function get_method_highlight(method)
-    local method_highlights = {
-        GET = "NurlInfoMethodGet",
-        POST = "NurlInfoMethodPost",
-        PUT = "NurlInfoMethodPut",
-        PATCH = "NurlInfoMethodPatch",
-        DELETE = "NurlInfoMethodDelete",
-        HEAD = "NurlInfoMethodHead",
-        OPTIONS = "NurlInfoMethodOptions",
-    }
-    return method_highlights[method] or "NurlInfoMethod"
-end
-
 ---@param status_code number
 ---@return string
 local function get_status_highlight(status_code)
     if status_code >= 200 and status_code < 300 then
-        return "NurlInfoStatusSuccess"
+        return config.highlight.groups.info_status_success
     elseif status_code >= 300 and status_code < 400 then
-        return "NurlInfoStatusRedirect"
+        return config.highlight.groups.info_status_redirect
     elseif status_code >= 400 and status_code < 500 then
-        return "NurlInfoStatusClientError"
+        return config.highlight.groups.info_status_client_error
     elseif status_code >= 500 then
-        return "NurlInfoStatusServerError"
+        return config.highlight.groups.info_status_server_error
     else
-        return "NurlInfoStatus"
+        return config.highlight.groups.info_status
     end
 end
 
@@ -98,8 +84,8 @@ function InfoBufferBuilder:section(label)
         self:newline()
     end
 
-    self:append(icons.section .. " ", "NurlInfoIcon")
-    self:append(label, "NurlInfoLabel")
+    self:append(icons.section .. " ", config.highlight.groups.info_icon)
+    self:append(label, config.highlight.groups.info_label)
 
     return self
 end
@@ -115,9 +101,9 @@ function InfoBufferBuilder:field(label, value, value_hl, label_width)
     self:append("    ", nil)
     self:append(
         string.format("%-" .. label_width .. "s", label),
-        "NurlInfoLabel"
+        config.highlight.groups.info_label
     )
-    self:append(value, value_hl or "NurlInfoValue")
+    self:append(value, value_hl or config.highlight.groups.info_value)
 
     return self
 end
@@ -129,10 +115,10 @@ function InfoBufferBuilder:query_param(prefix, key, value)
     self:newline()
 
     self:append("    ", nil)
-    self:append(prefix .. " ", "NurlInfoSeparator")
-    self:append(key, "NurlInfoQueryKey")
-    self:append(" = ", "NurlInfoSeparator")
-    self:append(value, "NurlInfoQueryValue")
+    self:append(prefix .. " ", config.highlight.groups.info_separator)
+    self:append(key, config.highlight.groups.info_query_key)
+    self:append(" = ", config.highlight.groups.info_separator)
+    self:append(value, config.highlight.groups.info_query_value)
 
     return self
 end
@@ -177,12 +163,8 @@ function M.render(bufnr, request, response, curl)
     builder:section("Request")
     builder:append("       ", nil)
     builder:append(curl.exec_datetime, "Comment")
-    builder:field(
-        "Method",
-        request.method,
-        get_method_highlight(request.method)
-    )
-    builder:field("URL", base_url, "NurlInfoUrl")
+    builder:field("Method", request.method, config.highlight.groups.info_method)
+    builder:field("URL", base_url, config.highlight.groups.info_url)
 
     if request.query then
         local is_first = true
@@ -233,7 +215,7 @@ function M.render(bufnr, request, response, curl)
     builder:field("Protocol", response.protocol)
 
     if response.body_file then
-        builder:field("File", response.body_file, "NurlInfoUrl")
+        builder:field("File", response.body_file, config.highlight.groups.info_url)
     end
 
     local time = response.time
@@ -247,7 +229,7 @@ function M.render(bufnr, request, response, curl)
     builder:field(
         "Total",
         numbers.format_duration(time.time_total),
-        "NurlInfoHighlight"
+        config.highlight.groups.info_highlight
     )
 
     local size = response.size
