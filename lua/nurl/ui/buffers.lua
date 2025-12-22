@@ -193,28 +193,27 @@ local function populate_info_buffer(bufnr, request, response, curl)
 
     new_line(0, "date: %s", curl.exec_datetime)
 
-    new_line(0, "request:")
-    new_line(1, "method: %s", request.method)
-    new_line(1, "url: %s", requests.build_url(request.url))
+    new_line(0, "method: %s", request.method)
+    new_line(0, "url: %s", requests.build_url(request.url))
 
     if request.query then
-        new_line(1, "query:")
+        new_line(0, "query:")
         for k, v in pairs(request.query) do
             if type(v) == "table" then
-                new_line(2, string.format("%s:", k))
+                new_line(1, string.format("%s:", k))
                 for _, value_item in ipairs(v) do
                     if type(value_item) == "string" then
                         value_item = strings.escape_percentage(value_item)
                     end
 
-                    new_line(3, string.format("- %s", value_item))
+                    new_line(2, string.format("- %s", value_item))
                 end
             else
                 if type(v) == "string" then
                     v = strings.escape_percentage(v)
                 end
 
-                new_line(2, string.format("%s: %s", k, v))
+                new_line(1, string.format("%s: %s", k, v))
             end
         end
     end

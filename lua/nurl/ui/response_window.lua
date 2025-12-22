@@ -49,11 +49,18 @@ function ResponseWindow:open(opts)
 
     for _, bufnr in pairs(self.buffers) do
         vim.api.nvim_create_autocmd("BufWinEnter", {
-            once = true,
             callback = function()
-                -- Use 0 instead of self.win here so that the correct win is used
-                -- in case the user enters the buffers on other win.
-                vim.wo[0].winbar = winbar.winbar()
+                if vim.api.nvim_get_current_win() == self.win then
+                    vim.wo[0].winbar = winbar.winbar()
+                else
+                    -- This is very important for the toggle_split action.
+                    -- For some reason, the winbar will be shown in any window
+                    -- this buffer is entered. Yes, even tho I set the winbar
+                    -- in self.win only. I don't want the split window to
+                    -- display the winbar too, so let's set it to an empty
+                    -- string when the window isn't the main response window.
+                    vim.wo[0].winbar = ""
+                end
             end,
             buffer = bufnr,
         })

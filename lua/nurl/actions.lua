@@ -129,6 +129,38 @@ M.builtin = {
             end
         end
     end,
+    ---@param opts? table
+    ---@return fun()
+    toggle_secondary = function(opts)
+        local Buffer = require("nurl.ui.buffers").Buffer
+
+        local default_opts = {
+            buffer = Buffer.Info,
+            win_config = { split = "below", height = 10, style = "minimal" },
+        }
+
+        opts = vim.tbl_deep_extend(
+            "force",
+            {},
+            vim.deepcopy(default_opts),
+            opts or {}
+        )
+
+        local secondary_window = nil
+
+        return function()
+            local SecondaryWindow = require("nurl.ui.seconday_window")
+
+            if secondary_window == nil then
+                secondary_window = SecondaryWindow:new({
+                    buffers = vim.b.nurl_data.buffers,
+                    win_config = opts.win_config,
+                })
+            end
+
+            secondary_window:toggle(opts.buffer)
+        end
+    end,
 }
 
 return M

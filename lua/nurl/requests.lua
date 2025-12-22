@@ -385,35 +385,41 @@ end
 
 ---@param request nurl.Request
 ---@return string
+function M.full_url(request)
+    local url = M.build_url(request.url)
+
+    if request.query then
+        if url:match("?") then
+            url = url .. "&"
+        else
+            url = url .. "?"
+        end
+
+        local query_items = {}
+
+        for k, v in pairs(request.query) do
+            if type(v) == "table" then
+                for _, value_item in ipairs(v) do
+                    table.insert(query_items, k .. "=" .. value_item)
+                end
+            else
+                table.insert(query_items, k .. "=" .. v)
+            end
+        end
+
+        url = url .. table.concat(query_items, "&")
+    end
+
+    return url
+end
+
+---@param request nurl.Request
+---@return string
 function M.title(request)
     if request.title then
         return request.title
     else
-        local url = M.build_url(request.url)
-
-        if request.query then
-            if url:match("?") then
-                url = url .. "&"
-            else
-                url = url .. "?"
-            end
-
-            local query_items = {}
-
-            for k, v in pairs(request.query) do
-                if type(v) == "table" then
-                    for _, value_item in ipairs(v) do
-                        table.insert(query_items, k .. "=" .. value_item)
-                    end
-                else
-                    table.insert(query_items, k .. "=" .. v)
-                end
-            end
-
-            url = url .. table.concat(query_items, "&")
-        end
-
-        return url
+        return M.full_url(request)
     end
 end
 
