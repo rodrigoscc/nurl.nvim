@@ -369,7 +369,30 @@ function M.text(request, opts)
     if request.title then
         title = request.title
     else
-        title = string.format("%s %s", request.method, M.build_url(request.url))
+        local url = M.build_url(request.url)
+        title = string.format("%s %s", request.method, url)
+
+        if request.query then
+            if url:match("?") then
+                title = title .. "&"
+            else
+                title = title .. "?"
+            end
+
+            local query_items = {}
+
+            for k, v in pairs(request.query) do
+                if type(v) == "table" then
+                    for _, value_item in ipairs(v) do
+                        table.insert(query_items, k .. "=" .. value_item)
+                    end
+                else
+                    table.insert(query_items, k .. "=" .. v)
+                end
+            end
+
+            title = title .. table.concat(query_items, "&")
+        end
     end
 
     if opts.suffix then

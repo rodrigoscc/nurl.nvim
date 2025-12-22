@@ -20,7 +20,7 @@ function M.request_title()
     title = strings.escape_percentage(title)
 
     return string.format(
-        "%%#%s# %s %%*",
+        "%%#%s#%s %%*",
         config.highlight.groups.winbar_title,
         title
     )
@@ -116,7 +116,7 @@ function M.tabs()
 end
 
 function M.winbar()
-    return "%{%v:lua.Nurl.winbar.status_code()%}%<%{%v:lua.Nurl.winbar.request_title()%}%{%v:lua.Nurl.winbar.time()%} %=%{%v:lua.Nurl.winbar.tabs()%}"
+    return "%{%v:lua.Nurl.winbar.status_code()%} %<%{%v:lua.Nurl.winbar.request_title()%}%{%v:lua.Nurl.winbar.time()%} %=%{%v:lua.Nurl.winbar.tabs()%}"
 end
 
 return M

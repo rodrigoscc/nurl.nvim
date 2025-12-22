@@ -23,10 +23,7 @@ local function format_history_item(item)
         table.insert(ret, { request.method, "SnacksPickerFileType" })
         table.insert(ret, { " " })
 
-        table.insert(
-            ret,
-            { requests.build_url(request.url), "SnacksPickerLabel" }
-        )
+        table.insert(ret, { requests.full_url(request), "SnacksPickerLabel" })
         table.insert(ret, { " " })
     end
 
@@ -51,7 +48,7 @@ local function format_project_request_item(item)
         table.insert(ret, { item.lazy.method, "SnacksPickerFileType" })
         table.insert(ret, { " " })
 
-        table.insert(ret, { item.lazy.url, "SnacksPickerLabel" })
+        table.insert(ret, { requests.full_url(item.lazy), "SnacksPickerLabel" })
         table.insert(ret, { " " })
     end
 
@@ -76,7 +73,7 @@ local function format_request_item(item)
         table.insert(ret, { item.lazy.method, "SnacksPickerFileType" })
         table.insert(ret, { " " })
 
-        table.insert(ret, { item.lazy.url, "SnacksPickerLabel" })
+        table.insert(ret, { requests.full_url(item.lazy), "SnacksPickerLabel" })
         table.insert(ret, { " " })
     end
 
