@@ -1,4 +1,4 @@
-*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 21
+*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 22
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -632,6 +632,7 @@ Curl execution details:
                     ["<S-Tab>"] = "previous_buffer",
                     ["<C-r>"] = "rerun",
                     ["<C-x>"] = "cancel",
+                    ["<C-m>"] = { "toggle_secondary", opts = { buffer = "info" } },
                     q = "close",
                 },
             },
