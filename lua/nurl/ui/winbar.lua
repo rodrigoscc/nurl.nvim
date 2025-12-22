@@ -1,6 +1,7 @@
 local config = require("nurl.config")
 local strings = require("nurl.utils.strings")
 local requests = require("nurl.requests")
+local numbers = require("nurl.utils.numbers")
 
 local M = {}
 
@@ -70,11 +71,10 @@ function M.time()
     local response = vim.b[0].nurl_data.response
 
     if response ~= nil then
-        local seconds = string.format("%.2f", response.time.time_total)
         return string.format(
-            "%%#%s#(took %ss)%%*",
+            "%%#%s#(took %s)%%*",
             config.highlight.groups.winbar_time,
-            seconds
+            numbers.format_duration(response.time.time_total)
         )
     end
 

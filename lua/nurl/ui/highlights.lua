@@ -12,6 +12,33 @@ M.highlights = {
     NurlWinbarTime = "@comment",
     NurlWinbarWarning = "WarningMsg",
     NurlWinbarError = "ErrorMsg",
+
+    NurlInfoTitle = "Title",
+    NurlInfoSubtitle = "@markup.heading",
+    NurlInfoSectionTitle = "@markup.heading.2",
+    NurlInfoSeparator = "NonText",
+    NurlInfoIcon = "Special",
+    NurlInfoLabel = "Comment",
+    NurlInfoValue = "Normal",
+    NurlInfoHighlight = "@markup.strong",
+    NurlInfoUrl = "@markup.link.url",
+    NurlInfoQueryKey = "@property",
+    NurlInfoQueryValue = "@string",
+
+    NurlInfoMethod = "@keyword",
+    NurlInfoMethodGet = "@diff.plus",
+    NurlInfoMethodPost = "@diff.change",
+    NurlInfoMethodPut = "@diff.change",
+    NurlInfoMethodPatch = "@diff.change",
+    NurlInfoMethodDelete = "@diff.minus",
+    NurlInfoMethodHead = "@comment",
+    NurlInfoMethodOptions = "@comment",
+
+    NurlInfoStatus = "Normal",
+    NurlInfoStatusSuccess = "@diff.plus",
+    NurlInfoStatusRedirect = "@diff.change",
+    NurlInfoStatusClientError = "@diff.minus",
+    NurlInfoStatusServerError = "@diff.minus",
 }
 
 function M.setup_highlights()

@@ -1,8 +1,7 @@
 local actions = require("nurl.actions")
 local config = require("nurl.config")
 local responses = require("nurl.responses")
-local requests = require("nurl.requests")
-local strings = require("nurl.utils.strings")
+local info_buffer = require("nurl.ui.info_buffer")
 
 local M = {}
 
@@ -184,67 +183,7 @@ end
 ---@param response nurl.Response
 ---@param curl nurl.Curl
 local function populate_info_buffer(bufnr, request, response, curl)
-    local info_lines = {}
-
-    local function new_line(indent_level, format, ...)
-        local indent = string.rep(" ", indent_level * 2)
-        table.insert(info_lines, string.format("%s" .. format, indent, ...))
-    end
-
-    new_line(0, "date: %s", curl.exec_datetime)
-
-    new_line(0, "method: %s", request.method)
-    new_line(0, "url: %s", requests.build_url(request.url))
-
-    if request.query then
-        new_line(0, "query:")
-        for k, v in pairs(request.query) do
-            if type(v) == "table" then
-                new_line(1, string.format("%s:", k))
-                for _, value_item in ipairs(v) do
-                    if type(value_item) == "string" then
-                        value_item = strings.escape_percentage(value_item)
-                    end
-
-                    new_line(2, string.format("- %s", value_item))
-                end
-            else
-                if type(v) == "string" then
-                    v = strings.escape_percentage(v)
-                end
-
-                new_line(1, string.format("%s: %s", k, v))
-            end
-        end
-    end
-
-    new_line(0, "response:")
-
-    if response.body_file then
-        new_line(1, "body_file: %s", response.body_file)
-    end
-
-    new_line(1, "time:")
-    new_line(2, "appconnect: %.4f", response.time.time_appconnect)
-    new_line(2, "connect: %.4f", response.time.time_connect)
-    new_line(2, "namelookup: %.4f", response.time.time_namelookup)
-    new_line(2, "pretransfer: %.4f", response.time.time_pretransfer)
-    new_line(2, "redirect: %.4f", response.time.time_redirect)
-    new_line(2, "starttransfer: %.4f", response.time.time_starttransfer)
-    new_line(2, "total: %.4f", response.time.time_total)
-
-    new_line(1, "size:")
-    new_line(2, "download: %d", response.size.size_download)
-    new_line(2, "header: %d", response.size.size_header)
-    new_line(2, "request: %d", response.size.size_request)
-    new_line(2, "upload: %d", response.size.size_upload)
-
-    new_line(1, "speed:")
-    new_line(2, "download: %d", response.speed.speed_download)
-    new_line(2, "upload: %d", response.speed.speed_upload)
-
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, info_lines)
-    vim.api.nvim_set_option_value("filetype", "yaml", { buf = bufnr })
+    info_buffer.render(bufnr, request, response, curl)
 end
 
 ---@param buffer nurl.Buffer
