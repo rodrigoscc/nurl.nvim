@@ -27,16 +27,16 @@ M.highlights = {
 
     NurlInfoMethod = "@keyword",
     NurlInfoMethodGet = "@diff.plus",
-    NurlInfoMethodPost = "@diff.change",
-    NurlInfoMethodPut = "@diff.change",
-    NurlInfoMethodPatch = "@diff.change",
+    NurlInfoMethodPost = "@diff.delta",
+    NurlInfoMethodPut = "@diff.delta",
+    NurlInfoMethodPatch = "@diff.delta",
     NurlInfoMethodDelete = "@diff.minus",
     NurlInfoMethodHead = "@comment",
     NurlInfoMethodOptions = "@comment",
 
     NurlInfoStatus = "Normal",
     NurlInfoStatusSuccess = "@diff.plus",
-    NurlInfoStatusRedirect = "@diff.change",
+    NurlInfoStatusRedirect = "@diff.delta",
     NurlInfoStatusClientError = "@diff.minus",
     NurlInfoStatusServerError = "@diff.minus",
 }
