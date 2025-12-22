@@ -657,7 +657,29 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 | `NurlWinbarErrorStatusCode` | 4xx/5xx status codes |
 | `NurlWinbarLoading` | Loading state |
 | `NurlWinbarTime` | Response time |
+| `NurlWinbarWarning` | Warning messages |
 | `NurlWinbarError` | Error messages |
+| `NurlInfoIcon` | Section icons in info buffer |
+| `NurlInfoLabel` | Field labels in info buffer |
+| `NurlInfoValue` | Field values in info buffer |
+| `NurlInfoHighlight` | Highlighted values (e.g., total time) |
+| `NurlInfoUrl` | URL values |
+| `NurlInfoQueryKey` | Query parameter keys |
+| `NurlInfoQueryValue` | Query parameter values |
+| `NurlInfoSeparator` | Separators (?, &, =) |
+| `NurlInfoMethod` | HTTP method (fallback) |
+| `NurlInfoMethodGet` | GET method |
+| `NurlInfoMethodPost` | POST method |
+| `NurlInfoMethodPut` | PUT method |
+| `NurlInfoMethodPatch` | PATCH method |
+| `NurlInfoMethodDelete` | DELETE method |
+| `NurlInfoMethodHead` | HEAD method |
+| `NurlInfoMethodOptions` | OPTIONS method |
+| `NurlInfoStatus` | Status code (fallback) |
+| `NurlInfoStatusSuccess` | 2xx status codes |
+| `NurlInfoStatusRedirect` | 3xx status codes |
+| `NurlInfoStatusClientError` | 4xx status codes |
+| `NurlInfoStatusServerError` | 5xx status codes |
 
 ## Recipes
 
