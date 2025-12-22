@@ -667,14 +667,7 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 | `NurlInfoQueryKey` | Query parameter keys |
 | `NurlInfoQueryValue` | Query parameter values |
 | `NurlInfoSeparator` | Separators (?, &, =) |
-| `NurlInfoMethod` | HTTP method (fallback) |
-| `NurlInfoMethodGet` | GET method |
-| `NurlInfoMethodPost` | POST method |
-| `NurlInfoMethodPut` | PUT method |
-| `NurlInfoMethodPatch` | PATCH method |
-| `NurlInfoMethodDelete` | DELETE method |
-| `NurlInfoMethodHead` | HEAD method |
-| `NurlInfoMethodOptions` | OPTIONS method |
+| `NurlInfoMethod` | HTTP method |
 | `NurlInfoStatus` | Status code (fallback) |
 | `NurlInfoStatusSuccess` | 2xx status codes |
 | `NurlInfoStatusRedirect` | 3xx status codes |
