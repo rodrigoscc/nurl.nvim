@@ -867,5 +867,9 @@ local function super_gx()
     end
 end
 
+-- Make <cfile> include query params
+vim.opt.isfname:append("?")
+vim.opt.isfname:append("&")
+
 vim.keymap.set("n", "gx", super_gx, { desc = "Super gx" })
 ```
