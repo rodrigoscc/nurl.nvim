@@ -31,9 +31,7 @@ end
 ---@param seconds number
 ---@return string
 function M.format_duration(seconds)
-    if seconds < 0.001 then
-        return string.format("%.0fµs", seconds * 1000000)
-    elseif seconds < 1 then
+    if seconds < 1 then
         return string.format("%.0fms", seconds * 1000)
     else
         return string.format("%.2fs", seconds)
