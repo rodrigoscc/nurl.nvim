@@ -14,8 +14,6 @@ M.highlights = {
     NurlWinbarError = "DiagnosticError",
 
     NurlInfoTitle = "Title",
-    NurlInfoSubtitle = "@markup.heading",
-    NurlInfoSectionTitle = "@markup.heading.2",
     NurlInfoSeparator = "NonText",
     NurlInfoIcon = "Special",
     NurlInfoLabel = "Comment",
@@ -25,7 +23,7 @@ M.highlights = {
     NurlInfoQueryKey = "@property",
     NurlInfoQueryValue = "@string",
 
-    NurlInfoMethod = "Special",
+    NurlInfoMethod = "Function",
 
     NurlInfoStatus = "Normal",
     NurlInfoStatusSuccess = "DiagnosticOk",

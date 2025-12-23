@@ -163,6 +163,15 @@ function M.render(bufnr, request, response, curl)
     builder:section("Request")
     builder:append("       ", nil)
     builder:append(curl.exec_datetime, "Comment")
+
+    if request.title then
+        builder:field(
+            "Title",
+            request.title,
+            config.highlight.groups.info_title
+        )
+    end
+
     builder:field("Method", request.method, config.highlight.groups.info_method)
     builder:field("URL", base_url, config.highlight.groups.info_url)
 
@@ -215,7 +224,11 @@ function M.render(bufnr, request, response, curl)
     builder:field("Protocol", response.protocol)
 
     if response.body_file then
-        builder:field("File", response.body_file, config.highlight.groups.info_url)
+        builder:field(
+            "File",
+            response.body_file,
+            config.highlight.groups.info_url
+        )
     end
 
     local time = response.time

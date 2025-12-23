@@ -82,6 +82,7 @@ local defaults = {
             winbar_warning = "NurlWinbarWarning",
             winbar_error = "NurlWinbarError",
 
+            info_title = "NurlInfoTitle",
             info_icon = "NurlInfoIcon",
             info_label = "NurlInfoLabel",
             info_value = "NurlInfoValue",
