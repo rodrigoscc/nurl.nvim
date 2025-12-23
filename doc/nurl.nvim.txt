@@ -1,4 +1,4 @@
-*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 22
+*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 23
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -932,6 +932,10 @@ under the cursor:
             Nurl.send({ cursor_url, headers = orig_headers })
         end
     end
+    
+    -- Make <cfile> include query params
+    vim.opt.isfname:append("?")
+    vim.opt.isfname:append("&")
     
     vim.keymap.set("n", "gx", super_gx, { desc = "Super gx" })
 <
