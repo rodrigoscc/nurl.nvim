@@ -119,7 +119,6 @@ local function history_items_to_snacks_items(history_items)
                 }),
                 response = response,
                 curl = curl,
-                preview = get_preview(request),
             }
 
             return snacks_item
@@ -150,7 +149,6 @@ local function super_requests_to_snacks_items(super_requests)
                 request = expanded,
                 lazy = lazy,
                 score = 1,
-                preview = get_preview(lazy),
             }
 
             return item
@@ -187,7 +185,6 @@ local function project_request_items_to_snacks_items(project_request_items)
                 lazy = lazy,
                 score = 1,
                 text = requests.text(lazy, { suffix = request_item.file }),
-                preview = get_preview(lazy),
                 file = request_item.file,
                 pos = { request_item.start_row, request_item.start_col },
             }
@@ -206,13 +203,18 @@ function M.pick_request(title, super_requests, on_pick)
     Snacks.picker.pick("buffer_requests", {
         title = title,
         items = items,
-        preview = "preview",
         format = format_request_item,
         confirm = function(picker, item)
             picker:close()
             if on_pick ~= nil then
                 on_pick(item.request)
             end
+        end,
+        preview = function(ctx)
+            local preview = get_preview(ctx.item.lazy)
+            ctx.preview:set_lines(vim.split(preview.text, "\n"))
+            ctx.preview:highlight({ ft = preview.ft })
+            return true
         end,
     })
 end
@@ -227,7 +229,6 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
     Snacks.picker.pick("project_requests", {
         title = title,
         items = snacks_items,
-        preview = "preview",
         format = format_project_request_item,
         confirm = function(picker, item, action)
             picker:close()
@@ -237,6 +238,12 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
             else
                 on_pick(item.item)
             end
+        end,
+        preview = function(ctx)
+            local preview = get_preview(ctx.item.lazy)
+            ctx.preview:set_lines(vim.split(preview.text, "\n"))
+            ctx.preview:highlight({ ft = preview.ft })
+            return true
         end,
     })
 end
@@ -250,13 +257,21 @@ function M.pick_request_history_item(title, history_items, on_pick)
     Snacks.picker.pick("history", {
         title = title,
         items = snacks_items,
-        preview = "preview",
         format = format_history_item,
         confirm = function(picker, item)
             picker:close()
             if on_pick ~= nil then
                 on_pick(item.item)
             end
+        end,
+        preview = function(ctx)
+            local request = unpack(ctx.item.item)
+            local preview = get_preview(request)
+
+            ctx.preview:set_lines(vim.split(preview.text, "\n"))
+            ctx.preview:highlight({ ft = preview.ft })
+
+            return true
         end,
     })
 end

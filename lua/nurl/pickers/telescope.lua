@@ -10,26 +10,6 @@ local projects = require("nurl.projects")
 
 local M = {}
 
-local function make_request_previewer()
-    return previewers.new_buffer_previewer({
-        title = "Request Body",
-        define_preview = function(self, entry)
-            local preview = entry.preview
-            if preview then
-                local lines = vim.split(preview.text, "\n")
-                vim.api.nvim_buf_set_lines(
-                    self.state.bufnr,
-                    0,
-                    -1,
-                    false,
-                    lines
-                )
-                vim.bo[self.state.bufnr].filetype = preview.ft
-            end
-        end,
-    })
-end
-
 local function get_preview(request)
     local ft = "text"
     local text = ""
@@ -50,6 +30,26 @@ local function get_preview(request)
     end
 
     return { text = text, ft = ft }
+end
+
+local function make_request_previewer()
+    return previewers.new_buffer_previewer({
+        title = "Request Body",
+        define_preview = function(self, entry)
+            local preview = get_preview(entry.request)
+            if preview then
+                local lines = vim.split(preview.text, "\n")
+                vim.api.nvim_buf_set_lines(
+                    self.state.bufnr,
+                    0,
+                    -1,
+                    false,
+                    lines
+                )
+                vim.bo[self.state.bufnr].filetype = preview.ft
+            end
+        end,
+    })
 end
 
 ---@param title string
@@ -103,7 +103,6 @@ function M.pick_request(title, super_requests, on_pick)
                         display = make_display,
                         ordinal = requests.text(lazy),
                         request = lazy,
-                        preview = get_preview(lazy),
                     }
                 end,
             }),
@@ -192,7 +191,6 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
                         filename = request_item.file,
                         lnum = request_item.start_row,
                         col = request_item.start_col,
-                        preview = get_preview(lazy),
                     }
                 end,
             }),
@@ -274,7 +272,6 @@ function M.pick_request_history_item(title, history_items, on_pick)
                         request = request,
                         response = response,
                         curl = curl,
-                        preview = get_preview(request),
                     }
                 end,
             }),
