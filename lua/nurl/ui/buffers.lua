@@ -43,32 +43,6 @@ local function expand_keymap_rhs(action)
     return rhs
 end
 
----@param headers table<string, string>
----@return string
-local function guess_file_type(headers)
-    local content_type = responses.get_content_type(headers)
-    if content_type == nil then
-        return "text"
-    elseif
-        string.find(content_type, "application/json")
-        or string.find(content_type, "text/json")
-    then
-        return "json"
-    elseif
-        string.find(content_type, "application/xml")
-        or string.find(content_type, "text/xml")
-    then
-        return "xml"
-    elseif
-        string.find(content_type, "application/html")
-        or string.find(content_type, "text/html")
-    then
-        return "html"
-    end
-
-    return "text"
-end
-
 ---@param bufnr integer
 ---@param content string
 ---@param file_type string
@@ -101,7 +75,7 @@ local function populate_body_buffer(bufnr, response)
         return
     end
 
-    local file_type = guess_file_type(response.headers)
+    local file_type = responses.guess_file_type(response.headers)
     local formatter = config.formatters[file_type]
 
     if
@@ -115,7 +89,7 @@ local function populate_body_buffer(bufnr, response)
                 vim.schedule(function()
                     local content
                     if out.code == 0 then
-                        content = out.stdout or ""
+                        content = vim.trim(out.stdout) or ""
                     else
                         content = response.body
                         vim.notify(
@@ -128,6 +102,7 @@ local function populate_body_buffer(bufnr, response)
                             vim.log.levels.ERROR
                         )
                     end
+
                     set_body_buffer(bufnr, content, file_type)
                 end)
             end

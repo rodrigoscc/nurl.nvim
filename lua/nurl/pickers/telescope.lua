@@ -7,47 +7,28 @@ local action_state = require("telescope.actions.state")
 local entry_display = require("telescope.pickers.entry_display")
 local previewers = require("telescope.previewers")
 local projects = require("nurl.projects")
+local preview = require("nurl.preview")
 
 local M = {}
 
-local function get_preview(request)
-    local ft = "text"
-    local text = ""
-
-    if request.data then
-        if type(request.data) == "table" then
-            text = vim.json.encode(request.data)
-            ft = "json"
-        else
-            text = request.data
-        end
-    elseif request.data_urlencode then
-        text = vim.json.encode(request.data_urlencode)
-        ft = "json"
-    elseif request.form then
-        text = vim.json.encode(request.form)
-        ft = "json"
-    end
-
-    return { text = text, ft = ft }
-end
-
 local function make_request_previewer()
     return previewers.new_buffer_previewer({
-        title = "Request Body",
+        title = "Request",
         define_preview = function(self, entry)
-            local preview = get_preview(entry.request)
-            if preview then
-                local lines = vim.split(preview.text, "\n")
-                vim.api.nvim_buf_set_lines(
-                    self.state.bufnr,
-                    0,
-                    -1,
-                    false,
-                    lines
-                )
-                vim.bo[self.state.bufnr].filetype = preview.ft
-            end
+            local lines = preview.render(entry.request)
+            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+            vim.bo[self.state.bufnr].filetype = "http"
+        end,
+    })
+end
+
+local function make_history_previewer()
+    return previewers.new_buffer_previewer({
+        title = "Request & Response",
+        define_preview = function(self, entry)
+            local lines = preview.render(entry.request, entry.response)
+            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+            vim.bo[self.state.bufnr].filetype = "http"
         end,
     })
 end
@@ -276,7 +257,7 @@ function M.pick_request_history_item(title, history_items, on_pick)
                 end,
             }),
             sorter = conf.generic_sorter({}),
-            previewer = make_request_previewer(),
+            previewer = make_history_previewer(),
             attach_mappings = function(prompt_bufnr)
                 actions.select_default:replace(function()
                     actions.close(prompt_bufnr)

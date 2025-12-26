@@ -1,5 +1,6 @@
 local requests = require("nurl.requests")
 local actions = require("snacks.picker.actions")
+local preview = require("nurl.preview")
 
 local M = {}
 
@@ -78,28 +79,6 @@ local function format_request_item(item)
     end
 
     return ret
-end
-
-local function get_preview(request)
-    local ft = "text"
-    local text = ""
-
-    if request.data then
-        if type(request.data) == "table" then
-            text = vim.json.encode(request.data)
-            ft = "json"
-        else
-            text = request.data
-        end
-    elseif request.data_urlencode then
-        text = vim.json.encode(request.data_urlencode)
-        ft = "json"
-    elseif request.form then
-        text = vim.json.encode(request.form)
-        ft = "json"
-    end
-
-    return { text = text, ft = ft }
 end
 
 ---@param history_items nurl.HistoryItem[]
@@ -211,10 +190,8 @@ function M.pick_request(title, super_requests, on_pick)
             end
         end,
         preview = function(ctx)
-            local preview = get_preview(ctx.item.lazy)
-            ctx.preview:set_lines(vim.split(preview.text, "\n"))
-            ctx.preview:highlight({ ft = preview.ft })
-            return true
+            ctx.preview:set_lines(preview.render(ctx.item.lazy))
+            ctx.preview:highlight({ ft = "http" })
         end,
     })
 end
@@ -240,10 +217,8 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
             end
         end,
         preview = function(ctx)
-            local preview = get_preview(ctx.item.lazy)
-            ctx.preview:set_lines(vim.split(preview.text, "\n"))
-            ctx.preview:highlight({ ft = preview.ft })
-            return true
+            ctx.preview:set_lines(preview.render(ctx.item.lazy))
+            ctx.preview:highlight({ ft = "http" })
         end,
     })
 end
@@ -265,13 +240,9 @@ function M.pick_request_history_item(title, history_items, on_pick)
             end
         end,
         preview = function(ctx)
-            local request = unpack(ctx.item.item)
-            local preview = get_preview(request)
-
-            ctx.preview:set_lines(vim.split(preview.text, "\n"))
-            ctx.preview:highlight({ ft = preview.ft })
-
-            return true
+            local request, response = unpack(ctx.item.item)
+            ctx.preview:set_lines(preview.render(request, response))
+            ctx.preview:highlight({ ft = "http" })
         end,
     })
 end

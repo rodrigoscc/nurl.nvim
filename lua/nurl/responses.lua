@@ -82,6 +82,32 @@ function M.get_content_type(headers)
     return nil
 end
 
+---@param headers table<string, string>
+---@return string
+function M.guess_file_type(headers)
+    local content_type = M.get_content_type(headers)
+    if content_type == nil then
+        return "text"
+    elseif
+        string.find(content_type, "application/json")
+        or string.find(content_type, "text/json")
+    then
+        return "json"
+    elseif
+        string.find(content_type, "application/xml")
+        or string.find(content_type, "text/xml")
+    then
+        return "xml"
+    elseif
+        string.find(content_type, "application/html")
+        or string.find(content_type, "text/html")
+    then
+        return "html"
+    end
+
+    return "text"
+end
+
 local displayable_content_types = {
     "application/json",
     "application/xml",
