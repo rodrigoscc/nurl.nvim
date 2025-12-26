@@ -19,7 +19,7 @@ local tables = require("nurl.utils.tables")
 ---@field headers table<string, string>
 ---@field data? string | table<string, any>
 ---@field form? table<string, string>
----@field data_urlencode? table<string, any>
+---@field data_urlencode? table<string, string>
 ---@field curl_args? string[]
 ---@field pre_hook? fun(next: fun(), input: nurl.RequestInput) | nil
 ---@field post_hook? fun(out: nurl.RequestOut) | nil
