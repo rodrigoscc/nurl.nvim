@@ -175,15 +175,18 @@ describe("variables", function()
             assert.are.equal("from_lazy", result)
         end)
 
-        it("expand preserves lazy value returned by function with lazy option", function()
-            local fn = function()
-                return variables.lazy(function()
-                    return "from_lazy"
-                end)
+        it(
+            "expand preserves lazy value returned by function with lazy option",
+            function()
+                local fn = function()
+                    return variables.lazy(function()
+                        return "from_lazy"
+                    end)
+                end
+                local result = variables.expand(fn, { lazy = true })
+                assert.is_true(variables.is_lazy(result))
             end
-            local result = variables.expand(fn, { lazy = true })
-            assert.is_true(variables.is_lazy(result))
-        end)
+        )
     end)
 
     describe("stringify_lazy", function()
@@ -222,7 +225,10 @@ describe("variables", function()
                 },
             }
             local result = variables.stringify_lazy(tbl)
-            assert.are.equal(variables.LAZY_PLACEHOLDER, result.nested.lazy_field)
+            assert.are.equal(
+                variables.LAZY_PLACEHOLDER,
+                result.nested.lazy_field
+            )
         end)
 
         it("handles function returning lazy value", function()
@@ -244,7 +250,10 @@ describe("variables", function()
         end)
 
         it("encodes spaces in strings", function()
-            assert.are.equal("hello%20world", variables.uri_encode("hello world"))
+            assert.are.equal(
+                "hello%20world",
+                variables.uri_encode("hello world")
+            )
         end)
 
         it("encodes special characters", function()
@@ -252,7 +261,10 @@ describe("variables", function()
         end)
 
         it("does not double-encode already encoded strings", function()
-            assert.are.equal("hello%20world", variables.uri_encode("hello%20world"))
+            assert.are.equal(
+                "hello%20world",
+                variables.uri_encode("hello%20world")
+            )
         end)
 
         it("returns numbers unchanged", function()

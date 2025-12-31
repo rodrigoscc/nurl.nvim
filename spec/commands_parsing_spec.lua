@@ -333,8 +333,9 @@ describe("commands_parsing", function()
             end)
 
             it("parses single-quoted key", function()
-                local result =
-                    commands_parsing.parse_command(". headers['Content-Type']=json")
+                local result = commands_parsing.parse_command(
+                    ". headers['Content-Type']=json"
+                )
                 assert.are.same({
                     subcommand = nil,
                     arg = ".",

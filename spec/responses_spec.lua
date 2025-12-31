@@ -9,7 +9,8 @@ describe("responses", function()
                 "",
                 '{"key": "value"}',
             }
-            local stderr = { "0.1,0.2,0.3,0.4,0.5,0.6,0.7,100,50,25,10,1000,500" }
+            local stderr =
+                { "0.1,0.2,0.3,0.4,0.5,0.6,0.7,100,50,25,10,1000,500" }
 
             local result = responses.parse(stdout, stderr)
 
@@ -37,7 +38,7 @@ describe("responses", function()
         it("parses headers with colons in value", function()
             local stdout = {
                 "HTTP/1.1 200 OK",
-                "Link: <https://example.com>; rel=\"next\"",
+                'Link: <https://example.com>; rel="next"',
                 "",
                 "",
             }
@@ -45,7 +46,10 @@ describe("responses", function()
 
             local result = responses.parse(stdout, stderr)
 
-            assert.are.equal('<https://example.com>; rel="next"', result.headers["Link"])
+            assert.are.equal(
+                '<https://example.com>; rel="next"',
+                result.headers["Link"]
+            )
         end)
 
         it("parses body correctly", function()
@@ -70,7 +74,8 @@ describe("responses", function()
                 "",
                 "",
             }
-            local stderr = { "0.1,0.2,0.3,0.4,0.5,0.6,0.7,100,50,25,10,1000,500" }
+            local stderr =
+                { "0.1,0.2,0.3,0.4,0.5,0.6,0.7,100,50,25,10,1000,500" }
 
             local result = responses.parse(stdout, stderr)
 

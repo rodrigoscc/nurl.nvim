@@ -171,28 +171,32 @@ describe("requests", function()
 
     describe("extract_query", function()
         it("returns url unchanged when no query string", function()
-            local url, query = requests.extract_query("https://example.com/path")
+            local url, query =
+                requests.extract_query("https://example.com/path")
 
             assert.are.equal("https://example.com/path", url)
             assert.is_nil(query)
         end)
 
         it("extracts single query parameter", function()
-            local url, query = requests.extract_query("https://example.com?foo=bar")
+            local url, query =
+                requests.extract_query("https://example.com?foo=bar")
 
             assert.are.equal("https://example.com", url)
             assert.are.same({ foo = "bar" }, query)
         end)
 
         it("extracts multiple query parameters", function()
-            local url, query = requests.extract_query("https://example.com?a=1&b=2&c=3")
+            local url, query =
+                requests.extract_query("https://example.com?a=1&b=2&c=3")
 
             assert.are.equal("https://example.com", url)
             assert.are.same({ a = "1", b = "2", c = "3" }, query)
         end)
 
         it("collects repeated query parameters into list", function()
-            local url, query = requests.extract_query("https://example.com?id=1&id=2&id=3")
+            local url, query =
+                requests.extract_query("https://example.com?id=1&id=2&id=3")
 
             assert.are.equal("https://example.com", url)
             assert.are.same({ id = { "1", "2", "3" } }, query)
@@ -346,27 +350,30 @@ describe("requests", function()
             assert.is_true(vim.tbl_contains(query_flags, "limit=10"))
         end)
 
-        it("expands repeated query params to multiple --url-query flags", function()
-            local request = {
-                url = "https://example.com",
-                method = "GET",
-                headers = {},
-                query = { id = { "1", "2", "3" } },
-            }
-            local curl = requests.build_curl(request)
+        it(
+            "expands repeated query params to multiple --url-query flags",
+            function()
+                local request = {
+                    url = "https://example.com",
+                    method = "GET",
+                    headers = {},
+                    query = { id = { "1", "2", "3" } },
+                }
+                local curl = requests.build_curl(request)
 
-            local query_flags = {}
-            for i, arg in ipairs(curl.args) do
-                if arg == "--url-query" then
-                    table.insert(query_flags, curl.args[i + 1])
+                local query_flags = {}
+                for i, arg in ipairs(curl.args) do
+                    if arg == "--url-query" then
+                        table.insert(query_flags, curl.args[i + 1])
+                    end
                 end
-            end
 
-            assert.are.equal(3, #query_flags)
-            assert.is_true(vim.tbl_contains(query_flags, "id=1"))
-            assert.is_true(vim.tbl_contains(query_flags, "id=2"))
-            assert.is_true(vim.tbl_contains(query_flags, "id=3"))
-        end)
+                assert.are.equal(3, #query_flags)
+                assert.is_true(vim.tbl_contains(query_flags, "id=1"))
+                assert.is_true(vim.tbl_contains(query_flags, "id=2"))
+                assert.is_true(vim.tbl_contains(query_flags, "id=3"))
+            end
+        )
 
         it("handles nil query", function()
             local request = {
