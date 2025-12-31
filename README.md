@@ -328,7 +328,7 @@ All assertions accept an optional message as the last argument.
 
 The test buffer displays results in busted-style format:
 
-```
+```text
 3 successes / 1 failure / 0 errors
 
 Failure
