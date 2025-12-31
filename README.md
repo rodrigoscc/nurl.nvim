@@ -13,6 +13,7 @@ HTTP client for Neovim. Requests in pure Lua. Programmable, composable, extensib
 - [Commands](#commands)
 - [Request Format](#request-format)
 - [Environments](#environments)
+- [Tests](#tests)
 - [Hooks and Callbacks](#hooks-and-callbacks)
 - [Type Reference](#type-reference)
 - [API](#api)
@@ -190,6 +191,11 @@ return {
             next()
         end,
         post_hook = function(out) end,
+
+        -- Test function (optional)
+        test = function(ctx, response)
+            ctx.are.equal(200, response.status_code)
+        end,
     },
 }
 ```
@@ -277,6 +283,66 @@ return {
 By default, all functions operate on the active environment. Pass an optional `env` argument to target a specific environment instead.
 
 Switch the active environment with `:Nurl env`.
+
+## Tests
+
+Define assertions to validate responses. Results are displayed in the Test buffer tab.
+
+```lua
+return {
+    {
+        url = "https://api.example.com/users/1",
+        test = function(ctx, response)
+            ctx.are.equal(200, response.status_code)
+
+            local body = vim.json.decode(response.body)
+
+            ctx.test("user data", function()
+                ctx.is_not_nil(body.id)
+                ctx.are.equal("John", body.name, "name should be John")
+                ctx.are.same({ city = "New York" }, body.address)
+            end)
+        end,
+    },
+}
+```
+
+### Available Assertions
+
+| Assertion | Description |
+|-----------|-------------|
+| `ctx.are.equal(expected, actual, msg?)` | Strict equality (`==`) |
+| `ctx.are.same(expected, actual, msg?)` | Deep equality for tables |
+| `ctx.are_not.equal(expected, actual, msg?)` | Not equal |
+| `ctx.are_not.same(expected, actual, msg?)` | Not deeply equal |
+| `ctx.is_true(value, msg?)` | Value is `true` |
+| `ctx.is_false(value, msg?)` | Value is `false` |
+| `ctx.truthy(value, msg?)` | Value is truthy (not `nil` and not `false`) |
+| `ctx.falsy(value, msg?)` | Value is falsy (`nil` or `false`) |
+| `ctx.is_nil(value, msg?)` | Value is `nil` |
+| `ctx.is_not_nil(value, msg?)` | Value is not `nil` |
+
+All assertions accept an optional message as the last argument.
+
+### Test Output
+
+The test buffer displays results in busted-style format:
+
+```
+3 successes / 1 failure / 0 errors
+
+Failure
+user data address
+city should match
+Passed in: "Los Angeles"
+Expected: "New York"
+```
+
+- **Successes**: Passing assertions (not shown individually)
+- **Failures**: Assertion mismatches with expected vs actual values
+- **Errors**: Exceptions thrown during test execution
+
+The test tab indicator in the winbar turns red when any test fails.
 
 ## Hooks and Callbacks
 
@@ -435,6 +501,7 @@ The expanded request object (all functions resolved):
 ---@field curl_args? string[]        Extra curl flags
 ---@field pre_hook? fun(next: fun(), input: nurl.RequestInput)
 ---@field post_hook? fun(out: nurl.RequestOut)
+---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
 ```
 
 ### nurl.RequestInput
@@ -613,6 +680,16 @@ require("nurl").setup({
                 q = "close",
             },
         },
+        {
+            "test",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
+            },
+        },
     },
 
     highlight = {
@@ -673,6 +750,13 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 | `NurlInfoStatusRedirect` | 3xx status codes |
 | `NurlInfoStatusClientError` | 4xx status codes |
 | `NurlInfoStatusServerError` | 5xx status codes |
+| `NurlTestPass` | Passing test count |
+| `NurlTestFail` | Failing test count and "Failure" header |
+| `NurlTestError` | Error count and "Error" header |
+| `NurlTestLabel` | "Passed in:" and "Expected:" labels |
+| `NurlTestValueActual` | Actual values (diff delete style) |
+| `NurlTestValueExpected` | Expected values (diff add style) |
+| `NurlTestSuiteName` | Test suite breadcrumb |
 
 ## Recipes
 
