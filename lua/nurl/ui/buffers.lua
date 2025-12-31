@@ -2,6 +2,7 @@ local actions = require("nurl.actions")
 local config = require("nurl.config")
 local responses = require("nurl.responses")
 local info_buffer = require("nurl.ui.info_buffer")
+local test_buffer = require("nurl.ui.test_buffer")
 
 local M = {}
 
@@ -11,6 +12,7 @@ M.Buffer = {
     Headers = "headers",
     Info = "info",
     Raw = "raw",
+    Test = "test",
 }
 
 ---@class nurl.BufferAction
@@ -27,6 +29,7 @@ M.Buffer = {
 ---@field curl nurl.Curl
 ---@field buffers table<nurl.BufferType, integer>
 ---@field response? nurl.Response
+---@field has_test_failures boolean
 
 ---@param action string|nurl.BufferAction
 ---@return fun()
@@ -161,12 +164,19 @@ local function populate_info_buffer(bufnr, request, response, curl)
     info_buffer.render(bufnr, request, response, curl)
 end
 
+---@param bufnr integer
+---@param test_report? nurl.TestReport
+local function populate_test_buffer(bufnr, test_report)
+    test_buffer.render(bufnr, test_report)
+end
+
 ---@param buffer nurl.Buffer
 ---@param request nurl.Request
----@param response nurl.Response | nil
+---@param response? nurl.Response
 ---@param curl nurl.Curl
+---@param test_report? nurl.TestReport
 ---@return integer bufnr the created buffer number
-function M.create_buffer(buffer, request, response, curl)
+function M.create_buffer(buffer, request, response, curl, test_report)
     local buf = vim.api.nvim_create_buf(true, true)
 
     local type = buffer[1]
@@ -183,6 +193,10 @@ function M.create_buffer(buffer, request, response, curl)
         if response ~= nil then
             populate_info_buffer(buf, request, response, curl)
         end
+    elseif type == "test" then
+        if response ~= nil then
+            populate_test_buffer(buf, test_report)
+        end
     elseif type == "raw" then
         populate_raw_buffer(buf, curl)
     end
@@ -198,9 +212,10 @@ end
 ---@param bufnr integer
 ---@param buffer nurl.Buffer
 ---@param request nurl.Request
----@param response nurl.Response | nil
+---@param response? nurl.Response
 ---@param curl nurl.Curl
-function M.update_buffer(bufnr, buffer, request, response, curl)
+---@param test_report? nurl.TestReport
+function M.update_buffer(bufnr, buffer, request, response, curl, test_report)
     if buffer[1] == "body" then
         if response ~= nil then
             populate_body_buffer(bufnr, response)
@@ -212,6 +227,10 @@ function M.update_buffer(bufnr, buffer, request, response, curl)
     elseif buffer[1] == "info" then
         if response ~= nil then
             populate_info_buffer(bufnr, request, response, curl)
+        end
+    elseif buffer[1] == "test" then
+        if response ~= nil then
+            populate_test_buffer(bufnr, test_report)
         end
     elseif buffer[1] == "raw" then
         populate_raw_buffer(bufnr, curl)
@@ -226,18 +245,23 @@ function M.update_buffer(bufnr, buffer, request, response, curl)
 end
 
 ---@param request nurl.Request
----@param response nurl.Response | nil
+---@param response? nurl.Response
 ---@param curl nurl.Curl
+---@param test_report? nurl.TestReport
 ---@return table<nurl.BufferType, integer>
-function M.create(request, response, curl)
+function M.create(request, response, curl, test_report)
     ---@type table<nurl.BufferType, integer>
     local buffers = {}
 
     for _, buffer in ipairs(config.buffers) do
-        local buf = M.create_buffer(buffer, request, response, curl)
+        local buf =
+            M.create_buffer(buffer, request, response, curl, test_report)
         local type = buffer[1]
         buffers[type] = buf
     end
+
+    local has_test_failures = test_report and test_report:has_failures()
+        or false
 
     for type, bufnr in pairs(buffers) do
         vim.b[bufnr].nurl_data = {
@@ -246,6 +270,7 @@ function M.create(request, response, curl)
             curl = curl,
             buffers = buffers,
             buffer_type = type,
+            has_test_failures = has_test_failures,
         }
     end
 
@@ -253,15 +278,19 @@ function M.create(request, response, curl)
 end
 
 ---@param request nurl.Request
----@param response nurl.Response | nil
+---@param response? nurl.Response
 ---@param curl nurl.Curl
+---@param test_report? nurl.TestReport
 ---@param buffers table<nurl.BufferType, integer>
-function M.update(request, response, curl, buffers)
+function M.update(request, response, curl, test_report, buffers)
     for _, buffer in ipairs(config.buffers) do
         local type = buffer[1]
         local bufnr = buffers[type]
-        M.update_buffer(bufnr, buffer, request, response, curl)
+        M.update_buffer(bufnr, buffer, request, response, curl, test_report)
     end
+
+    local has_test_failures = test_report and test_report:has_failures()
+        or false
 
     for type, bufnr in pairs(buffers) do
         vim.b[bufnr].nurl_data = {
@@ -270,6 +299,7 @@ function M.update(request, response, curl, buffers)
             curl = curl,
             buffers = buffers,
             buffer_type = type,
+            has_test_failures = has_test_failures,
         }
     end
 end

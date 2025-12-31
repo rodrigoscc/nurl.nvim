@@ -67,6 +67,16 @@ local defaults = {
                 q = "close",
             },
         },
+        {
+            "test",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
+            },
+        },
     },
     highlight = {
         groups = {
@@ -99,6 +109,15 @@ local defaults = {
             info_status_redirect = "NurlInfoStatusRedirect",
             info_status_client_error = "NurlInfoStatusClientError",
             info_status_server_error = "NurlInfoStatusServerError",
+
+            test_pass = "NurlTestPass",
+            test_fail = "NurlTestFail",
+            test_error = "NurlTestError",
+            test_label = "NurlTestLabel",
+            test_value_actual = "NurlTestValueActual",
+            test_value_expected = "NurlTestValueExpected",
+            test_suite_name = "NurlTestSuiteName",
+            test_separator = "NurlTestSeparator",
         },
     },
     ---@type table<string, nurl.ResponseFormatter>

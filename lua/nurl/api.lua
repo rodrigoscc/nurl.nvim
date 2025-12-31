@@ -11,6 +11,8 @@ local pickers = require("nurl.pickers")
 local variables = require("nurl.variables")
 local override = require("nurl.override")
 local util = require("nurl.util")
+local TestReport = require("nurl.test.report")
+local ctx = require("nurl.test.ctx")
 
 local M = {}
 
@@ -67,7 +69,7 @@ function M.send(request, opts)
         M.last_request_wins:push(win or vim.NIL)
 
         local function default_on_complete(out)
-            response_window:update(out.response, out.curl)
+            response_window:update(out.response, out.curl, out.test_report)
         end
 
         curl:run(function(system_completed)
@@ -94,6 +96,7 @@ function M.send(request, opts)
                     response = response,
                     curl = curl,
                     win = win,
+                    test_report = nil,
                 }
 
                 if expanded_request.post_hook ~= nil then
@@ -117,6 +120,15 @@ function M.send(request, opts)
                             "Environment post hook failed: " .. result,
                             vim.log.levels.ERROR
                         )
+                    end
+                end
+
+                if request.test and response then
+                    out.test_report = TestReport:new()
+                    local test_ctx = ctx.build_ctx(out.test_report)
+                    local ok, err = pcall(request.test, test_ctx, response)
+                    if not ok then
+                        out.test_report:error(err)
                     end
                 end
 
@@ -149,7 +161,7 @@ function M.send(request, opts)
 
         if response_window ~= nil then
             -- Update to add the curl PID
-            response_window:update(nil, curl)
+            response_window:update(nil, curl, nil)
         end
     end
 

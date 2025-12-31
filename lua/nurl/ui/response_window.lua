@@ -6,8 +6,9 @@ local config = require("nurl.config")
 ---@class nurl.ResponseWindow
 ---@field win integer | nil
 ---@field request nurl.Request
----@field response? nurl.Response | nil
+---@field response? nurl.Response
 ---@field curl nurl.Curl
+---@field test_report? nurl.TestReport
 ---@field elapsed_time nurl.ElapsedTimeFloating | nil
 ---@field buffers table<nurl.BufferType, integer> | nil
 local ResponseWindow = {}
@@ -26,7 +27,8 @@ end
 function ResponseWindow:open(opts)
     opts = opts or {}
 
-    self.buffers = buffers.create(self.request, self.response, self.curl)
+    self.buffers =
+        buffers.create(self.request, self.response, self.curl, self.test_report)
 
     assert(#config.buffers > 0, "Must configure at least one response buffer")
     local first_buffer_type = config.buffers[1][1]
@@ -85,14 +87,14 @@ function ResponseWindow:open(opts)
     return self.win
 end
 
-function ResponseWindow:update(response, curl)
+function ResponseWindow:update(response, curl, test_report)
     local curl_completed = curl.result ~= nil
     if curl_completed and self.elapsed_time ~= nil then
         self.elapsed_time:stop()
     end
 
     assert(self.buffers ~= nil, "Buffers must already exist")
-    buffers.update(self.request, response, curl, self.buffers)
+    buffers.update(self.request, response, curl, test_report, self.buffers)
     vim.cmd.redrawstatus() -- make sure the winbar updates
 
     local curl_failed = curl_completed and curl.result.code ~= 0

@@ -81,35 +81,48 @@ function M.time()
     return ""
 end
 
+---@param buffer_name string
+---@param has_test_failures boolean
+---@return string
+local function get_active_tab_highlight(buffer_name, has_test_failures)
+    if buffer_name == "test" and has_test_failures then
+        return config.highlight.groups.winbar_error_status_code
+    end
+
+    return config.highlight.groups.winbar_tab_active
+end
+
+---@param buffer_name string
+---@param has_test_failures boolean
+---@return string
+local function get_inactive_tab_highlight(buffer_name, has_test_failures)
+    if buffer_name == "test" and has_test_failures then
+        return config.highlight.groups.winbar_error_status_code
+    end
+
+    return config.highlight.groups.winbar_tab_inactive
+end
+
 function M.tabs()
     local buffer_type = vim.b[0].nurl_data.buffer_type
     local active_name = strings.title(buffer_type)
+    local has_test_failures = vim.b[0].nurl_data.has_test_failures
 
     local dots = {}
     for _, buffer in ipairs(config.buffers) do
         local is_active = buffer[1] == buffer_type
         if is_active then
-            table.insert(
-                dots,
-                string.format(
-                    "%%#%s#●%%*",
-                    config.highlight.groups.winbar_tab_active
-                )
-            )
+            local hl = get_active_tab_highlight(buffer[1], has_test_failures)
+            table.insert(dots, string.format("%%#%s#●%%*", hl))
         else
-            table.insert(
-                dots,
-                string.format(
-                    "%%#%s#○%%*",
-                    config.highlight.groups.winbar_tab_inactive
-                )
-            )
+            local hl = get_inactive_tab_highlight(buffer[1], has_test_failures)
+            table.insert(dots, string.format("%%#%s#○%%*", hl))
         end
     end
 
     return string.format(
         "%%#%s#%s%%* %s",
-        config.highlight.groups.winbar_tab_active,
+        get_active_tab_highlight(buffer_type, has_test_failures),
         active_name,
         table.concat(dots, " ")
     )

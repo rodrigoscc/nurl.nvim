@@ -30,6 +30,15 @@ M.highlights = {
     NurlInfoStatusRedirect = "DiagnosticInfo",
     NurlInfoStatusClientError = "DiagnosticError",
     NurlInfoStatusServerError = "DiagnosticError",
+
+    NurlTestPass = "DiagnosticOk",
+    NurlTestFail = "DiagnosticError",
+    NurlTestError = "Exception",
+    NurlTestLabel = "Comment",
+    NurlTestValueActual = "DiffDelete",
+    NurlTestValueExpected = "DiffAdd",
+    NurlTestSuiteName = "@markup.strong",
+    NurlTestSeparator = "NonText",
 }
 
 function M.setup_highlights()

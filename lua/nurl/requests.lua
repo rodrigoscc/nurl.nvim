@@ -9,6 +9,7 @@ local tables = require("nurl.utils.tables")
 ---@field curl nurl.Curl
 ---@field request nurl.Request
 ---@field response? nurl.Response
+---@field test_report? nurl.TestReport
 ---@field win? integer
 
 ---@class nurl.Request
@@ -23,6 +24,7 @@ local tables = require("nurl.utils.tables")
 ---@field curl_args? string[]
 ---@field pre_hook? fun(next: fun(), input: nurl.RequestInput) | nil
 ---@field post_hook? fun(out: nurl.RequestOut) | nil
+---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
 
 ---@class nurl.SuperRequest
 ---@field [1]? string
@@ -37,6 +39,7 @@ local tables = require("nurl.utils.tables")
 ---@field curl_args? string[] | fun(): string[]
 ---@field pre_hook? fun(next: fun(), input: nurl.RequestInput) | nil
 ---@field post_hook? fun(out: nurl.RequestOut) | nil
+---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
 
 local M = {}
 
@@ -165,6 +168,7 @@ function M.expand(request, opts)
         curl_args = curl_args,
         pre_hook = request.pre_hook,
         post_hook = request.post_hook,
+        test = request.test,
     }
 
     return req
@@ -227,6 +231,7 @@ function M.stringify_lazy(request)
         curl_args = curl_args,
         pre_hook = request.pre_hook,
         post_hook = request.post_hook,
+        test = request.test,
     }
 
     return req
