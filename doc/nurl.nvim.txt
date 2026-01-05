@@ -1,4 +1,4 @@
-*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2025 December 31
+*nurl.nvim.txt*        For Neovim >= 0.10.0       Last change: 2026 January 05
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -538,6 +538,17 @@ Reuse an existing response window instead of opening a new one:
 <
 
 Useful for updating a response in place, like when resending a request.
+
+
+FOCUS_BUFFER OPTION        *nurl.nvim-hooks-and-callbacks-focus_buffer-option*
+
+Open a specific tab when displaying the response:
+
+>lua
+    Nurl.send(request, {
+        focus_buffer = "test",
+    })
+<
 
 
 ==============================================================================
