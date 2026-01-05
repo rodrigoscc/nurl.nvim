@@ -19,6 +19,23 @@ describe("responses", function()
             assert.are.equal("OK", result.reason_phrase)
         end)
 
+        it("parses status line with long status phrase", function()
+            local stdout = {
+                "HTTP/1.1 503 Service Unavailable",
+                "Content-Type: application/json",
+                "",
+                '{"key": "value"}',
+            }
+            local stderr =
+                { "0.1,0.2,0.3,0.4,0.5,0.6,0.7,100,50,25,10,1000,500" }
+
+            local result = responses.parse(stdout, stderr)
+
+            assert.are.equal("HTTP/1.1", result.protocol)
+            assert.are.equal(503, result.status_code)
+            assert.are.equal("Service Unavailable", result.reason_phrase)
+        end)
+
         it("parses headers correctly", function()
             local stdout = {
                 "HTTP/1.1 200 OK",

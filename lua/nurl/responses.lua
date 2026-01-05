@@ -55,8 +55,11 @@ end
 ---@param line string request line
 ---@return string, number, string
 local function parse_start_line(line)
-    local protocol, status_code_str, reason_phrase =
-        unpack(vim.split(line, " "))
+    local splits = vim.split(line, " ")
+
+    local protocol = splits[1]
+    local status_code_str = splits[2]
+    local reason_phrase = table.concat(splits, " ", 3)
 
     local status_code = tonumber(status_code_str)
     if status_code == nil then
