@@ -30,8 +30,9 @@ M.last_requests = Stack:new(5)
 M.last_request_wins = Stack:new(5)
 
 ---@class nurl.RequestOpts
----@field win? integer | nil
----@field on_complete? fun(out: nurl.RequestOut) | nil
+---@field win? integer
+---@field focus_buffer? nurl.BufferType
+---@field on_complete? fun(out: nurl.RequestOut)
 
 ---@param request nurl.SuperRequest | nurl.Request
 ---@param opts? nurl.RequestOpts | nil
@@ -62,7 +63,7 @@ function M.send(request, opts)
                 request = expanded_request,
                 curl = curl,
             })
-            win = response_window:open()
+            win = response_window:open({ focus_buffer = opts.focus_buffer })
         end
 
         -- Push vim.NIL in case no window was opened

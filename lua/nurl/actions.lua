@@ -97,10 +97,12 @@ M.builtin = {
     rerun = function(_)
         return function()
             local nurl = require("nurl")
-            nurl.send(
-                vim.b.nurl_data.request,
-                { win = vim.api.nvim_get_current_win() }
-            )
+            nurl.send(vim.b.nurl_data.request, {
+                win = vim.api.nvim_get_current_win(),
+                -- Focus the active buffer after resending request.
+                -- Useful to run tests again.
+                focus_buffer = vim.b.nurl_data.buffer_type,
+            })
         end
     end,
     ---@param opts? table

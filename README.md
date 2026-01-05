@@ -482,6 +482,16 @@ Nurl.send(request, {
 
 Useful for updating a response in place, like when resending a request.
 
+### focus_buffer Option
+
+Open a specific tab when displaying the response:
+
+```lua
+Nurl.send(request, {
+    focus_buffer = "test",
+})
+```
+
 ## Type Reference
 
 ### nurl.Request

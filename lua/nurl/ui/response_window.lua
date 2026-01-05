@@ -22,6 +22,7 @@ end
 
 ---@class ResponseWindowOpts
 ---@field enter? boolean
+---@field focus_buffer? nurl.BufferType
 
 ---@param opts? ResponseWindowOpts
 function ResponseWindow:open(opts)
@@ -31,13 +32,14 @@ function ResponseWindow:open(opts)
         buffers.create(self.request, self.response, self.curl, self.test_report)
 
     assert(#config.buffers > 0, "Must configure at least one response buffer")
-    local first_buffer_type = config.buffers[1][1]
+
+    local focus_buffer = opts.focus_buffer or config.buffers[1][1]
 
     if self.win ~= nil and vim.api.nvim_win_is_valid(self.win) then
-        vim.api.nvim_win_set_buf(self.win, self.buffers[first_buffer_type])
+        vim.api.nvim_win_set_buf(self.win, self.buffers[focus_buffer])
     else
         self.win = vim.api.nvim_open_win(
-            self.buffers[first_buffer_type],
+            self.buffers[focus_buffer],
             false,
             config.win_config
         )
