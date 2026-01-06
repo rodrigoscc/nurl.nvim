@@ -193,13 +193,19 @@ function M.resend_last_request(index, overrides)
     end
 
     local win = M.last_request_wins:get(index)
-    if win == vim.NIL then -- vim.NIL is pushed when no window was opened
+    if win == vim.NIL or not vim.api.nvim_win_is_valid(win) then -- vim.NIL is pushed when no window was opened
         win = nil
+    end
+
+    local focus_buffer = nil
+    if win ~= nil then
+        local buf = vim.api.nvim_win_get_buf(win)
+        focus_buffer = vim.b[buf].nurl_data.buffer_type
     end
 
     request = override(request, overrides)
     -- TODO: previous on_complete won't be passed
-    M.send(request, { win = win })
+    M.send(request, { win = win, focus_buffer = focus_buffer })
 end
 
 function M.pick_resend(overrides)
