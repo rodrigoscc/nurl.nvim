@@ -256,11 +256,12 @@ describe("http", function()
                 status_code = 200,
                 reason_phrase = "OK",
                 headers = {},
+                body = "",
             }
 
             local result = http.response_to_http_message(response)
 
-            assert.are.same({ "HTTP/1.1 200 OK" }, result)
+            assert.are.same({ "HTTP/1.1 200 OK", "", "" }, result)
         end)
 
         it("formats response without reason phrase", function()
@@ -269,11 +270,12 @@ describe("http", function()
                 status_code = 204,
                 reason_phrase = "",
                 headers = {},
+                body = "",
             }
 
             local result = http.response_to_http_message(response)
 
-            assert.are.same({ "HTTP/1.1 204" }, result)
+            assert.are.same({ "HTTP/1.1 204", "", "" }, result)
         end)
 
         it("formats response with headers", function()
@@ -284,6 +286,7 @@ describe("http", function()
                 headers = {
                     ["Content-Type"] = "text/plain",
                 },
+                body = "",
             }
 
             local result = http.response_to_http_message(response)
