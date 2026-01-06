@@ -127,19 +127,19 @@ function M.response_to_http_message(response)
         table.insert(lines, name .. ": " .. value)
     end
 
-    if response.body ~= nil then
+    if response.body_file then
+        table.insert(lines, "") -- separation line
+        table.insert(
+            lines,
+            "[Body saved to file: " .. response.body_file .. "]"
+        )
+    else
         table.insert(lines, "") -- separation line
 
         local body = format_body(response.body, response.headers)
         local body_lines = vim.split(body, "\n")
 
         vim.list_extend(lines, body_lines)
-    elseif response.body_file then
-        table.insert(lines, "") -- separation line
-        table.insert(
-            lines,
-            "[Body saved to file: " .. response.body_file .. "]"
-        )
     end
 
     return lines
