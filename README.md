@@ -390,8 +390,7 @@ Hooks let you run code before/after requests. They can be defined per-request or
                               |
                               v
                     +-----------------------+
-                    | Response is displayed |
-                    | or on_complete func   |
+                    |   Callback executes   |
                     +-----------------------+
 ```
 
@@ -452,45 +451,45 @@ return {
 }
 ```
 
-### on_complete Callback
+### Callback
 
-Used with `Nurl.send()` for programmatic requests:
+Used with `Nurl.send()` for programmatic requests. The callback can be passed as the second or third argument:
 
 ```lua
-Nurl.send(request, {
-    ---@param out nurl.RequestOut
-    on_complete = function(out)
-        if out.response then
-            local body = vim.json.decode(out.response.body)
-            Nurl.env.set("token", body.access_token)
-        end
-    end,
-})
+-- Callback as second argument
+Nurl.send(request, function(out)
+    if out.response then
+        local body = vim.json.decode(out.response.body)
+        Nurl.env.set("token", body.access_token)
+    end
+end)
+
+-- Callback as third argument (with opts)
+Nurl.send(request, { display = true }, function(out)
+    print("Status: " .. out.response.status_code)
+end)
 ```
 
-The response window won't be opened if `on_complete` is defined.
+The response window is only opened if `display` is set in opts.
 
-### win Option
+### display Option
 
-Reuse an existing response window instead of opening a new one:
+Control the response window display. Can be `true` (show with defaults), `false` (don't show), or an options table:
 
 ```lua
+-- Show response window with defaults
+Nurl.send(request, { display = true })
+
+-- Show response window with options
 Nurl.send(request, {
-    win = existing_win_id,
+    display = {
+        win = existing_win_id, -- Reuse existing window
+        focus_buffer = "test", -- Open specific tab (body, headers, info, raw, test)
+    },
 })
 ```
 
 Useful for updating a response in place, like when resending a request.
-
-### focus_buffer Option
-
-Open a specific tab when displaying the response:
-
-```lua
-Nurl.send(request, {
-    focus_buffer = "test",
-})
-```
 
 ## Type Reference
 
@@ -525,7 +524,7 @@ Passed to `pre_hook`:
 
 ### nurl.RequestOut
 
-Passed to `post_hook` and `on_complete`:
+Passed to `post_hook` and `callback`:
 
 ```lua
 ---@class nurl.RequestOut
@@ -583,9 +582,8 @@ Curl execution details:
 local Nurl = require("nurl")
 
 -- Send a request programmatically
-Nurl.send(request, {
-    on_complete = function(out) end, -- optional callback
-})
+Nurl.send(request, opts?, callback?)
+Nurl.send(request, callback?) -- opts can be omitted
 
 -- Resend from history
 Nurl.resend_last_request() -- resend last
@@ -832,22 +830,20 @@ return {
                     grant_type = "refresh_token",
                     refresh_token = env.get("refresh_token"),
                 },
-            }, {
-                on_complete = function(out)
-                    if out.response and out.response.status_code == 200 then
-                        local body = vim.json.decode(out.response.body)
-                        env.set("access_token", body.access_token)
-                        env.set("expires_at", os.time() + body.expires_in)
+            }, function(out)
+                if out.response and out.response.status_code == 200 then
+                    local body = vim.json.decode(out.response.body)
+                    env.set("access_token", body.access_token)
+                    env.set("expires_at", os.time() + body.expires_in)
 
-                        -- This request has already been expanded before the pre_hook,
-                        -- so we need to update the header here so that it reflects the
-                        -- above changes.
-                        input.request.headers["Authorization"] = "Bearer "
-                            .. body.access_token
-                        next()
-                    end
-                end,
-            })
+                    -- This request has already been expanded before the pre_hook,
+                    -- so we need to update the header here so that it reflects the
+                    -- above changes.
+                    input.request.headers["Authorization"] = "Bearer "
+                        .. body.access_token
+                    next()
+                end
+            end)
         end,
     },
 }
