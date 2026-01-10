@@ -29,19 +29,32 @@ M.last_requests = Stack:new(5)
 ---@type nurl.Stack
 M.last_request_wins = Stack:new(5)
 
----@class nurl.RequestOpts
----@field win? integer
+---@class nurl.SendDisplayOpts
+---@field win? integer Reuse existing window
 ---@field focus_buffer? nurl.BufferType
----@field on_complete? fun(out: nurl.RequestOut)
+
+---@class nurl.SendOpts
+---@field display? nurl.SendDisplayOpts|boolean Show UI (default: false)
 
 ---@param request nurl.SuperRequest | nurl.Request
----@param opts? nurl.RequestOpts | nil
-function M.send(request, opts)
-    opts = opts or {}
+---@param opts_or_callback? nurl.SendOpts | fun(out: nurl.RequestOut)
+---@param callback? fun(out: nurl.RequestOut)
+function M.send(request, opts_or_callback, callback)
+    local opts = {}
+
+    if type(opts_or_callback) == "function" then
+        callback = opts_or_callback
+    elseif type(opts_or_callback) == "table" then
+        opts = opts_or_callback
+    end
 
     local response_window
 
-    local win = opts.win
+    if opts.display ~= nil and opts.display == true then
+        opts.display = {}
+    end
+
+    local win = nil
 
     local expanded_request = requests.expand(request)
 
@@ -56,22 +69,19 @@ function M.send(request, opts)
 
         local curl = requests.build_curl(expanded_request)
 
-        local should_prepare_response_ui = opts.on_complete == nil
-        if should_prepare_response_ui then
+        if opts.display then
             response_window = ResponseWindow:new({
-                win = win,
+                win = opts.display.win,
                 request = expanded_request,
                 curl = curl,
             })
-            win = response_window:open({ focus_buffer = opts.focus_buffer })
+            win = response_window:open({
+                focus_buffer = opts.display.focus_buffer,
+            })
         end
 
         -- Push vim.NIL in case no window was opened
         M.last_request_wins:push(win or vim.NIL)
-
-        local function default_on_complete(out)
-            response_window:update(out.response, out.curl, out.test_report)
-        end
 
         curl:run(function(system_completed)
             local stdout = vim.split(system_completed.stdout, "\n")
@@ -133,10 +143,16 @@ function M.send(request, opts)
                     end
                 end
 
-                if opts.on_complete then
-                    opts.on_complete(out)
-                else
-                    default_on_complete(out)
+                if callback then
+                    callback(out)
+                end
+
+                if opts.display then
+                    response_window:update(
+                        out.response,
+                        out.curl,
+                        out.test_report
+                    )
                 end
 
                 local request_was_sent = response ~= nil
@@ -160,7 +176,7 @@ function M.send(request, opts)
             end)
         end)
 
-        if response_window ~= nil then
+        if opts.display then
             -- Update to add the curl PID
             response_window:update(nil, curl, nil)
         end
@@ -205,7 +221,7 @@ function M.resend_last_request(index, overrides)
 
     request = override(request, overrides)
     -- TODO: previous on_complete won't be passed
-    M.send(request, { win = win, focus_buffer = focus_buffer })
+    M.send(request, { display = { win = win, focus_buffer = focus_buffer } })
 end
 
 function M.pick_resend(overrides)
@@ -220,7 +236,7 @@ function M.pick_resend(overrides)
 
     pickers.pick_request("Nurl: resend", recent_requests, function(request)
         request = override(request, overrides)
-        M.send(request)
+        M.send(request, { display = true })
     end)
 end
 
@@ -233,7 +249,7 @@ function M.send_project_request(overrides)
         project_requests,
         function(item)
             local request = override(item.request, overrides)
-            M.send(request)
+            M.send(request, { display = true })
         end
     )
 end
@@ -245,11 +261,11 @@ function M.send_file_request(filepath, overrides)
     local file_requests = dofile(filepath)
     if #file_requests == 1 then
         local request = override(file_requests[1], overrides)
-        M.send(request)
+        M.send(request, { display = true })
     else
         pickers.pick_request("Nurl: send", file_requests, function(request)
             request = override(request, overrides)
-            M.send(request)
+            M.send(request, { display = true })
         end)
     end
 end
@@ -293,7 +309,10 @@ function M.send_request_at_cursor(overrides)
     if at_nurl_buffer then
         local buffer_request = vim.b.nurl_data.request
         buffer_request = override(buffer_request, overrides)
-        M.send(buffer_request, { win = vim.api.nvim_get_current_win() })
+        M.send(
+            buffer_request,
+            { display = { win = vim.api.nvim_get_current_win() } }
+        )
     else
         local cursor_row, cursor_col = unpack(vim.api.nvim_win_get_cursor(0))
 
@@ -308,7 +327,7 @@ function M.send_request_at_cursor(overrides)
 
             if request_contains_cursor then
                 local request = override(item.request, overrides)
-                M.send(request)
+                M.send(request, { display = true })
                 return
             end
         end
