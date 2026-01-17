@@ -2,11 +2,13 @@ local config = require("nurl.config")
 local strings = require("nurl.utils.strings")
 local requests = require("nurl.requests")
 local numbers = require("nurl.utils.numbers")
+local registry = require("nurl.registry")
 
 local M = {}
 
 function M.request_title()
-    local request = vim.b[0].nurl_data.request
+    local entry = registry:get(vim.b[0].nurl_data.handle_id)
+    local request = entry.handle.request
 
     local title = ""
 
@@ -27,7 +29,8 @@ function M.request_title()
 end
 
 function M.status_code()
-    local response = vim.b[0].nurl_data.response
+    local entry = registry:get(vim.b[0].nurl_data.handle_id)
+    local response = entry.handle.response
 
     if response ~= nil then
         if response.status_code <= 299 then
@@ -45,16 +48,14 @@ function M.status_code()
         end
     end
 
-    local curl = vim.b[0].nurl_data.curl
-
-    if curl.result and curl.result.code ~= 0 then
+    if entry.handle:is_failed() then
         return string.format(
             "%%#%s#󰅚 Error%%*",
             config.highlight.groups.winbar_error
         )
     end
 
-    if curl.result and curl.result.signal ~= 0 then
+    if entry.handle:is_cancelled() then
         return string.format(
             "%%#%s#󰜺 Cancelled%%*",
             config.highlight.groups.winbar_warning
@@ -68,7 +69,8 @@ function M.status_code()
 end
 
 function M.time()
-    local response = vim.b[0].nurl_data.response
+    local entry = registry:get(vim.b[0].nurl_data.handle_id)
+    local response = entry.handle.response
 
     if response ~= nil then
         return string.format(
@@ -104,9 +106,13 @@ local function get_inactive_tab_highlight(buffer_name, has_test_failures)
 end
 
 function M.tabs()
+    local entry = registry:get(vim.b[0].nurl_data.handle_id)
+
     local buffer_type = vim.b[0].nurl_data.buffer_type
     local active_name = strings.title(buffer_type)
-    local has_test_failures = vim.b[0].nurl_data.has_test_failures
+    local has_test_failures = entry.handle.test_report
+            and entry.handle.test_report:has_failures()
+        or false
 
     local dots = {}
     for _, buffer in ipairs(config.buffers) do

@@ -3,6 +3,7 @@ local config = require("nurl.config")
 local responses = require("nurl.responses")
 local info_buffer = require("nurl.ui.info_buffer")
 local test_buffer = require("nurl.ui.test_buffer")
+local registry = require("nurl.registry")
 
 local M = {}
 
@@ -157,11 +158,18 @@ local function populate_raw_buffer(bufnr, curl)
 end
 
 ---@param bufnr integer
+---@param exec_datetime string
 ---@param request nurl.Request
 ---@param response nurl.Response
 ---@param curl nurl.Curl
-local function populate_info_buffer(bufnr, request, response, curl)
-    info_buffer.render(bufnr, request, response, curl)
+local function populate_info_buffer(
+    bufnr,
+    exec_datetime,
+    request,
+    response,
+    curl
+)
+    info_buffer.render(bufnr, exec_datetime, request, response, curl)
 end
 
 ---@param bufnr integer
@@ -171,12 +179,20 @@ local function populate_test_buffer(bufnr, test_report)
 end
 
 ---@param buffer nurl.Buffer
+---@param exec_datetime string
 ---@param request nurl.Request
 ---@param response? nurl.Response
----@param curl nurl.Curl
+---@param curl? nurl.Curl
 ---@param test_report? nurl.TestReport
 ---@return integer bufnr the created buffer number
-function M.create_buffer(buffer, request, response, curl, test_report)
+local function create_buffer(
+    buffer,
+    exec_datetime,
+    request,
+    response,
+    curl,
+    test_report
+)
     local buf = vim.api.nvim_create_buf(true, true)
 
     local type = buffer[1]
@@ -191,14 +207,16 @@ function M.create_buffer(buffer, request, response, curl, test_report)
         end
     elseif type == "info" then
         if response ~= nil then
-            populate_info_buffer(buf, request, response, curl)
+            populate_info_buffer(buf, exec_datetime, request, response, curl)
         end
     elseif type == "test" then
         if response ~= nil then
             populate_test_buffer(buf, test_report)
         end
     elseif type == "raw" then
-        populate_raw_buffer(buf, curl)
+        if curl ~= nil then
+            populate_raw_buffer(buf, curl)
+        end
     end
 
     for lhs, rhs in pairs(buffer.keys) do
@@ -211,11 +229,20 @@ end
 
 ---@param bufnr integer
 ---@param buffer nurl.Buffer
+---@param exec_datetime string
 ---@param request nurl.Request
 ---@param response? nurl.Response
 ---@param curl nurl.Curl
 ---@param test_report? nurl.TestReport
-function M.update_buffer(bufnr, buffer, request, response, curl, test_report)
+local function update_buffer(
+    bufnr,
+    buffer,
+    exec_datetime,
+    request,
+    response,
+    curl,
+    test_report
+)
     if buffer[1] == "body" then
         if response ~= nil then
             populate_body_buffer(bufnr, response)
@@ -226,14 +253,16 @@ function M.update_buffer(bufnr, buffer, request, response, curl, test_report)
         end
     elseif buffer[1] == "info" then
         if response ~= nil then
-            populate_info_buffer(bufnr, request, response, curl)
+            populate_info_buffer(bufnr, exec_datetime, request, response, curl)
         end
     elseif buffer[1] == "test" then
         if response ~= nil then
             populate_test_buffer(bufnr, test_report)
         end
     elseif buffer[1] == "raw" then
-        populate_raw_buffer(bufnr, curl)
+        if curl ~= nil then
+            populate_raw_buffer(bufnr, curl)
+        end
     end
 
     for lhs, rhs in pairs(buffer.keys) do
@@ -244,63 +273,56 @@ function M.update_buffer(bufnr, buffer, request, response, curl, test_report)
     return bufnr
 end
 
----@param request nurl.Request
----@param response? nurl.Response
----@param curl nurl.Curl
----@param test_report? nurl.TestReport
+---@param handle_id integer
 ---@return table<nurl.BufferType, integer>
-function M.create(request, response, curl, test_report)
+function M.create(handle_id)
+    local entry = registry:get(handle_id)
+    local handle = entry.handle
+
     ---@type table<nurl.BufferType, integer>
     local buffers = {}
 
     for _, buffer in ipairs(config.buffers) do
-        local buf =
-            M.create_buffer(buffer, request, response, curl, test_report)
+        local buf = create_buffer(
+            buffer,
+            handle.exec_datetime,
+            handle.request,
+            handle.response,
+            handle.curl,
+            handle.test_report
+        )
         local type = buffer[1]
         buffers[type] = buf
     end
 
-    local has_test_failures = test_report and test_report:has_failures()
-        or false
-
     for type, bufnr in pairs(buffers) do
         vim.b[bufnr].nurl_data = {
-            request = request,
-            response = response,
-            curl = curl,
-            buffers = buffers,
+            handle_id = handle_id,
             buffer_type = type,
-            has_test_failures = has_test_failures,
         }
     end
 
     return buffers
 end
 
----@param request nurl.Request
----@param response? nurl.Response
----@param curl nurl.Curl
----@param test_report? nurl.TestReport
+---@param handle_id integer
 ---@param buffers table<nurl.BufferType, integer>
-function M.update(request, response, curl, test_report, buffers)
+function M.update(handle_id, buffers)
+    local entry = registry:get(handle_id)
+    local handle = entry.handle
+
     for _, buffer in ipairs(config.buffers) do
         local type = buffer[1]
         local bufnr = buffers[type]
-        M.update_buffer(bufnr, buffer, request, response, curl, test_report)
-    end
-
-    local has_test_failures = test_report and test_report:has_failures()
-        or false
-
-    for type, bufnr in pairs(buffers) do
-        vim.b[bufnr].nurl_data = {
-            request = request,
-            response = response,
-            curl = curl,
-            buffers = buffers,
-            buffer_type = type,
-            has_test_failures = has_test_failures,
-        }
+        update_buffer(
+            bufnr,
+            buffer,
+            handle.exec_datetime,
+            handle.request,
+            handle.response,
+            handle.curl,
+            handle.test_report
+        )
     end
 end
 

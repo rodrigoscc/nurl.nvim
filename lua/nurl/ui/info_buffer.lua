@@ -151,10 +151,11 @@ function InfoBufferBuilder:build()
 end
 
 ---@param bufnr integer
+---@param exec_datetime string
 ---@param request nurl.Request
 ---@param response nurl.Response
 ---@param curl nurl.Curl
-function M.render(bufnr, request, response, curl)
+function M.render(bufnr, exec_datetime, request, response, curl)
     local builder = InfoBufferBuilder:new()
 
     local base_url = requests.build_url(request.url)
@@ -162,7 +163,7 @@ function M.render(bufnr, request, response, curl)
 
     builder:section("Request")
     builder:append("       ", nil)
-    builder:append(curl.exec_datetime, "Comment")
+    builder:append(exec_datetime, "Comment")
 
     if request.title then
         builder:field(

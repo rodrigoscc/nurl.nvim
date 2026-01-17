@@ -214,7 +214,7 @@ function M.pick_request_history_item(title, history_items, on_pick)
         if entry.request.title then
             return displayer({
                 { "", "TelescopeResultsIdentifier" },
-                { entry.curl.exec_datetime, "TelescopeResultsComment" },
+                { entry.exec_datetime, "TelescopeResultsComment" },
                 { "", "TelescopeResultsFunction" },
                 { entry.request.title, "TelescopeResultsTitle" },
                 {
@@ -225,7 +225,7 @@ function M.pick_request_history_item(title, history_items, on_pick)
         else
             return displayer({
                 { "", "TelescopeResultsIdentifier" },
-                { entry.curl.exec_datetime, "TelescopeResultsComment" },
+                { entry.exec_datetime, "TelescopeResultsComment" },
                 { entry.request.method, "TelescopeResultsFunction" },
                 { requests.full_url(entry.request), "TelescopeResultsTitle" },
                 {
@@ -242,17 +242,18 @@ function M.pick_request_history_item(title, history_items, on_pick)
             finder = finders.new_table({
                 results = history_items,
                 entry_maker = function(item)
-                    local request, response, curl = unpack(item)
+                    local exec_datetime, request, response, curl = unpack(item)
                     return {
                         value = item,
                         display = make_display,
                         ordinal = requests.text(request, {
-                            prefix = curl.exec_datetime,
+                            prefix = exec_datetime,
                             suffix = response.status_code,
                         }),
                         request = request,
                         response = response,
                         curl = curl,
+                        exec_datetime = exec_datetime,
                     }
                 end,
             }),

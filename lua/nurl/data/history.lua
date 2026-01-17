@@ -5,7 +5,7 @@ local requests = require("nurl.requests")
 
 local M = {}
 
----@alias nurl.HistoryItem [nurl.Request, nurl.Response, nurl.Curl]
+---@alias nurl.HistoryItem [string, nurl.Request, nurl.Response, nurl.Curl]
 
 ---@type nurl.Db | nil
 M.db = nil
@@ -28,13 +28,18 @@ function M.setup()
     })
 end
 
----@param request nurl.Request
----@param response nurl.Response
----@param curl nurl.Curl
-function M.insert_history_entry(request, response, curl)
+---@param handle nurl.RequestHandle
+function M.insert_history_entry(handle)
     if M.db == nil then
         M.setup()
     end
+
+    local request = handle.request
+    local response = handle.response
+    local curl = handle.curl
+
+    assert(response ~= nil, "Request must be completed")
+    assert(curl ~= nil, "Request must be completed")
 
     local result = M.db:exec(
         [[INSERT INTO
@@ -114,7 +119,7 @@ VALUES
     ?
 );]],
         {
-            curl.exec_datetime,
+            handle.exec_datetime,
             vim.json.encode(request.url),
             requests.build_url(request.url),
             request.query and vim.json.encode(request.query) or vim.NIL,
@@ -329,10 +334,9 @@ ORDER BY time DESC]])
                 stdout = curl_result_stdout,
                 stderr = curl_result_stderr,
             },
-            exec_datetime = time,
         })
 
-        table.insert(history, { request, response, curl })
+        table.insert(history, { time, request, response, curl })
     end
 
     return history

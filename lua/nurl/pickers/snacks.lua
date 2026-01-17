@@ -9,12 +9,12 @@ local M = {}
 local function format_history_item(item)
     local ret = {}
 
-    local request, response, curl = unpack(item.item)
+    local exec_datetime, request, response, curl = unpack(item.item)
 
     table.insert(ret, { "", "SnacksPickerIcon" })
     table.insert(ret, { " " })
 
-    table.insert(ret, { curl.exec_datetime, "SnacksPickerComment" })
+    table.insert(ret, { exec_datetime, "SnacksPickerComment" })
     table.insert(ret, { " " })
 
     if request.title then
@@ -86,18 +86,19 @@ end
 local function history_items_to_snacks_items(history_items)
     return vim.iter(ipairs(history_items))
         :map(function(i, item)
-            local request, response, curl = unpack(item)
+            local exec_datetime, request, response, curl = unpack(item)
 
             local snacks_item = {
                 idx = i,
                 score = 1,
                 item = item,
                 text = requests.text(request, {
-                    prefix = curl.exec_datetime,
+                    prefix = exec_datetime,
                     suffix = response.status_code,
                 }),
                 response = response,
                 curl = curl,
+                exec_datetime = exec_datetime,
             }
 
             return snacks_item
@@ -240,7 +241,7 @@ function M.pick_request_history_item(title, history_items, on_pick)
             end
         end,
         preview = function(ctx)
-            local request, response = unpack(ctx.item.item)
+            local _, request, response = unpack(ctx.item.item)
             ctx.preview:set_lines(preview.render(request, response))
             ctx.preview:highlight({ ft = "http" })
         end,

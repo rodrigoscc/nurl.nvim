@@ -13,6 +13,8 @@ local override = require("nurl.override")
 local util = require("nurl.util")
 local TestReport = require("nurl.test.report")
 local ctx = require("nurl.test.ctx")
+local RequestHandle = require("nurl.request_handle")
+local registry = require("nurl.registry")
 
 local M = {}
 
@@ -24,10 +26,14 @@ M.env = environments
 
 M.util = util
 
+M.registry = registry
+
 ---@type nurl.Stack
 M.last_requests = Stack:new(5)
----@type nurl.Stack
-M.last_request_wins = Stack:new(5)
+
+---@class nurl.LastItem
+---@field request nurl.Request
+---@field win integer
 
 ---@class nurl.SendDisplayOpts
 ---@field win? integer Reuse existing window
@@ -39,6 +45,7 @@ M.last_request_wins = Stack:new(5)
 ---@param request nurl.SuperRequest | nurl.Request
 ---@param opts_or_callback? nurl.SendOpts | fun(out: nurl.RequestOut)
 ---@param callback? fun(out: nurl.RequestOut)
+---@return nurl.RequestHandle
 function M.send(request, opts_or_callback, callback)
     local opts = {}
 
@@ -64,26 +71,32 @@ function M.send(request, opts_or_callback, callback)
     ---@type nurl.RequestInput
     local input = { request = expanded_request }
 
-    local function next_function()
-        M.last_requests:push(expanded_request)
+    local handle = RequestHandle:new(expanded_request)
 
-        local curl = requests.build_curl(expanded_request)
+    ---@type nurl.RegistryEntry
+    local entry = { handle = handle }
+
+    local function next_function()
+        registry:push(entry)
 
         if opts.display then
             response_window = ResponseWindow:new({
                 win = opts.display.win,
-                request = expanded_request,
-                curl = curl,
+                handle_id = handle.id,
             })
             win = response_window:open({
                 focus_buffer = opts.display.focus_buffer,
             })
         end
 
-        -- Push vim.NIL in case no window was opened
-        M.last_request_wins:push(win or vim.NIL)
+        -- Last request feature is targetted only to resend displayed requests
+        if opts.display then
+            M.last_requests:push({ request = expanded_request, win = win })
+        end
 
-        curl:run(function(system_completed)
+        local curl = requests.build_curl(expanded_request)
+
+        local curl_handle = curl:run(function(system_completed)
             local stdout = vim.split(system_completed.stdout, "\n")
             local stderr = vim.split(system_completed.stderr, "\n")
 
@@ -91,6 +104,7 @@ function M.send(request, opts_or_callback, callback)
 
             local curl_success = system_completed.code == 0
                 and system_completed.signal == 0
+            local curl_interrupted = system_completed.signal ~= 0
 
             if curl_success then
                 response = responses.parse(stdout, stderr)
@@ -134,10 +148,11 @@ function M.send(request, opts_or_callback, callback)
                     end
                 end
 
-                if request.test and response then
+                if expanded_request.test and curl_success then
                     out.test_report = TestReport:new()
                     local test_ctx = ctx.build_ctx(out.test_report)
-                    local ok, err = pcall(request.test, test_ctx, response)
+                    local ok, err =
+                        pcall(expanded_request.test, test_ctx, response)
                     if not ok then
                         out.test_report:error(err)
                     end
@@ -147,23 +162,27 @@ function M.send(request, opts_or_callback, callback)
                     callback(out)
                 end
 
-                if opts.display then
-                    response_window:update(
-                        out.response,
-                        out.curl,
-                        out.test_report
-                    )
+                if curl_interrupted then
+                    handle:_cancelled(out.response, out.curl, out.test_report)
+                elseif curl_success then
+                    handle:_resolve(out.response, out.curl, out.test_report)
+                else
+                    handle:_failed(out.response, out.curl, out.test_report)
                 end
 
-                local request_was_sent = response ~= nil
-                    and curl.result.code == 0
+                if opts.display then
+                    response_window:update()
+                    response_window:on_buffers_unloaded(function()
+                        registry:remove(handle.id)
+                    end)
+                else
+                    registry:remove(handle.id)
+                end
+
+                local request_was_sent = curl_success
                 if request_was_sent and config.history.enabled then
-                    local status, error = pcall(
-                        history.insert_history_entry,
-                        expanded_request,
-                        response,
-                        curl
-                    )
+                    local status, error =
+                        pcall(history.insert_history_entry, handle)
                     if not status then
                         vim.notify(
                             ("Failed to save request in history: %s"):format(
@@ -176,10 +195,7 @@ function M.send(request, opts_or_callback, callback)
             end)
         end)
 
-        if opts.display then
-            -- Update to add the curl PID
-            response_window:update(nil, curl, nil)
-        end
+        handle:_started(curl_handle.pid)
     end
 
     local function env_next_function()
@@ -196,19 +212,21 @@ function M.send(request, opts_or_callback, callback)
     else
         env_pre_hook(env_next_function, input)
     end
+
+    return handle
 end
 
 function M.resend_last_request(index, overrides)
     index = index or -1
     overrides = overrides or {}
 
-    local request = M.last_requests:get(index)
-    if not request then
+    local last = M.last_requests:get(index)
+    if not last then
         vim.notify("No last request at position: " .. index)
         return
     end
 
-    local win = M.last_request_wins:get(index)
+    local win = last.win
     if win == vim.NIL or not vim.api.nvim_win_is_valid(win) then -- vim.NIL is pushed when no window was opened
         win = nil
     end
@@ -219,7 +237,7 @@ function M.resend_last_request(index, overrides)
         focus_buffer = vim.b[buf].nurl_data.buffer_type
     end
 
-    request = override(request, overrides)
+    local request = override(last.request, overrides)
     -- TODO: previous on_complete won't be passed
     M.send(request, { display = { win = win, focus_buffer = focus_buffer } })
 end
@@ -227,12 +245,16 @@ end
 function M.pick_resend(overrides)
     overrides = overrides or {}
 
-    local recent_requests = M.last_requests.items
+    local last_items = M.last_requests.items
 
-    if #recent_requests == 0 then
+    if #last_items == 0 then
         vim.notify("No recent requests to resend", vim.log.levels.WARN)
         return
     end
+
+    local recent_requests = vim.tbl_map(function(r)
+        return r.request
+    end, last_items)
 
     pickers.pick_request("Nurl: resend", recent_requests, function(request)
         request = override(request, overrides)
@@ -307,7 +329,8 @@ function M.send_request_at_cursor(overrides)
     local at_nurl_buffer = vim.b.nurl_data ~= nil
 
     if at_nurl_buffer then
-        local buffer_request = vim.b.nurl_data.request
+        local entry = registry:get(vim.b.nurl_data.handle_id)
+        local buffer_request = entry.handle.request
         buffer_request = override(buffer_request, overrides)
         M.send(
             buffer_request,
@@ -351,7 +374,8 @@ function M.yank_curl_at_cursor(overrides)
     local is_at_nurl_buffer = vim.b.nurl_data ~= nil
 
     if is_at_nurl_buffer then
-        local buffer_request = vim.b.nurl_data.request
+        local entry = registry.get(vim.b.nurl_data.handle_id)
+        local buffer_request = entry.handle.request
         buffer_request = override(buffer_request, overrides)
         yank_curl(buffer_request)
     else
@@ -443,14 +467,18 @@ function M.pick_history()
         "Nurl: history",
         history_items,
         function(item)
-            local request, response, curl = unpack(item)
+            local exec_datetime, request, response, curl = unpack(item)
 
-            local window = ResponseWindow:new({
-                request = request,
-                response = response,
-                curl = curl,
+            local item_handle =
+                RequestHandle:rebuild(exec_datetime, request, response, curl)
+
+            local entry = { handle = item_handle }
+            registry:push(entry)
+
+            local response_window = ResponseWindow:new({
+                handle_id = item_handle.id,
             })
-            window:open({ enter = true })
+            response_window:open({ enter = true })
         end
     )
 end

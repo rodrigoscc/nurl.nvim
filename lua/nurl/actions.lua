@@ -8,6 +8,7 @@ M.builtin = {
     next_buffer = function(_)
         return function()
             local config = require("nurl.config")
+            local registry = require("nurl.registry")
 
             local buffer_index = vim.iter(config.buffers)
                 :enumerate()
@@ -28,7 +29,8 @@ M.builtin = {
             local next_buffer_type = config.buffers[next_buffer_index][1]
             assert(next_buffer_type, "Next response buffer missing")
 
-            local next_buffer = vim.b.nurl_data.buffers[next_buffer_type]
+            local entry = registry:get(vim.b.nurl_data.handle_id)
+            local next_buffer = entry.buffers[next_buffer_type]
 
             if next_buffer == nil then
                 return
@@ -45,6 +47,7 @@ M.builtin = {
     previous_buffer = function(_)
         return function()
             local config = require("nurl.config")
+            local registry = require("nurl.registry")
 
             local buffer_index = vim.iter(config.buffers)
                 :enumerate()
@@ -67,8 +70,8 @@ M.builtin = {
                 config.buffers[previous_buffer_index][1]
             assert(previous_buffer_type, "Previous response buffer missing")
 
-            local previous_buffer =
-                vim.b.nurl_data.buffers[previous_buffer_type]
+            local entry = registry:get(vim.b.nurl_data.handle_id)
+            local previous_buffer = entry.buffers[previous_buffer_type]
 
             if previous_buffer == nil then
                 return
@@ -84,7 +87,10 @@ M.builtin = {
     ---@return fun()
     switch_buffer = function(opts)
         return function()
-            local new_buffer = vim.b.nurl_data.buffers[opts.buffer]
+            local registry = require("nurl.registry")
+
+            local entry = registry:get(vim.b.nurl_data.handle_id)
+            local new_buffer = entry.buffers[opts.buffer]
             if new_buffer == nil then
                 return
             end
@@ -97,7 +103,10 @@ M.builtin = {
     rerun = function(_)
         return function()
             local nurl = require("nurl")
-            nurl.send(vim.b.nurl_data.request, {
+            local registry = require("nurl.registry")
+
+            local entry = registry:get(vim.b.nurl_data.handle_id)
+            nurl.send(entry.handle.request, {
                 display = {
                     win = vim.api.nvim_get_current_win(),
                     -- Focus the active buffer after resending request.
@@ -118,25 +127,18 @@ M.builtin = {
     ---@return fun()
     cancel = function(_)
         return function()
-            local curl = vim.b.nurl_data.curl
+            local registry = require("nurl.registry")
 
-            if curl and curl.pid then
-                local code, msg = uv.kill(curl.pid, "sigterm")
-                if code ~= 0 then
-                    vim.notify(
-                        "Could not kill curl: " .. msg,
-                        vim.log.levels.ERROR
-                    )
-                end
-            else
-                vim.notify("Curl PID not available", vim.log.levels.ERROR)
-            end
+            local entry = registry:get(vim.b.nurl_data.handle_id)
+
+            entry.handle:cancel("sigterm")
         end
     end,
     ---@param opts? table
     ---@return fun()
     toggle_secondary = function(opts)
         local Buffer = require("nurl.ui.buffers").Buffer
+        local registry = require("nurl.registry")
 
         local default_opts = {
             buffer = Buffer.Info,
@@ -153,11 +155,12 @@ M.builtin = {
         local secondary_window = nil
 
         return function()
+            local entry = registry:get(vim.b.nurl_data.handle_id)
             local SecondaryWindow = require("nurl.ui.seconday_window")
 
             if secondary_window == nil then
                 secondary_window = SecondaryWindow:new({
-                    buffers = vim.b.nurl_data.buffers,
+                    buffers = entry.buffers,
                     win_config = opts.win_config,
                 })
             end
