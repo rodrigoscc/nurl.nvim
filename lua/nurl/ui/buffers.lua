@@ -161,15 +161,8 @@ end
 ---@param exec_datetime string
 ---@param request nurl.Request
 ---@param response nurl.Response
----@param curl nurl.Curl
-local function populate_info_buffer(
-    bufnr,
-    exec_datetime,
-    request,
-    response,
-    curl
-)
-    info_buffer.render(bufnr, exec_datetime, request, response, curl)
+local function populate_info_buffer(bufnr, exec_datetime, request, response)
+    info_buffer.render(bufnr, exec_datetime, request, response)
 end
 
 ---@param bufnr integer
@@ -207,7 +200,7 @@ local function create_buffer(
         end
     elseif type == "info" then
         if response ~= nil then
-            populate_info_buffer(buf, exec_datetime, request, response, curl)
+            populate_info_buffer(buf, exec_datetime, request, response)
         end
     elseif type == "test" then
         if response ~= nil then
@@ -253,7 +246,7 @@ local function update_buffer(
         end
     elseif buffer[1] == "info" then
         if response ~= nil then
-            populate_info_buffer(bufnr, exec_datetime, request, response, curl)
+            populate_info_buffer(bufnr, exec_datetime, request, response)
         end
     elseif buffer[1] == "test" then
         if response ~= nil then

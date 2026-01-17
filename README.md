@@ -576,14 +576,44 @@ Curl execution details:
 ---@field pid? integer Process ID
 ```
 
+### nurl.RequestHandle
+
+Returned by `Nurl.send()` to control a running request:
+
+```lua
+---@class nurl.RequestHandle
+---@field id integer                Unique handle identifier
+---@field request nurl.Request      The request being sent
+---@field response? nurl.Response   Response (available after completion)
+---@field curl? nurl.Curl           Curl details (available after completion)
+---@field status string             "pending"|"started"|"completed"|"cancelled"|"failed"
+```
+
+Methods:
+
+| Method | Description |
+|--------|-------------|
+| `handle:wait(time?, interval?)` | Block until complete. Returns `nurl.RequestOut`. Optional timeout in ms. |
+| `handle:cancel(signame?)` | Cancel the request. Optional signal name (default: `"sigterm"`). |
+| `handle:is_done()` | Returns `true` if completed, cancelled, or failed. |
+| `handle:is_cancelled()` | Returns `true` if cancelled. |
+| `handle:is_failed()` | Returns `true` if failed. |
+
 ## API
 
 ```lua
 local Nurl = require("nurl")
 
--- Send a request programmatically
-Nurl.send(request, opts?, callback?)
-Nurl.send(request, callback?) -- opts can be omitted
+-- Send a request programmatically (returns a handle)
+local handle = Nurl.send(request, opts?, callback?)
+local handle = Nurl.send(request, callback?) -- opts can be omitted
+
+-- Wait for request to complete (blocks)
+local out = handle:wait()
+local out = handle:wait(5000) -- with timeout in ms
+
+-- Cancel a running request
+handle:cancel()
 
 -- Resend from history
 Nurl.resend_last_request() -- resend last

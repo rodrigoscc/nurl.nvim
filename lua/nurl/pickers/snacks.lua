@@ -9,7 +9,7 @@ local M = {}
 local function format_history_item(item)
     local ret = {}
 
-    local exec_datetime, request, response, curl = unpack(item.item)
+    local exec_datetime, request, response = unpack(item.item)
 
     table.insert(ret, { "", "SnacksPickerIcon" })
     table.insert(ret, { " " })

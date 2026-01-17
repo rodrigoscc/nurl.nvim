@@ -69,7 +69,7 @@ function Registry:index(idx)
         return nil
     end
 
-    local entry = nil
+    local entry
 
     local negative_index = idx < 0
 

@@ -154,8 +154,7 @@ end
 ---@param exec_datetime string
 ---@param request nurl.Request
 ---@param response nurl.Response
----@param curl nurl.Curl
-function M.render(bufnr, exec_datetime, request, response, curl)
+function M.render(bufnr, exec_datetime, request, response)
     local builder = InfoBufferBuilder:new()
 
     local base_url = requests.build_url(request.url)
