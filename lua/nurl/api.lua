@@ -195,7 +195,7 @@ function M.send(request, opts_or_callback, callback)
             end)
         end)
 
-        handle:_started(curl_handle.pid)
+        handle:_started(curl_handle.pid, win)
     end
 
     local function env_next_function()

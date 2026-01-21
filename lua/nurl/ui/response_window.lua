@@ -45,7 +45,6 @@ function ResponseWindow:open(opts)
     end
 
     entry.buffers = self.buffers
-    entry.win = self.win
 
     if opts.enter then
         vim.api.nvim_set_current_win(self.win)

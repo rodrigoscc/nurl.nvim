@@ -16,6 +16,7 @@ end
 ---@field status "pending"|"started"|"completed"|"cancelled"|"failed"
 ---@field pid? integer
 ---@field exec_datetime? string
+---@field private win? integer
 local RequestHandle = {}
 
 function RequestHandle:new(request)
@@ -62,10 +63,12 @@ function RequestHandle:is_failed()
 end
 
 ---@param pid integer
-function RequestHandle:_started(pid)
+---@param win? integer
+function RequestHandle:_started(pid, win)
+    self.status = "started"
     self.exec_datetime = tostring(os.date("%Y-%m-%dT%H:%M:%S")) -- local time
     self.pid = pid
-    self.status = "started"
+    self.win = win
 end
 
 ---@param response nurl.Response
@@ -108,7 +111,7 @@ function RequestHandle:wait(time, interval)
             response = self.response,
             curl = self.curl,
             test_report = self.test_report,
-            -- TODO: win?
+            win = self.win,
         }
     end
 
@@ -124,7 +127,7 @@ function RequestHandle:wait(time, interval)
         response = self.response,
         curl = self.curl,
         test_report = self.test_report,
-        -- TODO: win?
+        win = self.win,
     }
 end
 

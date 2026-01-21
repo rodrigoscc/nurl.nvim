@@ -1,7 +1,6 @@
 ---@class nurl.RegistryEntry
 ---@field handle nurl.RequestHandle
 ---@field buffers? table<nurl.BufferType, integer>
----@field win? integer
 ---@field _next? nurl.RegistryEntry
 ---@field _previous? nurl.RegistryEntry
 
