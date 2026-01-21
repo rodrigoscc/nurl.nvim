@@ -996,11 +996,11 @@ local function super_gx()
         -- Display response in the current window
         Nurl.send(
             { cursor_url, headers = orig_headers },
-            { win = vim.api.nvim_get_current_win() }
+            { display = { win = vim.api.nvim_get_current_win() } }
         )
     else
         -- Create new window if a count is given before pressing `gx`.
-        Nurl.send({ cursor_url, headers = orig_headers })
+        Nurl.send({ cursor_url, headers = orig_headers }, { display = true })
     end
 end
 
