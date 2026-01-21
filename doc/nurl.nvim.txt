@@ -1,4 +1,4 @@
-*nurl.nvim.txt*        For Neovim >= 0.10.0       Last change: 2026 January 17
+*nurl.nvim.txt*        For Neovim >= 0.10.0       Last change: 2026 January 21
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -194,6 +194,13 @@ A request file returns a list of request tables:
             headers = {
                 ["Authorization"] = "Bearer token",
                 ["Content-Type"] = "application/json",
+            },
+    
+            -- Auth (optional)
+            auth = {
+                type = "basic",
+                username = "user",
+                password = "pass",
             },
     
             -- Body (optional, use only one)
@@ -566,6 +573,7 @@ The expanded request object (all functions resolved):
     ---@field query? table<string,any>   Query parameters (URI-encoded)
     ---@field title? string              Display name
     ---@field headers table<string,string>  Headers
+    ---@field auth? nurl.BasicAuth       Auth configuration
     ---@field data? string|table         Request body
     ---@field form? table<string,string> Form data
     ---@field data_urlencode? table      URL-encoded data
@@ -596,6 +604,16 @@ Passed to `post_hook` and `callback`:
     ---@field response? nurl.Response Parsed response (nil if curl failed)
     ---@field curl nurl.Curl Curl execution details
     ---@field win? integer Response window id
+<
+
+
+NURL.BASICAUTH                       *nurl.nvim-type-reference-nurl.basicauth*
+
+>lua
+    ---@class nurl.BasicAuth
+    ---@field type "basic"
+    ---@field username string
+    ---@field password string
 <
 
 
