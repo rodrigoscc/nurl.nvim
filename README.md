@@ -177,6 +177,13 @@ return {
             ["Content-Type"] = "application/json",
         },
 
+        -- Auth (optional)
+        auth = {
+            type = "basic",
+            username = "user",
+            password = "pass",
+        },
+
         -- Body (optional, use only one)
         data = { key = "value" }, -- table: JSON encoded
         data = '{"raw": "json"}', -- string: sent as-is
@@ -504,6 +511,7 @@ The expanded request object (all functions resolved):
 ---@field query? table<string,any>   Query parameters (URI-encoded)
 ---@field title? string              Display name
 ---@field headers table<string,string>  Headers
+---@field auth? nurl.BasicAuth       Auth configuration
 ---@field data? string|table         Request body
 ---@field form? table<string,string> Form data
 ---@field data_urlencode? table      URL-encoded data
@@ -532,6 +540,15 @@ Passed to `post_hook` and `callback`:
 ---@field response? nurl.Response Parsed response (nil if curl failed)
 ---@field curl nurl.Curl Curl execution details
 ---@field win? integer Response window id
+```
+
+### nurl.BasicAuth
+
+```lua
+---@class nurl.BasicAuth
+---@field type "basic"
+---@field username string
+---@field password string
 ```
 
 ### nurl.Response

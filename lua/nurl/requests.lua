@@ -12,12 +12,18 @@ local tables = require("nurl.utils.tables")
 ---@field test_report? nurl.TestReport
 ---@field win? integer
 
+---@class nurl.BasicAuth
+---@field type "basic"
+---@field username string
+---@field password string
+
 ---@class nurl.Request
 ---@field method string
 ---@field url string | (string | number)[]
 ---@field query? table<string, any>
 ---@field title? string
 ---@field headers table<string, string>
+---@field auth? nurl.BasicAuth
 ---@field data? string | table<string, any>
 ---@field form? table<string, string>
 ---@field data_urlencode? table<string, string>
@@ -33,6 +39,7 @@ local tables = require("nurl.utils.tables")
 ---@field title? string | fun(): string
 ---@field method? string
 ---@field headers? table<string, string> | fun(): table<string, string>
+---@field auth? nurl.BasicAuth | fun(): nurl.BasicAuth
 ---@field data? string | table<string, any> | fun(): string | table<string, any>
 ---@field form? table<string, any> | fun(): table<string, any>
 ---@field data_urlencode? table<string, any> | fun(): table<string, any>
@@ -136,6 +143,8 @@ function M.expand(request, opts)
 
     assert(url ~= nil, "Request must have a URL")
 
+    local auth = variables.expand(request.auth, opts)
+
     local headers = variables.expand(request.headers, opts)
     local data = variables.expand(request.data, opts)
     local form = variables.expand(request.form, opts)
@@ -161,6 +170,7 @@ function M.expand(request, opts)
         query = query,
         title = title,
         method = method,
+        auth = auth,
         headers = headers or {},
         data = data,
         form = form,
@@ -190,6 +200,8 @@ function M.stringify_lazy(request)
 
     local query = variables.stringify_lazy(request.query)
     query = variables.uri_encode(query)
+
+    local auth = variables.stringify_lazy(request.auth)
 
     local headers = variables.stringify_lazy(request.headers)
     local data = variables.stringify_lazy(request.data)
@@ -224,6 +236,7 @@ function M.stringify_lazy(request)
         query = query,
         title = title,
         method = method,
+        auth = auth,
         headers = headers or {},
         data = data,
         form = form,
@@ -275,6 +288,21 @@ end
 function M.build_curl(request)
     local url = M.build_url(request.url)
     local args = { "--request", request.method, url }
+
+    if request.auth then
+        if request.auth.type == "basic" then
+            table.insert(args, "--user")
+            table.insert(
+                args,
+                ("%s:%s"):format(
+                    request.auth.username or "",
+                    request.auth.password or ""
+                )
+            )
+        else
+            error("Only basic auth is supported.")
+        end
+    end
 
     if request.query then
         local query_items = {}

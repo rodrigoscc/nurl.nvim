@@ -230,6 +230,7 @@ function Db:new(path)
     request_query TEXT,
     request_title TEXT,
     request_method TEXT,
+    request_auth TEXT,
     request_headers TEXT,
     request_data TEXT,
     request_form TEXT,
