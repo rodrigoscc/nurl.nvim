@@ -22,7 +22,7 @@ local tables = require("nurl.utils.tables")
 ---@field url string | (string | number)[]
 ---@field query? table<string, any>
 ---@field title? string
----@field headers table<string, string>
+---@field headers table<string, string | string[]>
 ---@field auth? nurl.BasicAuth
 ---@field data? string | table<string, any>
 ---@field form? table<string, string>
@@ -38,7 +38,7 @@ local tables = require("nurl.utils.tables")
 ---@field query? table<string, any> | fun(): table<string, any>
 ---@field title? string | fun(): string
 ---@field method? string
----@field headers? table<string, string> | fun(): table<string, string>
+---@field headers? table<string, string | string[]> | fun(): table<string, string | string[]>
 ---@field auth? nurl.BasicAuth | fun(): nurl.BasicAuth
 ---@field data? string | table<string, any> | fun(): string | table<string, any>
 ---@field form? table<string, any> | fun(): table<string, any>
@@ -360,9 +360,17 @@ function M.build_curl(request)
     end
 
     for k, v in pairs(request.headers) do
-        local header = k .. ": " .. v
-        table.insert(args, "--header")
-        table.insert(args, header)
+        if type(v) == "table" then
+            for _, item in ipairs(v) do
+                local header = k .. ": " .. item
+                table.insert(args, "--header")
+                table.insert(args, header)
+            end
+        else
+            local header = k .. ": " .. v
+            table.insert(args, "--header")
+            table.insert(args, header)
+        end
     end
 
     table.insert(args, "--include")

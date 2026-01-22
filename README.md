@@ -119,6 +119,7 @@ Override request fields directly from the command-line for quick one-off changes
 The syntax mirrors Lua table access:
 - `data.user.name=value`
 - `headers["Content-Type"]="application/json"`
+- `headers["Accept"]={"application/json","text/plain"}`
 - `url[2]=users`
 
 Types are inferred: `42` (number), `true`/`false` (boolean), `"quoted"` (string with spaces).
@@ -175,6 +176,7 @@ return {
         headers = {
             ["Authorization"] = "Bearer token",
             ["Content-Type"] = "application/json",
+            ["Accept"] = { "application/json", "text/plain" },
         },
 
         -- Auth (optional)
@@ -510,7 +512,7 @@ The expanded request object (all functions resolved):
 ---@field url string                 Full URL
 ---@field query? table<string,any>   Query parameters (URI-encoded)
 ---@field title? string              Display name
----@field headers table<string,string>  Headers
+---@field headers table<string,string|string[]>  Headers
 ---@field auth? nurl.BasicAuth       Auth configuration
 ---@field data? string|table         Request body
 ---@field form? table<string,string> Form data
@@ -560,7 +562,7 @@ Parsed HTTP response:
 ---@field status_code integer HTTP status code
 ---@field reason_phrase string Status text (e.g., "OK")
 ---@field protocol string Protocol (e.g., "HTTP/2")
----@field headers table<string,string> Response headers
+---@field headers table<string,string|string[]> Response headers
 ---@field body string Response body
 ---@field body_file? string Path if body saved to file
 ---@field time nurl.ResponseTime Timing breakdown

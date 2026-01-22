@@ -27,7 +27,7 @@ local M = {}
 ---@field status_code integer
 ---@field reason_phrase string
 ---@field protocol string
----@field headers table<string, string>
+---@field headers table<string, string | string[]>
 ---@field body string
 ---@field body_file? string
 ---@field time nurl.ResponseTime
@@ -45,7 +45,15 @@ local function parse_headers(lines)
         local name = parts[1]
         local value = table.concat(parts, ": ", 2)
 
-        headers[name] = value
+        if headers[name] == nil then
+            headers[name] = value
+        else
+            if type(headers[name]) == "table" then
+                table.insert(headers[name], value)
+            else
+                headers[name] = { headers[name], value }
+            end
+        end
     end
 
     return headers
@@ -73,11 +81,14 @@ local function parse_start_line(line)
     return protocol, status_code, reason_phrase or ""
 end
 
----@param headers table<string, string>
+---@param headers table<string, string | string[]>
 ---@return string|nil
 function M.get_content_type(headers)
     for name, value in pairs(headers) do
-        if string.lower(name) == "content-type" then
+        if
+            string.lower(name) == "content-type"
+            and type(value) == "string" -- list in content-type header is considered invalid
+        then
             return string.lower(value)
         end
     end
@@ -85,7 +96,7 @@ function M.get_content_type(headers)
     return nil
 end
 
----@param headers table<string, string>
+---@param headers table<string, string | string[]>
 ---@return string
 function M.guess_file_type(headers)
     local content_type = M.get_content_type(headers)
@@ -196,7 +207,7 @@ function M.is_displayable(response)
     return false
 end
 
----@param headers table<string, string>
+---@param headers table<string, string | string[]>
 ---@param fallback string
 ---@return string
 local function guess_extension(headers, fallback)

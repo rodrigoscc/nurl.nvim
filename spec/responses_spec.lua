@@ -69,6 +69,24 @@ describe("responses", function()
             assert.are.equal("custom-value", result.headers["X-Custom-Header"])
         end)
 
+        it("collects repeated headers into list", function()
+            local stdout = {
+                "HTTP/1.1 200 OK",
+                "Set-Cookie: a=1",
+                "Set-Cookie: b=2",
+                "",
+                "body",
+            }
+            local stderr = { "0,0,0,0,0,0,0,0,0,0,0,0,0" }
+
+            local result = responses.parse(stdout, stderr)
+
+            assert.are.same(
+                { "a=1", "b=2" },
+                result.headers["Set-Cookie"]
+            )
+        end)
+
         it("parses headers with colons in value", function()
             local stdout = {
                 "HTTP/1.1 200 OK",

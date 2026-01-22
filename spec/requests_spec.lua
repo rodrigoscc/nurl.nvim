@@ -260,6 +260,25 @@ describe("requests", function()
             assert.is_true(has_header)
         end)
 
+        it("expands list headers into multiple args", function()
+            local request = {
+                url = "https://example.com",
+                method = "GET",
+                headers = { ["Set-Cookie"] = { "a=1", "b=2" } },
+            }
+            local curl = requests.build_curl(request)
+
+            local headers = {}
+            for i, arg in ipairs(curl.args) do
+                if arg == "--header" then
+                    table.insert(headers, curl.args[i + 1])
+                end
+            end
+
+            assert.is_true(vim.tbl_contains(headers, "Set-Cookie: a=1"))
+            assert.is_true(vim.tbl_contains(headers, "Set-Cookie: b=2"))
+        end)
+
         it("includes data in args for string data", function()
             local request = {
                 url = "https://example.com",

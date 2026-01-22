@@ -130,7 +130,13 @@ local function populate_headers_buffer(bufnr, response)
     }
 
     for name, value in pairs(response.headers) do
-        table.insert(headers_lines, name .. ": " .. value)
+        if type(value) == "table" then
+            for _, item in ipairs(value) do
+                table.insert(headers_lines, name .. ": " .. item)
+            end
+        else
+            table.insert(headers_lines, name .. ": " .. value)
+        end
     end
 
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, headers_lines)

@@ -5,9 +5,9 @@ local responses = require("nurl.responses")
 
 local M = {}
 
----@param headers table<string, string>
+---@param headers table<string, string | string[]>
 ---@param content_type string
----@return table<string, string>
+---@return table<string, string | string[]>
 local function ensure_content_type(headers, content_type)
     for name, _ in pairs(headers) do
         if string.lower(name) == "content-type" then
@@ -45,7 +45,7 @@ local function format_urlencoded_body(data)
 end
 
 ---@param content string
----@param headers table<string, string>
+---@param headers table<string, string | string[]>
 ---@return string
 local function format_body(content, headers)
     local file_type = responses.guess_file_type(headers)
@@ -95,7 +95,13 @@ function M.request_to_http_message(request)
     end
 
     for name, value in pairs(headers) do
-        table.insert(lines, name .. ": " .. value)
+        if type(value) == "table" then
+            for _, item in ipairs(value) do
+                table.insert(lines, name .. ": " .. item)
+            end
+        else
+            table.insert(lines, name .. ": " .. value)
+        end
     end
 
     if body then
@@ -124,7 +130,13 @@ function M.response_to_http_message(response)
     table.insert(lines, start_line)
 
     for name, value in pairs(response.headers) do
-        table.insert(lines, name .. ": " .. value)
+        if type(value) == "table" then
+            for _, item in ipairs(value) do
+                table.insert(lines, name .. ": " .. item)
+            end
+        else
+            table.insert(lines, name .. ": " .. value)
+        end
     end
 
     if response.body_file then
