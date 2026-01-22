@@ -1,4 +1,5 @@
 local config = require("nurl.config")
+local tables = require("nurl.utils.tables")
 
 local fs = require("nurl.data.fs")
 
@@ -45,15 +46,7 @@ local function parse_headers(lines)
         local name = parts[1]
         local value = table.concat(parts, ": ", 2)
 
-        if headers[name] == nil then
-            headers[name] = value
-        else
-            if type(headers[name]) == "table" then
-                table.insert(headers[name], value)
-            else
-                headers[name] = { headers[name], value }
-            end
-        end
+        headers = tables.collect_value(headers, name, value)
     end
 
     return headers
