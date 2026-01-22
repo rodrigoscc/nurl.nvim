@@ -1,7 +1,7 @@
 ---@meta _
 
 ---@class nurl.api
----@field send fun(request: nurl.SuperRequest | nurl.Request, opts?: nurl.SendOpts)
+---@field send fun(request: nurl.SuperRequest | nurl.Request, opts_or_callback?: nurl.SendOpts | fun(out: nurl.RequestOut), callback?: fun(out: nurl.RequestOut)): nurl.RequestHandle
 ---@field pick_resend fun(overrides?: nurl.Override[])
 ---@field resend_last_request fun(index?: integer, overrides?: nurl.Override[])
 ---@field send_file_request fun(filepath: string, overrides?: nurl.Override[])
