@@ -19,4 +19,4 @@
 ---@field pick_history fun()
 ---@field lazy fun(value: any)
 ---@field env nurl.env
----@field util nurl.util
+---@field helpers nurl.helpers

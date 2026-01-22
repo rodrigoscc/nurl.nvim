@@ -10,7 +10,7 @@ local Stack = require("nurl.utils.stack")
 local pickers = require("nurl.pickers")
 local variables = require("nurl.variables")
 local override = require("nurl.override")
-local util = require("nurl.util")
+local helpers = require("nurl.helpers")
 local TestReport = require("nurl.test.report")
 local ctx = require("nurl.test.ctx")
 local RequestHandle = require("nurl.request_handle")
@@ -24,7 +24,7 @@ M.lazy = variables.lazy
 
 M.env = environments
 
-M.util = util
+M.helpers = helpers
 
 M.registry = registry
 

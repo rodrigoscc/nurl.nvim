@@ -1,6 +1,6 @@
 local requests = require("nurl.requests")
 
----@class nurl.util
+---@class nurl.helpers
 local M = {}
 
 ---@param url string | (string | number)[]
