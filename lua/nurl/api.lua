@@ -374,7 +374,7 @@ function M.yank_curl_at_cursor(overrides)
     local is_at_nurl_buffer = vim.b.nurl_data ~= nil
 
     if is_at_nurl_buffer then
-        local entry = registry.get(vim.b.nurl_data.handle_id)
+        local entry = registry:get(vim.b.nurl_data.handle_id)
         local buffer_request = entry.handle.request
         buffer_request = override(buffer_request, overrides)
         yank_curl(buffer_request)
