@@ -77,7 +77,7 @@ function M.request_to_http_message(request)
 
     if request.data then
         if type(request.data) == "table" then
-            -- we use --json in curl, which adds json content type
+            -- we add json content type when data is a table
             headers = ensure_content_type(headers, "application/json")
             body = format_body(vim.json.encode(request.data), headers)
         else

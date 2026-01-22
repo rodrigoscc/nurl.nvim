@@ -327,13 +327,16 @@ function M.build_curl(request)
 
         if type(request.data) == "table" then
             data = vim.json.encode(request.data)
-            -- The following automatically adds the json content-type
-            table.insert(args, "--json")
+
+            -- If data is table we will be sending a json in data.
+            -- We won't use --json as it requires a relatively new version of curl.
+            table.insert(args, "--header")
+            table.insert(args, "Content-Type: application/json")
         else
             data = request.data
-            table.insert(args, "--data")
         end
 
+        table.insert(args, "--data")
         table.insert(args, data)
     elseif request.form then
         local form_items = {}
