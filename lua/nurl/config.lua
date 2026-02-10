@@ -17,7 +17,7 @@ local defaults = {
         ---@type string
         db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
         ---@type integer
-        max_history_items = 5000,
+        max_history_items = 10000,
         ---@type integer
         history_buffer = 500,
     },

@@ -669,7 +669,7 @@ require("nurl").setup({
     history = {
         enabled = true,
         db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
-        max_history_items = 5000,
+        max_history_items = 10000,
     },
 
     -- Directory for non-displayable response bodies (images, etc.)
