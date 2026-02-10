@@ -1,4 +1,4 @@
-*nurl.nvim.txt*        For Neovim >= 0.10.0       Last change: 2026 January 22
+*nurl.nvim.txt*       For Neovim >= 0.10.0       Last change: 2026 February 10
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -750,7 +750,7 @@ Methods:
         history = {
             enabled = true,
             db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
-            max_history_items = 5000,
+            max_history_items = 10000,
         },
     
         -- Directory for non-displayable response bodies (images, etc.)
