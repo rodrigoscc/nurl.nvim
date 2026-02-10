@@ -38,7 +38,7 @@ local function format_urlencoded_body(data)
     local parts = {}
 
     for k, v in pairs(data) do
-        table.insert(parts, k .. "=" .. variables.uri_encode(v))
+        table.insert(parts, k .. "=" .. v)
     end
 
     return table.concat(parts, "&")

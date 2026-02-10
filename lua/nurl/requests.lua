@@ -125,21 +125,15 @@ function M.expand(request, opts)
         url = request[1]
         ---@cast url string
         url, url_query = M.extract_query(url)
-
-        url_query = variables.uri_encode(url_query)
     else
         url = variables.expand(request.url, opts)
     end
-
-    url = variables.uri_encode(url)
 
     local query = variables.expand(request.query, opts)
 
     if url_query then
         query = tables.shallow_extend(url_query, query)
     end
-
-    query = variables.uri_encode(query)
 
     assert(url ~= nil, "Request must have a URL")
 
@@ -199,7 +193,6 @@ function M.stringify_lazy(request)
     ---@cast url string
 
     local query = variables.stringify_lazy(request.query)
-    query = variables.uri_encode(query)
 
     local auth = variables.stringify_lazy(request.auth)
 
@@ -353,7 +346,7 @@ function M.build_curl(request)
         local data_items = {}
 
         for k, v in pairs(request.data_urlencode) do
-            table.insert(data_items, k .. "=" .. variables.uri_encode(v))
+            table.insert(data_items, k .. "=" .. v)
         end
 
         for _, item in ipairs(data_items) do
