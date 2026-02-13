@@ -1,5 +1,4 @@
 local requests = require("nurl.requests")
-local variables = require("nurl.variables")
 local config = require("nurl.config")
 local responses = require("nurl.responses")
 
