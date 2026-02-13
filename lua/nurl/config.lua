@@ -143,6 +143,12 @@ local config = vim.deepcopy(defaults) --[[@as nurl.Config]]
 function M.setup(opts)
     config =
         vim.tbl_deep_extend("force", {}, vim.deepcopy(defaults), opts or {})
+
+    -- Replace win_config instead of merging, since some keys are incompatible
+    -- with each other (e.g. split and relative) and would cause nvim_open_win to error.
+    if opts and opts.win_config then
+        config.win_config = opts.win_config
+    end
 end
 
 setmetatable(M, {
