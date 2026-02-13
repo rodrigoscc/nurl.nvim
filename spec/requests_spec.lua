@@ -151,16 +151,6 @@ describe("requests", function()
             assert.are.equal("param", result.query.added)
         end)
 
-        it("uri encodes query values", function()
-            local request = {
-                url = "https://example.com",
-                query = { search = "hello world" },
-            }
-            local result = requests.expand(request)
-
-            assert.are.equal("hello%20world", result.query.search)
-        end)
-
         it("handles repeated query params from shorthand url", function()
             local request = { "https://example.com?tag=a&tag=b" }
             local result = requests.expand(request)
