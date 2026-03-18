@@ -47,6 +47,25 @@ M.last_requests = Stack:new(5)
 ---@param callback? fun(out: nurl.RequestOut)
 ---@return nurl.RequestHandle
 function M.send(request, opts_or_callback, callback)
+    local function run_pre_hook(hook, input, next)
+        if hook then
+            hook(next, input)
+        else
+            next()
+        end
+    end
+
+    local function run_post_hook(name, hook, out)
+        if not hook then
+            return
+        end
+
+        local ok, err = pcall(hook, out)
+        if not ok then
+            vim.notify(name .. " failed: " .. err, vim.log.levels.ERROR)
+        end
+    end
+
     local opts = {}
 
     if type(opts_or_callback) == "function" then
@@ -76,7 +95,16 @@ function M.send(request, opts_or_callback, callback)
     ---@type nurl.RegistryEntry
     local entry = { handle = handle }
 
-    local function next_function()
+    local function run_post_hooks(out)
+        run_post_hook("Request post hook", expanded_request.post_hook, out)
+        run_post_hook("Environment post hook", environments.get_post_hook(), out)
+
+        if callback then
+            callback(out)
+        end
+    end
+
+    local function send_request()
         registry:push(entry)
 
         if opts.display then
@@ -124,30 +152,6 @@ function M.send(request, opts_or_callback, callback)
                     test_report = nil,
                 }
 
-                if expanded_request.post_hook ~= nil then
-                    local status, result =
-                        pcall(expanded_request.post_hook, out)
-
-                    if not status then
-                        vim.notify(
-                            "Request post hook failed: " .. result,
-                            vim.log.levels.ERROR
-                        )
-                    end
-                end
-
-                local env_post_hook = environments.get_post_hook()
-                if env_post_hook ~= nil then
-                    local status, result = pcall(env_post_hook, out)
-
-                    if not status then
-                        vim.notify(
-                            "Environment post hook failed: " .. result,
-                            vim.log.levels.ERROR
-                        )
-                    end
-                end
-
                 if expanded_request.test and curl_success then
                     out.test_report = TestReport:new()
                     local test_ctx = ctx.build_ctx(out.test_report)
@@ -158,9 +162,7 @@ function M.send(request, opts_or_callback, callback)
                     end
                 end
 
-                if callback then
-                    callback(out)
-                end
+                run_post_hooks(out)
 
                 if curl_interrupted then
                     handle:_cancelled(out.response, out.curl, out.test_report)
@@ -198,20 +200,11 @@ function M.send(request, opts_or_callback, callback)
         handle:_started(curl_handle.pid, win)
     end
 
-    local function env_next_function()
-        if expanded_request.pre_hook ~= nil then
-            expanded_request.pre_hook(next_function, input)
-        else
-            next_function()
-        end
+    local function run_request_pre_hook()
+        run_pre_hook(expanded_request.pre_hook, input, send_request)
     end
 
-    local env_pre_hook = environments.get_pre_hook()
-    if env_pre_hook == nil then
-        env_next_function()
-    else
-        env_pre_hook(env_next_function, input)
-    end
+    run_pre_hook(environments.get_pre_hook(), input, run_request_pre_hook)
 
     return handle
 end
