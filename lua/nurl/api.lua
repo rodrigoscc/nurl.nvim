@@ -29,7 +29,17 @@ M.helpers = helpers
 M.registry = registry
 
 ---@type nurl.Stack
-M.last_requests = Stack:new(5)
+M.last_requests = Stack:new(5, {
+    key_fn = function(item)
+        local request = vim.deepcopy(item.request)
+
+        request.pre_hook = nil
+        request.post_hook = nil
+        request.test = nil
+
+        return request
+    end,
+})
 
 ---@class nurl.LastItem
 ---@field request nurl.Request
@@ -97,7 +107,11 @@ function M.send(request, opts_or_callback, callback)
 
     local function run_post_hooks(out)
         run_post_hook("Request post hook", expanded_request.post_hook, out)
-        run_post_hook("Environment post hook", environments.get_post_hook(), out)
+        run_post_hook(
+            "Environment post hook",
+            environments.get_post_hook(),
+            out
+        )
 
         if callback then
             callback(out)
