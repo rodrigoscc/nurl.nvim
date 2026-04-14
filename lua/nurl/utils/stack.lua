@@ -17,8 +17,10 @@ end
 function Stack:push(item)
     if #self.items > 0 then
         if self:_same(item, self.items[#self.items]) then
-            -- Do not push if the same item is already at the tip
-            return
+            -- Pop last here to avoid duplicates at the tip.
+            -- Important to still keep the item updated so that we use the latest fields
+            -- other than the key (e.g. win)
+            self.items = vim.iter(self.items):rskip(1):totable()
         end
     end
 
