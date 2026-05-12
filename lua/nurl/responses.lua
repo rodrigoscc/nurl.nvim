@@ -186,6 +186,11 @@ local content_type_to_ext = {
 ---@param response nurl.Response
 ---@return boolean
 function M.is_displayable(response)
+    local empty_response = vim.trim(response.body) == ""
+    if empty_response then
+        return true
+    end
+
     local content_type = M.get_content_type(response.headers)
     if not content_type then
         return false
