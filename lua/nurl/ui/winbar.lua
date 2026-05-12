@@ -10,19 +10,14 @@ function M.request_title()
     local entry = registry:get(vim.b[0].nurl_data.handle_id)
     local request = entry.handle.request
 
-    local title = ""
-
-    if request and request.title then
-        title = request.title
-    elseif request.url then
-        title = requests.title(request)
-    end
-
-    -- % in statusline is special
+    local title = request.title
+        or requests.full_url(request):gsub("^%w+://", "")
     title = strings.escape_percentage(title)
 
     return string.format(
-        "%%#%s#%s %%*",
+        "%%#%s#%s%%* %%#%s#%s%%*",
+        config.highlight.groups.info_method,
+        request.method,
         config.highlight.groups.winbar_title,
         title
     )
@@ -74,7 +69,7 @@ function M.time()
 
     if response ~= nil then
         return string.format(
-            "%%#%s#(took %s)%%*",
+            " %%#%s#· %s%%*",
             config.highlight.groups.winbar_time,
             numbers.format_duration(response.time.time_total)
         )
