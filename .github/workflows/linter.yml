@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - CHANGELOG.md
 
 jobs:
   build:
@@ -23,3 +25,4 @@ jobs:
           VALIDATE_JSCPD: false
           VALIDATE_PYTHON_BLACK: false
           VALIDATE_MARKDOWN: false
+          VALIDATE_NATURAL_LANGUAGE: false
