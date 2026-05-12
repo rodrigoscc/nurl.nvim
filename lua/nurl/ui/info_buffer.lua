@@ -8,12 +8,32 @@ local M = {}
 local ns = vim.api.nvim_create_namespace("nurl.info")
 
 local icons = {
-    section = "▸",
-    download = "↓",
-    upload = "↑",
     query_first = "?",
     query_next = "&",
+    timing_bar = "█",
+    timing_tick = "▏",
 }
+
+local timing_bar_width = 20
+local timing_value_width = 7
+local timing_label_width = 13
+
+---@param value number
+---@return number
+local function non_negative(value)
+    if value < 0 then
+        return 0
+    end
+
+    return value
+end
+
+---@param value number
+---@return number
+local function round(value)
+    -- Lua has no built-in round. Adding 0.5 before floor rounds positive values to nearest integer.
+    return math.floor(value + 0.5)
+end
 
 ---@param status_code number
 ---@return string
@@ -78,14 +98,35 @@ function InfoBufferBuilder:newline()
     return self
 end
 
+function InfoBufferBuilder:blankline()
+    self:newline()
+    self.lines[self.current_line + 1] = { text = "", highlights = {} }
+    return self
+end
+
+function InfoBufferBuilder:indent()
+    self:append("  ", nil)
+    return self
+end
+
 ---@param label string
 function InfoBufferBuilder:section(label)
     if #self.lines > 0 then
+        self:blankline()
         self:newline()
     end
 
-    self:append(icons.section .. " ", config.highlight.groups.info_icon)
-    self:append(label, config.highlight.groups.info_label)
+    self:append(label, config.highlight.groups.info_section)
+
+    return self
+end
+
+---@param text string
+---@param hl_group? string
+function InfoBufferBuilder:indented_line(text, hl_group)
+    self:newline()
+    self:indent()
+    self:append(text, hl_group or config.highlight.groups.info_value)
 
     return self
 end
@@ -95,12 +136,12 @@ end
 ---@param value_hl? string
 ---@param label_width? number
 function InfoBufferBuilder:field(label, value, value_hl, label_width)
-    label_width = label_width or 12
+    label_width = label_width or 13
 
     self:newline()
-    self:append("    ", nil)
+    self:indent()
     self:append(
-        string.format("%-" .. label_width .. "s", label),
+        string.format("%-" .. label_width .. "s", label:lower()),
         config.highlight.groups.info_label
     )
     self:append(value, value_hl or config.highlight.groups.info_value)
@@ -114,11 +155,68 @@ end
 function InfoBufferBuilder:query_param(prefix, key, value)
     self:newline()
 
-    self:append("    ", nil)
+    self:indent()
     self:append(prefix .. " ", config.highlight.groups.info_separator)
     self:append(key, config.highlight.groups.info_query_key)
     self:append(" = ", config.highlight.groups.info_separator)
     self:append(value, config.highlight.groups.info_query_value)
+
+    return self
+end
+
+---@param label string
+---@param value string
+---@param duration number
+---@param total number
+function InfoBufferBuilder:timing_field(label, value, duration, total)
+    self:newline()
+    self:indent()
+    self:append(
+        string.format("%-" .. timing_label_width .. "s", label:lower()),
+        config.highlight.groups.info_label
+    )
+    self:append(
+        string.format("%" .. timing_value_width .. "s", value),
+        config.highlight.groups.info_value
+    )
+    self:append("  ", nil)
+
+    local ratio = 0
+    if total > 0 and duration > 0 then
+        ratio = duration / total
+    end
+
+    local exact_bar_len = ratio * timing_bar_width
+    local bar_len = round(exact_bar_len)
+    if bar_len > timing_bar_width then
+        bar_len = timing_bar_width
+    end
+
+    if duration <= 0 or exact_bar_len < 1 then
+        self:append(icons.timing_tick, config.highlight.groups.info_separator)
+    else
+        self:append(
+            string.rep(icons.timing_bar, bar_len),
+            config.highlight.groups.info_timing_bar
+        )
+    end
+
+    return self
+end
+
+---@param label string
+---@param value string
+function InfoBufferBuilder:timing_total(label, value)
+    self:newline()
+    self:indent()
+    self:append(
+        string.format("%-" .. timing_label_width .. "s", label:lower()),
+        config.highlight.groups.info_label
+    )
+    self:append(
+        string.format("%" .. timing_value_width .. "s", value),
+        config.highlight.groups.info_highlight
+    )
 
     return self
 end
@@ -161,21 +259,26 @@ function M.render(bufnr, exec_datetime, request, response)
     base_url = strings.escape_percentage(base_url)
 
     builder:section("Request")
-    builder:append("       ", nil)
-    builder:append(exec_datetime, "Comment")
+
+    builder:newline()
+    builder:indent()
+    builder:append(request.method, config.highlight.groups.info_method)
+    builder:append(" ", nil)
+    builder:append(base_url, config.highlight.groups.info_url)
+
+    builder:indented_line("sent " .. exec_datetime, "Comment")
 
     if request.title then
         builder:field(
-            "Title",
+            "title",
             request.title,
             config.highlight.groups.info_title
         )
     end
 
-    builder:field("Method", request.method, config.highlight.groups.info_method)
-    builder:field("URL", base_url, config.highlight.groups.info_url)
+    if request.query and next(request.query) then
+        builder:section("Query")
 
-    if request.query then
         local is_first = true
 
         for k, v in pairs(request.query) do
@@ -217,15 +320,15 @@ function M.render(bufnr, exec_datetime, request, response)
 
     builder:section("Response")
     builder:field(
-        "Status",
+        "status",
         status_text,
         get_status_highlight(response.status_code)
     )
-    builder:field("Protocol", response.protocol)
+    builder:field("protocol", response.protocol)
 
     if response.body_file then
         builder:field(
-            "File",
+            "file",
             response.body_file,
             config.highlight.groups.info_url
         )
@@ -233,29 +336,75 @@ function M.render(bufnr, exec_datetime, request, response)
 
     local time = response.time
     builder:section("Timing")
-    builder:field("DNS", numbers.format_duration(time.time_namelookup))
-    builder:field("Connect", numbers.format_duration(time.time_connect))
-    builder:field("TLS", numbers.format_duration(time.time_appconnect))
-    builder:field("Pretransfer", numbers.format_duration(time.time_pretransfer))
-    builder:field("TTFB", numbers.format_duration(time.time_starttransfer))
-    builder:field("Redirect", numbers.format_duration(time.time_redirect))
-    builder:field(
-        "Total",
-        numbers.format_duration(time.time_total),
-        config.highlight.groups.info_highlight
+
+    local dns = non_negative(time.time_namelookup)
+    local tcp = non_negative(time.time_connect - time.time_namelookup)
+    local has_tls = time.time_appconnect > 0
+    local tls = has_tls
+            and non_negative(time.time_appconnect - time.time_connect)
+        or 0
+    local setup_end = has_tls and time.time_appconnect or time.time_connect
+    local pretransfer = non_negative(time.time_pretransfer - setup_end)
+    local server = non_negative(time.time_starttransfer - time.time_pretransfer)
+    local redirect = non_negative(time.time_redirect)
+    local transfer = non_negative(time.time_total - time.time_starttransfer)
+
+    builder:timing_field(
+        "dns",
+        numbers.format_duration(dns),
+        dns,
+        time.time_total
     )
+    builder:timing_field(
+        "tcp",
+        numbers.format_duration(tcp),
+        tcp,
+        time.time_total
+    )
+    builder:timing_field(
+        "tls",
+        numbers.format_duration(tls),
+        tls,
+        time.time_total
+    )
+    builder:timing_field(
+        "pretransfer",
+        numbers.format_duration(pretransfer),
+        pretransfer,
+        time.time_total
+    )
+    builder:timing_field(
+        "server",
+        numbers.format_duration(server),
+        server,
+        time.time_total
+    )
+    builder:timing_field(
+        "redirect",
+        numbers.format_duration(redirect),
+        redirect,
+        time.time_total
+    )
+    builder:timing_field(
+        "transfer",
+        numbers.format_duration(transfer),
+        transfer,
+        time.time_total
+    )
+    builder:blankline()
+    builder:timing_total("total", numbers.format_duration(time.time_total))
 
     local size = response.size
     builder:section("Size")
-    builder:field("Download", numbers.format_bytes(size.size_download))
-    builder:field("Upload", numbers.format_bytes(size.size_upload))
-    builder:field("Headers", numbers.format_bytes(size.size_header))
-    builder:field("Request", numbers.format_bytes(size.size_request))
+    builder:field("download", numbers.format_bytes(size.size_download))
+    builder:field("upload", numbers.format_bytes(size.size_upload))
+    builder:field("headers", numbers.format_bytes(size.size_header))
+    builder:field("request", numbers.format_bytes(size.size_request))
 
     local speed = response.speed
     builder:section("Speed")
-    builder:field("Download", numbers.format_speed(speed.speed_download))
-    builder:field("Upload", numbers.format_speed(speed.speed_upload))
+    builder:field("download", numbers.format_speed(speed.speed_download))
+    builder:field("upload", numbers.format_speed(speed.speed_upload))
 
     local lines, highlights = builder:build()
 

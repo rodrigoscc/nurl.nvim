@@ -94,9 +94,11 @@ local defaults = {
 
             info_title = "NurlInfoTitle",
             info_icon = "NurlInfoIcon",
+            info_section = "NurlInfoSection",
             info_label = "NurlInfoLabel",
             info_value = "NurlInfoValue",
             info_highlight = "NurlInfoHighlight",
+            info_timing_bar = "NurlInfoTimingBar",
             info_url = "NurlInfoUrl",
             info_query_key = "NurlInfoQueryKey",
             info_query_value = "NurlInfoQueryValue",
