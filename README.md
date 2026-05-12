@@ -27,7 +27,7 @@ HTTP client for Neovim. Requests in pure Lua. Programmable, composable, extensib
 - **Lua-based requests** - Define HTTP requests as Lua tables with full language support
 - **Environments** - Manage variables per environment (dev, staging, prod)
 - **Request history** - SQLite-backed history with full request/response data
-- **Response viewer** - Split window with body, headers, info, and raw curl output tabs
+- **Response viewer** - Split window with body, request, headers, info, and raw curl output tabs
 - **Hooks** - Pre/post hooks per request, or per environment (applies to all requests when env is active)
 - **Picker integration** - Browse requests and history with [snacks.nvim](https://github.com/folke/snacks.nvim) or [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 
@@ -496,7 +496,7 @@ Nurl.send(request, { display = true })
 Nurl.send(request, {
     display = {
         win = existing_win_id, -- Reuse existing window
-        focus_buffer = "test", -- Open specific tab (body, headers, info, raw, test)
+        focus_buffer = "test", -- Open specific tab (body, request, headers, info, raw, test)
     },
 })
 ```
@@ -708,6 +708,16 @@ require("nurl").setup({
                 ["<C-r>"] = "rerun",
                 ["<C-x>"] = "cancel",
                 ["<C-m>"] = { "toggle_secondary", opts = { buffer = "info" } },
+                q = "close",
+            },
+        },
+        {
+            "request",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
                 q = "close",
             },
         },

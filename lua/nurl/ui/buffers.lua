@@ -1,5 +1,6 @@
 local actions = require("nurl.actions")
 local config = require("nurl.config")
+local http = require("nurl.http")
 local responses = require("nurl.responses")
 local info_buffer = require("nurl.ui.info_buffer")
 local test_buffer = require("nurl.ui.test_buffer")
@@ -13,6 +14,7 @@ M.Buffer = {
     Headers = "headers",
     Info = "info",
     Raw = "raw",
+    Request = "request",
     Test = "test",
 }
 
@@ -119,6 +121,14 @@ local function populate_body_buffer(bufnr, response)
 end
 
 ---@param bufnr integer
+---@param request nurl.Request
+local function populate_request_buffer(bufnr, request)
+    local lines = http.request_to_http_message(request)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
+    vim.api.nvim_set_option_value("filetype", "http", { buf = bufnr })
+end
+
+---@param bufnr integer
 ---@param response nurl.Response
 local function populate_headers_buffer(bufnr, response)
     local headers_lines = {
@@ -200,6 +210,8 @@ local function create_buffer(
         if response ~= nil then
             populate_body_buffer(buf, response)
         end
+    elseif type == "request" then
+        populate_request_buffer(buf, request)
     elseif type == "headers" then
         if response ~= nil then
             populate_headers_buffer(buf, response)
@@ -246,6 +258,8 @@ local function update_buffer(
         if response ~= nil then
             populate_body_buffer(bufnr, response)
         end
+    elseif buffer[1] == "request" then
+        populate_request_buffer(bufnr, request)
     elseif buffer[1] == "headers" then
         if response ~= nil then
             populate_headers_buffer(bufnr, response)

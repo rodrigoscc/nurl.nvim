@@ -80,6 +80,11 @@ function M.request_to_http_message(request)
             headers = ensure_content_type(headers, "application/json")
             body = format_body(vim.json.encode(request.data), headers)
         else
+            -- curl --data sends urlencoded content type unless explicitly set.
+            headers = ensure_content_type(
+                headers,
+                "application/x-www-form-urlencoded"
+            )
             body = format_body(tostring(request.data), headers)
         end
     elseif request.form then

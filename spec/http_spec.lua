@@ -105,6 +105,7 @@ describe("http", function()
 
             assert.are.same({
                 "POST https://api.example.com/users",
+                "Content-Type: application/x-www-form-urlencoded",
                 "",
                 '{"custom":"json"}',
             }, result)

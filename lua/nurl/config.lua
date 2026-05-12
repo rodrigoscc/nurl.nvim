@@ -58,6 +58,16 @@ local defaults = {
             },
         },
         {
+            "request",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
+            },
+        },
+        {
             "raw",
             keys = {
                 ["<Tab>"] = "next_buffer",
