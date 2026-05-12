@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/rodrigoscc/nurl.nvim/compare/v0.9.0...v0.10.0) (2026-05-12)
+
+
+### Features
+
+* add save_history request field to disable history per request ([a663158](https://github.com/rodrigoscc/nurl.nvim/commit/a6631581edd29938c861baf6c85244f5b0571212))
+* request tab shows fully expanded request ([a307ca6](https://github.com/rodrigoscc/nurl.nvim/commit/a307ca6e872c13709225da42c7a377a5730fbb7d))
+
 ## [0.9.0](https://github.com/rodrigoscc/nurl.nvim/compare/v0.8.0...v0.9.0) (2026-05-12)
 
 
