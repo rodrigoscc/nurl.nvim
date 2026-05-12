@@ -28,6 +28,7 @@ local tables = require("nurl.utils.tables")
 ---@field form? table<string, string>
 ---@field data_urlencode? table<string, string>
 ---@field curl_args? string[]
+---@field save_history? boolean
 ---@field pre_hook? fun(next: fun(), input: nurl.RequestInput) | nil
 ---@field post_hook? fun(out: nurl.RequestOut) | nil
 ---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
@@ -44,6 +45,7 @@ local tables = require("nurl.utils.tables")
 ---@field form? table<string, any> | fun(): table<string, any>
 ---@field data_urlencode? table<string, any> | fun(): table<string, any>
 ---@field curl_args? string[] | fun(): string[]
+---@field save_history? boolean | fun(): boolean
 ---@field pre_hook? fun(next: fun(), input: nurl.RequestInput) | nil
 ---@field post_hook? fun(out: nurl.RequestOut) | nil
 ---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
@@ -147,6 +149,7 @@ function M.expand(request, opts)
     local title = variables.expand(request.title, opts)
 
     local curl_args = variables.expand(request.curl_args, opts)
+    local save_history = variables.expand(request.save_history, opts)
 
     assert(
         title == nil or type(title) == "string",
@@ -170,6 +173,7 @@ function M.expand(request, opts)
         form = form,
         data_urlencode = data_urlencode,
         curl_args = curl_args,
+        save_history = save_history,
         pre_hook = request.pre_hook,
         post_hook = request.post_hook,
         test = request.test,
@@ -205,6 +209,7 @@ function M.stringify_lazy(request)
     ---@cast title string
 
     local curl_args = variables.stringify_lazy(request.curl_args)
+    local save_history = variables.stringify_lazy(request.save_history)
 
     -- Make sure the fields that are expected to be tables are still tables after calling stringify_lazy
     if type(headers) == "string" then
@@ -235,6 +240,7 @@ function M.stringify_lazy(request)
         form = form,
         data_urlencode = data_urlencode,
         curl_args = curl_args,
+        save_history = save_history,
         pre_hook = request.pre_hook,
         post_hook = request.post_hook,
         test = request.test,

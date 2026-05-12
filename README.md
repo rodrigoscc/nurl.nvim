@@ -195,6 +195,9 @@ return {
         -- Additional curl flags (optional)
         curl_args = { "--insecure", "--compressed" },
 
+        -- Save request to history (optional, defaults to true)
+        save_history = false,
+
         -- Hooks (optional)
         pre_hook = function(next, input)
             next()
@@ -518,6 +521,7 @@ The expanded request object (all functions resolved):
 ---@field form? table<string,string> Form data
 ---@field data_urlencode? table      URL-encoded data
 ---@field curl_args? string[]        Extra curl flags
+---@field save_history? boolean      Save request to history
 ---@field pre_hook? fun(next: fun(), input: nurl.RequestInput)
 ---@field post_hook? fun(out: nurl.RequestOut)
 ---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)

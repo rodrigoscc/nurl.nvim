@@ -73,6 +73,18 @@ describe("requests", function()
             assert.are.equal(post_hook, result.post_hook)
         end)
 
+        it("expands save_history", function()
+            local request = {
+                url = "https://example.com",
+                save_history = function()
+                    return false
+                end,
+            }
+            local result = requests.expand(request)
+
+            assert.is_false(result.save_history)
+        end)
+
         it("errors when multiple body types provided", function()
             local request = {
                 url = "https://example.com",

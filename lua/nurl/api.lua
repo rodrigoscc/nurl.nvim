@@ -196,7 +196,11 @@ function M.send(request, opts_or_callback, callback)
                 end
 
                 local request_was_sent = curl_success
-                if request_was_sent and config.history.enabled then
+                if
+                    request_was_sent
+                    and config.history.enabled
+                    and expanded_request.save_history ~= false
+                then
                     local status, error =
                         pcall(history.insert_history_entry, handle)
                     if not status then
