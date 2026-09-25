@@ -1,4 +1,5 @@
 local fs = require("nurl.data.fs")
+local worker_root = require("nurl.data.worker_root")
 
 local M = {}
 
@@ -234,12 +235,6 @@ end
 ---@param max_bytes integer
 ---@param callback fun(error?: string)
 function M.enforce_async(path, max_bytes, callback)
-    local db_module =
-        vim.api.nvim_get_runtime_file("lua/nurl/data/db.lua", false)[1]
-    assert(db_module, "Could not find nurl.data.db for retention worker")
-    local lua_root = vim.fs.dirname(vim.fs.dirname(vim.fs.dirname(db_module)))
-        .. "/"
-
     local work
     work = vim.uv.new_work(enforce_in_worker, function(ok, err)
         work = nil
@@ -251,7 +246,7 @@ function M.enforce_async(path, max_bytes, callback)
             end
         end)
     end)
-    work:queue(path, lua_root, max_bytes)
+    work:queue(path, worker_root, max_bytes)
 end
 
 return M

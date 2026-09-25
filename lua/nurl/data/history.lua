@@ -2,6 +2,7 @@ local config = require("nurl.config")
 local Curl = require("nurl.curl")
 local fs = require("nurl.data.fs")
 local retention = require("nurl.data.history_retention")
+local worker_root = require("nurl.data.worker_root")
 local requests = require("nurl.requests")
 
 local M = {}
@@ -423,11 +424,6 @@ end
 function M.page_async(filters, cursor, limit, callback)
     ensure_db()
     local query, binds = page_query(filters, cursor, limit)
-    local db_module =
-        vim.api.nvim_get_runtime_file("lua/nurl/data/db.lua", false)[1]
-    assert(db_module, "Could not find nurl.data.db for history worker")
-    local lua_root = vim.fs.dirname(vim.fs.dirname(vim.fs.dirname(db_module)))
-        .. "/"
 
     local work
     work = vim.uv.new_work(query_in_worker, function(ok, data)
@@ -449,7 +445,7 @@ function M.page_async(filters, cursor, limit, callback)
         end)
     end)
 
-    work:queue(M.db.path, lua_root, query, vim.json.encode(binds))
+    work:queue(M.db.path, worker_root, query, vim.json.encode(binds))
 end
 
 local SELECT_ITEM = [[SELECT
