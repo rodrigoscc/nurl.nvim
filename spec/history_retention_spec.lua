@@ -99,6 +99,7 @@ SELECT request_url_raw FROM request_history ORDER BY time, id]])
         assert.are.same({ "https://example.org/4" }, kept)
         for i = 1, 3 do
             assert.is_false(fs.exists(files[i]))
+            assert.is_false(fs.exists(vim.fs.dirname(files[i])))
         end
         assert.is_true(fs.exists(files[4]))
         assert.is_true(disk_size(files) <= 90000)

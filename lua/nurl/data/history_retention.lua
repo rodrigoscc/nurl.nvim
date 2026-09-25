@@ -1,5 +1,4 @@
-local fs = require("nurl.data.fs")
-local worker_root = require("nurl.data.worker_root")
+local uv = vim.uv or vim.loop
 
 local M = {}
 
@@ -122,6 +121,28 @@ FROM request_history ORDER BY time ASC, id ASC]]):format(
     return query_rows(db, query)
 end
 
+local function delete_body_file(path)
+    local removed, err, name = uv.fs_unlink(path)
+    if not removed and name ~= "ENOENT" then
+        error(("Could not remove history response file %s: %s"):format(path, err))
+    end
+
+    -- Each response is saved in its own directory. Leave the directory alone
+    -- if another file is present rather than recursively deleting it.
+    local dir = path:match("^(.*)[/\\][^/\\]+$")
+    if dir then
+        local success, dir_err, dir_name = uv.fs_rmdir(dir)
+        if
+            not success
+            and dir_name ~= "ENOENT"
+            and dir_name ~= "ENOTEMPTY"
+            and dir_name ~= "EEXIST"
+        then
+            error(("Could not remove history response directory %s: %s"):format(dir, dir_err))
+        end
+    end
+end
+
 local function delete_oldest(db, count)
     local rows = query_rows(
         db,
@@ -142,7 +163,7 @@ SELECT 1 FROM request_history WHERE response_body_file = ? LIMIT 1]],
                 { path }
             ) > 0
             if not still_used then
-                fs.delete_dir(vim.fs.dirname(path))
+                delete_body_file(path)
             end
         end
     end
@@ -235,6 +256,7 @@ end
 ---@param max_bytes integer
 ---@param callback fun(error?: string)
 function M.enforce_async(path, max_bytes, callback)
+    local worker_root = require("nurl.data.worker_root")
     local work
     work = vim.uv.new_work(enforce_in_worker, function(ok, err)
         work = nil
