@@ -158,15 +158,15 @@ discards older results. Configure the explorer through `history.explorer`
 (`page_size` and buffer-local `keys`; set a mapping to `false` to disable it).
 
 
-HISTORY RETENTION                                *nurl.nvim-history-retention*
+HISTORY RETENTION                       *nurl.nvim-commands-history-retention*
 
 History has no item-count limit. `history.max_size_bytes` defaults to 512 MiB
 and counts the SQLite database, its WAL/SHM files, and file-backed responses
 referenced by saved history. When the budget is exceeded, the oldest entries
-and their response files are removed until usage is roughly 80% of the budget.
-SQLite is compacted in the background to reclaim disk space. The newest entry
-is always kept, even if it alone exceeds the budget. Response files outside
-saved history are not included.
+are removed until usage is roughly 80% of the budget. Their response files are
+deleted, and SQLite is compacted in the background to reclaim disk space. The
+newest entry is always kept, even if it alone exceeds the budget. Response
+files that are not saved in history are outside this budget.
 
 
 OVERRIDES                                       *nurl.nvim-commands-overrides*
@@ -801,6 +801,7 @@ Methods:
         history = {
             enabled = true,
             db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
+            -- Budget includes SQLite storage and response files referenced by history
             max_size_bytes = 512 * 1024 * 1024,
         },
 
