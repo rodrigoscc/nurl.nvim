@@ -1,5 +1,5 @@
 *nurl.nvim.txt*
-                              For Neovim >= 0.10.0    Last change: 2026 May 18
+                        For Neovim >= 0.10.0    Last change: 2026 September 25
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -34,6 +34,7 @@ https://github.com/user-attachments/assets/8fdfdc50-6086-411c-9fd0-482a5b913d4d
 - **Lua-based requests** - Define HTTP requests as Lua tables with full language support
 - **Environments** - Manage variables per environment (dev, staging, prod)
 - **Request history** - SQLite-backed history with full request/response data
+- **History explorer** - Paginated timeline with body filters and direct access to saved responses
 - **Response viewer** - Split window with body, request, headers, info, and raw curl output tabs
 - **Hooks** - Pre/post hooks per request, or per environment (applies to all requests when env is active)
 - **Picker integration** - Browse project requests with snacks.nvim <https://github.com/folke/snacks.nvim> or telescope.nvim <https://github.com/nvim-telescope/telescope.nvim>
@@ -101,7 +102,7 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
 6. Commands                                               *nurl.nvim-commands*
 
   Command                 Description
-  ----------------------- ---------------------------------------
+  ----------------------- ------------------------------------------------
   :Nurl                   Project picker -> send request
   :Nurl .                 Send request at cursor
   :Nurl %                 Current buffer picker -> send request
@@ -109,7 +110,7 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
   :Nurl jump              Project picker -> jump to definition
   :Nurl jump %            Current buffer picker -> jump
   :Nurl jump <filepath>   File picker -> jump
-  :Nurl history           Paged history explorer -> filter and open responses
+  :Nurl history           Browse and filter history in a full-width list
   :Nurl resend            Recent requests picker -> resend
   :Nurl resend <-n>       Resend nth last request (-1 = last)
   :Nurl env               Environment picker -> activate
@@ -123,26 +124,38 @@ When using `%` or `<filepath>`, if the file contains only one request, the
 action runs immediately without opening a picker.
 
 
-HISTORY EXPLORER                              *nurl.nvim-history-explorer*
+HISTORY EXPLORER                         *nurl.nvim-commands-history-explorer*
 
-`:Nurl history` opens a full-width history list in a new tab. Normal motions
-navigate the list; reaching the end loads more entries. Opening a response
-creates a window beside the list; close it with `q` to return to the explorer
-without losing the current position or filters.
+`:Nurl history` opens a paged history list in a new tab. Navigate with normal
+motions (`j`, `k`, `gg`, `G`); scrolling near the end loads more entries.
+Opening a response creates a response window beside the list. Close that window
+with `q` to return to the explorer at the same position and filters.
 
-  <CR>           Open the selected response
-  /              Search URL/title
-  F              Filter method, status, time, request or response body
-  C              Clear filters
-  <C-r>          Resend the selected request
-  q              Close the explorer
-  ?              Show keymaps
+  -----------------------------------------------------------------------
+  Key                         Action
+  --------------------------- -------------------------------------------
+  <CR>                        Open the selected response
 
-Filters combine. Status accepts a code (404) or class (4xx), and date filters
-accept an ISO date or date/time prefix. Body search matches saved text, but
-excludes file-backed response bodies. Body queries run in a background worker;
-results from superseded searches are discarded. Explorer options live under
-`history.explorer`: `page_size` and buffer-local `keys`.
+  /                           Filter by URL or title
+
+  F                           Filter by method, status, time, request
+                              body, or text response body
+
+  C                           Clear filters
+
+  <C-r>                       Resend the selected request
+
+  q                           Close the explorer
+
+  ?                           Show keymaps
+  -----------------------------------------------------------------------
+Filters can be combined. Status accepts codes (`404`) and classes (`4xx`);
+dates accept `YYYY-MM-DD` or an ISO date/time prefix. Body searches are
+case-insensitive substring searches of saved request data/form fields or text
+responses; file-backed response bodies are excluded. Body searches run in a
+background worker so the explorer remains responsive, and changing filters
+discards older results. Configure the explorer through `history.explorer`
+(`page_size` and buffer-local `keys`; set a mapping to `false` to disable it).
 
 
 OVERRIDES                                       *nurl.nvim-commands-overrides*
@@ -198,7 +211,7 @@ A request file returns a list of request tables:
             url = function()
                 return "https://..."
             end, -- dynamic
-    
+
             -- Query parameters (optional): table or function
             -- Values are URI-encoded automatically. Use functions for dynamic values.
             query = {
@@ -207,45 +220,45 @@ A request file returns a list of request tables:
                 search = "hello world", -- becomes search=hello%20world
                 token = Nurl.env.var("api_token"),
             },
-    
+
             -- Method (optional, defaults to GET)
             method = "POST",
-    
+
             -- Title (optional): display name in pickers
             title = "Create user",
-    
+
             -- Headers (optional): table or function
             headers = {
                 ["Authorization"] = "Bearer token",
                 ["Content-Type"] = "application/json",
                 ["Accept"] = { "application/json", "text/plain" },
             },
-    
+
             -- Auth (optional)
             auth = {
                 type = "basic",
                 username = "user",
                 password = "pass",
             },
-    
+
             -- Body (optional, use only one)
             data = { key = "value" }, -- table: JSON encoded
             data = '{"raw": "json"}', -- string: sent as-is
             form = { field = "value" }, -- multipart/form-data
             data_urlencode = { q = "search" }, -- URL encoded
-    
+
             -- Additional curl flags (optional)
             curl_args = { "--insecure", "--compressed" },
-    
+
             -- Save request to history (optional, defaults to true)
             save_history = false,
-    
+
             -- Hooks (optional)
             pre_hook = function(next, input)
                 next()
             end,
             post_hook = function(out) end,
-    
+
             -- Test function (optional)
             test = function(ctx, response)
                 ctx.are.equal(200, response.status_code)
@@ -364,9 +377,9 @@ buffer tab.
             url = "https://api.example.com/users/1",
             test = function(ctx, response)
                 ctx.are.equal(200, response.status_code)
-    
+
                 local body = vim.json.decode(response.body)
-    
+
                 ctx.test("user data", function()
                     ctx.is_not_nil(body.id)
                     ctx.are.equal("John", body.name, "name should be John")
@@ -413,7 +426,7 @@ The test buffer displays results in busted-style format:
 
 >text
     3 successes / 1 failure / 0 errors
-    
+
     Failure
     user data address
     city should match
@@ -555,7 +568,7 @@ as the second or third argument:
             Nurl.env.set("token", body.access_token)
         end
     end)
-    
+
     -- Callback as third argument (with opts)
     Nurl.send(request, { display = true }, function(out)
         print("Status: " .. out.response.status_code)
@@ -573,7 +586,7 @@ Control the response window display. Can be `true` (show with defaults),
 >lua
     -- Show response window with defaults
     Nurl.send(request, { display = true })
-    
+
     -- Show response window with options
     Nurl.send(request, {
         display = {
@@ -728,29 +741,29 @@ Methods:
 
 >lua
     local Nurl = require("nurl")
-    
+
     -- Send a request programmatically (returns a handle)
     local handle = Nurl.send(request, opts?, callback?)
     local handle = Nurl.send(request, callback?) -- opts can be omitted
-    
+
     -- Wait for request to complete (blocks)
     local out = handle:wait()
     local out = handle:wait(5000) -- with timeout in ms
-    
+
     -- Cancel a running request
     handle:cancel()
-    
+
     -- Resend from history
     Nurl.resend_last_request() -- resend last
     Nurl.resend_last_request(-2) -- resend second to last
-    
+
     -- Environment
     Nurl.get_active_env() -- returns active env name or nil
     Nurl.activate_env("production")
     Nurl.env.get("variable") -- get variable value
     Nurl.env.set("variable", val) -- set variable value
     Nurl.env.var("variable") -- get resolver function
-    
+
     -- Winbar components
     Nurl.winbar.status_code()
     Nurl.winbar.time()
@@ -766,26 +779,26 @@ Methods:
     require("nurl").setup({
         -- Project directory for request files
         dir = ".nurl",
-    
+
         -- Environments file name (in dir)
         environments_file = "environments.lua",
-    
+
         -- Active environments per working directory file name (in dir)
         active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
-    
+
         -- History settings
         history = {
             enabled = true,
             db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
             max_history_items = 10000,
         },
-    
+
         -- Directory for non-displayable response bodies (images, etc.)
         responses_files_dir = vim.fn.stdpath("data") .. "/nurl/responses",
-    
+
         -- Response window config (see :help nvim_open_win)
         win_config = { split = "right" },
-    
+
         -- Response formatters by filetype
         formatters = {
             json = {
@@ -801,7 +814,7 @@ Methods:
                 end,
             },
         },
-    
+
         -- Buffer keymaps
         buffers = {
             {
@@ -866,7 +879,7 @@ Methods:
                 },
             },
         },
-    
+
         highlight = {
             groups = {
                 spinner = "NurlSpinner",
@@ -966,16 +979,16 @@ The response window includes a winbar. Use it in your own winbar:
                 "--format",
                 "json",
             }, { text = true }):wait()
-    
+
             if result.code ~= 0 then
                 error("Failed getting op item")
             end
-    
+
             local data = vim.json.decode(result.stdout)
             return data.value
         end)
     end
-    
+
     return {
         {
             url = "https://api.example.com/login",
@@ -994,7 +1007,7 @@ OAUTH2 TOKEN REFRESH                  *nurl.nvim-recipes-oauth2-token-refresh*
 >lua
     -- .nurl/environments.lua
     local env = require("nurl.environments")
-    
+
     return {
         default = {
             access_token = nil,
@@ -1006,7 +1019,7 @@ OAUTH2 TOKEN REFRESH                  *nurl.nvim-recipes-oauth2-token-refresh*
                     next()
                     return
                 end
-    
+
                 Nurl.send({
                     url = "https://auth.example.com/token",
                     method = "POST",
@@ -1019,7 +1032,7 @@ OAUTH2 TOKEN REFRESH                  *nurl.nvim-recipes-oauth2-token-refresh*
                         local body = vim.json.decode(out.response.body)
                         env.set("access_token", body.access_token)
                         env.set("expires_at", os.time() + body.expires_in)
-    
+
                         -- This request has already been expanded before the pre_hook,
                         -- so we need to update the header here so that it reflects the
                         -- above changes.
@@ -1047,9 +1060,9 @@ HMAC SIGNATURE                              *nurl.nvim-recipes-hmac-signature*
         }, message)
         return result:match("=%s*(%x+)") or ""
     end
-    
+
     local body = '{"action":"test"}'
-    
+
     return {
         {
             url = "https://api.example.com/secure",
@@ -1101,7 +1114,7 @@ GRAPHQL HELPER                              *nurl.nvim-recipes-graphql-helper*
             data = { query = query, variables = variables },
         }
     end
-    
+
     return {
         graphql(
             [[
@@ -1129,12 +1142,12 @@ under the cursor:
             vim.ui.open(cursor_url)
             return
         end
-    
+
         local nurl_data = vim.b.nurl_data
-    
+
         -- Will send the same headers, since they may include authentication.
         local orig_headers = nurl_data.request.headers
-    
+
         if vim.v.count == 0 then
             -- Display response in the current window
             Nurl.send(
@@ -1146,11 +1159,11 @@ under the cursor:
             Nurl.send({ cursor_url, headers = orig_headers }, { display = true })
         end
     end
-    
+
     -- Make <cfile> include query params
     vim.opt.isfname:append("?")
     vim.opt.isfname:append("&")
-    
+
     vim.keymap.set("n", "gx", super_gx, { desc = "Super gx" })
 <
 
