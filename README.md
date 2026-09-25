@@ -27,9 +27,10 @@ https://github.com/user-attachments/assets/8fdfdc50-6086-411c-9fd0-482a5b913d4d
 - **Lua-based requests** - Define HTTP requests as Lua tables with full language support
 - **Environments** - Manage variables per environment (dev, staging, prod)
 - **Request history** - SQLite-backed history with full request/response data
+- **History explorer** - Paginated timeline with body filters and direct access to saved responses
 - **Response viewer** - Split window with body, request, headers, info, and raw curl output tabs
 - **Hooks** - Pre/post hooks per request, or per environment (applies to all requests when env is active)
-- **Picker integration** - Browse requests and history with [snacks.nvim](https://github.com/folke/snacks.nvim) or [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+- **Picker integration** - Browse project requests with [snacks.nvim](https://github.com/folke/snacks.nvim) or [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 
 ## Requirements
 
@@ -92,7 +93,7 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
 | `:Nurl jump` | Project picker -> jump to definition |
 | `:Nurl jump %` | Current buffer picker -> jump |
 | `:Nurl jump <filepath>` | File picker -> jump |
-| `:Nurl history` | History picker -> view response |
+| `:Nurl history` | Browse and filter history in a full-width list |
 | `:Nurl resend` | Recent requests picker -> resend |
 | `:Nurl resend <-n>` | Resend nth last request (-1 = last) |
 | `:Nurl env` | Environment picker -> activate |
@@ -104,6 +105,31 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
 | `:Nurl yank <filepath>` | File picker -> yank |
 
 When using `%` or `<filepath>`, if the file contains only one request, the action runs immediately without opening a picker.
+
+### History explorer
+
+`:Nurl history` opens a paged history list in a new tab. Navigate with normal
+motions (`j`, `k`, `gg`, `G`); scrolling near the end loads more entries.
+Opening a response creates a response window beside the list. Close that
+window with `q` to return to the explorer at the same position and filters.
+
+| Key | Action |
+|-----|--------|
+| `<CR>` | Open the selected response |
+| `/` | Filter by URL or title |
+| `F` | Filter by method, status, time, request body, or text response body |
+| `C` | Clear filters |
+| `<C-r>` | Resend the selected request |
+| `q` | Close the explorer |
+| `?` | Show keymaps |
+
+Filters can be combined. Status accepts codes (`404`) and classes (`4xx`);
+dates accept `YYYY-MM-DD` or an ISO date/time prefix. Body searches are
+case-insensitive substring searches of saved request data/form fields or text
+responses; file-backed response bodies are excluded. Body searches run in a
+background worker so the explorer remains responsive, and changing filters
+discards older results. Configure the explorer through `history.explorer`
+(`page_size` and buffer-local `keys`; set a mapping to `false` to disable it).
 
 ### Overrides
 
@@ -821,6 +847,16 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 | `NurlInfoStatusRedirect` | 3xx status codes |
 | `NurlInfoStatusClientError` | 4xx status codes |
 | `NurlInfoStatusServerError` | 5xx status codes |
+| `NurlHistoryTime` | History timestamp |
+| `NurlHistoryMethod` | History request method |
+| `NurlHistoryStatus` | Other history status codes |
+| `NurlHistoryStatusSuccess` | History 2xx status codes |
+| `NurlHistoryStatusRedirect` | History 3xx status codes |
+| `NurlHistoryStatusError` | History 4xx/5xx status codes |
+| `NurlHistoryDuration` | History request duration |
+| `NurlHistoryTitle` | History request title |
+| `NurlHistoryUrl` | History request URL |
+| `NurlHistoryMatch` | URL/title filter matches in history |
 | `NurlTestPass` | Passing test count |
 | `NurlTestFail` | Failing test count and "Failure" header |
 | `NurlTestError` | Error count and "Error" header |

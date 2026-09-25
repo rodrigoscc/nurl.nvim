@@ -5,35 +5,6 @@ local preview = require("nurl.preview")
 local M = {}
 
 ---@param item snacks.picker.Item
----@return snacks.picker.Highlight[]
-local function format_history_item(item)
-    local ret = {}
-
-    local exec_datetime, request, response = unpack(item.item)
-
-    table.insert(ret, { "", "SnacksPickerIcon" })
-    table.insert(ret, { " " })
-
-    table.insert(ret, { exec_datetime, "SnacksPickerComment" })
-    table.insert(ret, { " " })
-
-    if request.title then
-        table.insert(ret, { request.title, "SnacksPickerLabel" })
-        table.insert(ret, { " " })
-    else
-        table.insert(ret, { request.method, "SnacksPickerFileType" })
-        table.insert(ret, { " " })
-
-        table.insert(ret, { requests.full_url(request), "SnacksPickerLabel" })
-        table.insert(ret, { " " })
-    end
-
-    table.insert(ret, { tostring(response.status_code), "SnacksPickerIdx" })
-
-    return ret
-end
-
----@param item snacks.picker.Item
 ---@param picker snacks.Picker
 ---@return snacks.picker.Highlight[]
 local function format_project_request_item(item)
@@ -79,31 +50,6 @@ local function format_request_item(item)
     end
 
     return ret
-end
-
----@param history_items nurl.HistoryItem[]
----@return snacks.picker.Item[]
-local function history_items_to_snacks_items(history_items)
-    return vim.iter(ipairs(history_items))
-        :map(function(i, item)
-            local exec_datetime, request, response, curl = unpack(item)
-
-            local snacks_item = {
-                idx = i,
-                score = 1,
-                item = item,
-                text = requests.text(request, {
-                    prefix = exec_datetime,
-                    suffix = response.status_code,
-                }),
-                response = response,
-                curl = curl,
-                exec_datetime = exec_datetime,
-            }
-
-            return snacks_item
-        end)
-        :totable()
 end
 
 ---@param super_requests nurl.SuperRequest[]
@@ -219,30 +165,6 @@ function M.pick_project_request_item(title, project_request_items, on_pick)
         end,
         preview = function(ctx)
             ctx.preview:set_lines(preview.render(ctx.item.lazy))
-            ctx.preview:highlight({ ft = "http" })
-        end,
-    })
-end
-
----@param title string
----@param history_items nurl.HistoryItem[]
----@param on_pick? fun(item: nurl.HistoryItem)
-function M.pick_request_history_item(title, history_items, on_pick)
-    local snacks_items = history_items_to_snacks_items(history_items)
-
-    Snacks.picker.pick("history", {
-        title = title,
-        items = snacks_items,
-        format = format_history_item,
-        confirm = function(picker, item)
-            picker:close()
-            if on_pick ~= nil then
-                on_pick(item.item)
-            end
-        end,
-        preview = function(ctx)
-            local _, request, response = unpack(ctx.item.item)
-            ctx.preview:set_lines(preview.render(request, response))
             ctx.preview:highlight({ ft = "http" })
         end,
     })

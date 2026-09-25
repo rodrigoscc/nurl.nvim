@@ -53,12 +53,18 @@ end
 ---@param content string
 ---@param file_type string
 local function set_body_buffer(bufnr, content, file_type)
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+    end
     local lines = vim.split(content, "\n")
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
     vim.api.nvim_set_option_value("filetype", file_type, { buf = bufnr })
 end
 
 local function open_file_in_buffer(bufnr, file)
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+    end
     local existing_buffer = vim.fn.bufnr(file)
     if existing_buffer ~= -1 then
         -- Specially important for when the user opens a request in history which buffers are still open.

@@ -7,14 +7,33 @@ local M = {}
 
 ---@alias nurl.HistoryItem [string, nurl.Request, nurl.Response, nurl.Curl]
 
+---@class nurl.HistorySummary
+---@field id integer
+---@field time string
+---@field method string
+---@field url string
+---@field title? string
+---@field status integer
+---@field duration? number
+
+---@class nurl.HistoryFilters
+---@field search? string
+---@field method? string
+---@field status? string
+---@field from? string
+---@field to? string
+---@field request_body? string
+---@field response_body? string
+
 ---@type nurl.Db | nil
 M.db = nil
 
 function M.setup()
     local Db = require("nurl.data.db")
 
-    fs.mkdir(vim.fs.dirname(config.history.db_file))
-    M.db = Db:new(config.history.db_file)
+    local db_file = vim.fn.fnamemodify(config.history.db_file, ":p")
+    fs.mkdir(vim.fs.dirname(db_file))
+    M.db = Db:new(db_file)
 
     local group = vim.api.nvim_create_augroup("nurl.history", {})
     vim.api.nvim_create_autocmd("ExitPre", {
@@ -197,13 +216,229 @@ RETURNING response_body_file;]],
     end
 end
 
----@return nurl.HistoryItem[]
-function M.all()
+local function ensure_db()
     if M.db == nil then
         M.setup()
     end
+end
 
-    local result = M.db:exec([[SELECT
+local function like_pattern(value)
+    return "%"
+        .. value:gsub("\\", "\\\\"):gsub("%%", "\\%%"):gsub("_", "\\_")
+        .. "%"
+end
+
+local function page_query(filters, cursor, limit)
+    filters = filters or {}
+    limit = limit or 50
+
+    assert(
+        limit > 0 and limit % 1 == 0,
+        "History page size must be a positive integer"
+    )
+
+    local where = {}
+    local binds = {}
+
+    local function condition(sql, ...)
+        table.insert(where, sql)
+        for _, value in ipairs({ ... }) do
+            table.insert(binds, value)
+        end
+    end
+
+    if filters.search and filters.search ~= "" then
+        local pattern = like_pattern(filters.search)
+        condition(
+            "(request_url_raw LIKE ? ESCAPE '\\' OR request_title LIKE ? ESCAPE '\\')",
+            pattern,
+            pattern
+        )
+    end
+
+    if filters.method and filters.method ~= "" then
+        condition("request_method = ?", filters.method:upper())
+    end
+
+    if filters.status and filters.status ~= "" then
+        local class = filters.status:match("^([1-5])[xX][xX]$")
+
+        if class then
+            condition(
+                "response_status_code >= ? AND response_status_code < ?",
+                tonumber(class) * 100,
+                (tonumber(class) + 1) * 100
+            )
+        else
+            local status = tonumber(filters.status)
+            assert(
+                status and status % 1 == 0,
+                "Status must be a code or a class such as 4xx"
+            )
+            condition("response_status_code = ?", status)
+        end
+    end
+
+    if filters.from and filters.from ~= "" then
+        condition("time >= ?", filters.from)
+    end
+
+    if filters.to and filters.to ~= "" then
+        -- Allow a date or a prefix of an ISO local datetime, inclusively.
+        condition("time < ?", filters.to .. "~")
+    end
+
+    if filters.request_body and filters.request_body ~= "" then
+        local pattern = like_pattern(filters.request_body)
+        condition(
+            "(request_data LIKE ? ESCAPE '\\' OR request_form LIKE ? ESCAPE '\\' OR request_data_urlencode LIKE ? ESCAPE '\\')",
+            pattern,
+            pattern,
+            pattern
+        )
+    end
+
+    if filters.response_body and filters.response_body ~= "" then
+        condition(
+            "response_body_file IS NULL AND response_body LIKE ? ESCAPE '\\'",
+            like_pattern(filters.response_body)
+        )
+    end
+
+    if cursor then
+        condition(
+            "(time < ? OR (time = ? AND id < ?))",
+            cursor.time,
+            cursor.time,
+            cursor.id
+        )
+    end
+
+    local query = [[SELECT id, time, request_method, request_url_raw,
+    request_title, response_status_code, response_time_total
+FROM request_history]]
+    if #where > 0 then
+        query = query .. " WHERE " .. table.concat(where, " AND ")
+    end
+
+    query = query .. " ORDER BY time DESC, id DESC LIMIT ?"
+    table.insert(binds, limit + 1)
+
+    return query, binds
+end
+
+local function page_results(rows, limit)
+    limit = limit or 50
+    local summaries = {}
+
+    for i = 1, math.min(#rows, limit) do
+        local columns = rows[i]
+        local function text(index)
+            local value = columns[index]
+            return value ~= vim.NIL and value or nil
+        end
+        table.insert(summaries, {
+            id = tonumber(text(1)),
+            time = text(2),
+            method = text(3),
+            url = text(4),
+            title = text(5),
+            status = tonumber(text(6)),
+            duration = tonumber(text(7)),
+        })
+    end
+
+    return summaries, #rows > limit
+end
+
+---Fetch summaries only. The cursor is a (time, id) pair, so entries with the
+---same second are never skipped when loading another page.
+---@param filters nurl.HistoryFilters
+---@param cursor? nurl.HistorySummary
+---@param limit? integer
+---@return nurl.HistorySummary[], boolean
+function M.page(filters, cursor, limit)
+    ensure_db()
+
+    local query, binds = page_query(filters, cursor, limit)
+    local result = M.db:exec(query, binds)
+    local rows = result:all()
+
+    result:close()
+
+    local columns = {}
+    for _, row in ipairs(rows) do
+        table.insert(columns, row.columns)
+    end
+
+    return page_results(columns, limit)
+end
+
+local function query_in_worker(path, root, sql, params)
+    package.path = root .. "?.lua;" .. package.path
+
+    local db
+    local ok, data = pcall(function()
+        db = require("nurl.data.db"):new(path)
+        local result = db:exec(sql, vim.json.decode(params))
+        local rows = result:all()
+
+        result:close()
+
+        local columns = {}
+        for _, row in ipairs(rows) do
+            table.insert(columns, row.columns)
+        end
+
+        return vim.json.encode(columns)
+    end)
+
+    if db then
+        db:close()
+    end
+
+    return ok, data
+end
+
+---Run body searches on a separate SQLite connection in libuv's worker pool.
+---The worker only receives serialized values and never touches Neovim buffers.
+---@param filters nurl.HistoryFilters
+---@param cursor nurl.HistorySummary?
+---@param limit integer
+---@param callback fun(rows: nurl.HistorySummary[]?, more: boolean?, error: string?)
+function M.page_async(filters, cursor, limit, callback)
+    ensure_db()
+    local query, binds = page_query(filters, cursor, limit)
+    local db_module =
+        vim.api.nvim_get_runtime_file("lua/nurl/data/db.lua", false)[1]
+    assert(db_module, "Could not find nurl.data.db for history worker")
+    local lua_root = vim.fs.dirname(vim.fs.dirname(vim.fs.dirname(db_module)))
+        .. "/"
+
+    local work
+    work = vim.uv.new_work(query_in_worker, function(ok, data)
+        work = nil
+        vim.schedule(function()
+            if not ok then
+                callback(nil, nil, data)
+                return
+            end
+
+            local decoded, columns = pcall(vim.json.decode, data)
+            if not decoded then
+                callback(nil, nil, columns)
+                return
+            end
+
+            local summaries, more = page_results(columns, limit)
+            callback(summaries, more)
+        end)
+    end)
+
+    work:queue(M.db.path, lua_root, query, vim.json.encode(binds))
+end
+
+local SELECT_ITEM = [[SELECT
     time,
     request_url,
     request_query,
@@ -239,113 +474,115 @@ function M.all()
     curl_result_signal,
     curl_result_stdout,
     curl_result_stderr
-FROM
-    request_history
-ORDER BY time DESC]])
+FROM request_history]]
 
+---@param row nurl.Row
+---@return nurl.HistoryItem
+local function decode_row(row)
+    local time = row:get_string(1)
+    local request_url = row:get_string(2)
+    local request_query = row:get_string(3)
+    local request_title = row:get_string(4)
+    local request_method = row:get_string(5)
+    local request_auth = row:get_string(6)
+    local request_headers = row:get_string(7)
+    local request_data = row:get_string(8)
+    local request_form = row:get_string(9)
+    local request_data_urlencode = row:get_string(10)
+    local request_curl_args = row:get_string(11)
+    local response_status_code = row:get_number(12)
+    local response_reason_phrase = row:get_string(13)
+    local response_protocol = row:get_string(14)
+    local response_headers = row:get_string(15)
+    local response_body = row:get_string(16)
+    local response_body_file = row:get_string(17)
+    local response_time_appconnect = row:get_number(18)
+    local response_time_connect = row:get_number(19)
+    local response_time_namelookup = row:get_number(20)
+    local response_time_pretransfer = row:get_number(21)
+    local response_time_redirect = row:get_number(22)
+    local response_time_starttransfer = row:get_number(23)
+    local response_time_total = row:get_number(24)
+    local response_size_download = row:get_number(25)
+    local response_size_header = row:get_number(26)
+    local response_size_request = row:get_number(27)
+    local response_size_upload = row:get_number(28)
+    local response_speed_download = row:get_number(29)
+    local response_speed_upload = row:get_number(30)
+    local curl_args = row:get_string(31)
+    local curl_result_code = row:get_number(32)
+    local curl_result_signal = row:get_number(33)
+    local curl_result_stdout = row:get_string(34)
+    local curl_result_stderr = row:get_string(35)
+
+    ---@type nurl.Request
+    local request = {
+        title = request_title,
+        url = vim.json.decode(request_url),
+        query = request_query and vim.json.decode(request_query),
+        method = request_method,
+        auth = request_auth and vim.json.decode(request_auth),
+        headers = request_headers and vim.json.decode(request_headers),
+        data = request_data and vim.json.decode(request_data),
+        form = request_form and vim.json.decode(request_form),
+        data_urlencode = request_data_urlencode
+            and vim.json.decode(request_data_urlencode),
+        curl_args = request_curl_args and vim.json.decode(request_curl_args),
+    }
+
+    ---@type nurl.Response
+    local response = {
+        status_code = response_status_code,
+        reason_phrase = response_reason_phrase,
+        protocol = response_protocol,
+        headers = response_headers and vim.json.decode(response_headers),
+        body = response_body,
+        body_file = response_body_file,
+        time = {
+            time_appconnect = response_time_appconnect,
+            time_connect = response_time_connect,
+            time_namelookup = response_time_namelookup,
+            time_pretransfer = response_time_pretransfer,
+            time_redirect = response_time_redirect,
+            time_starttransfer = response_time_starttransfer,
+            time_total = response_time_total,
+        },
+        size = {
+            size_download = response_size_download,
+            size_header = response_size_header,
+            size_request = response_size_request,
+            size_upload = response_size_upload,
+        },
+        speed = {
+            speed_download = response_speed_download,
+            speed_upload = response_speed_upload,
+        },
+    }
+
+    ---@type nurl.Curl
+    local curl = Curl:new({
+        args = vim.json.decode(curl_args),
+        result = {
+            code = curl_result_code,
+            signal = curl_result_signal,
+            stdout = curl_result_stdout,
+            stderr = curl_result_stderr,
+        },
+    })
+
+    return { time, request, response, curl }
+end
+
+---@param id integer
+---@return nurl.HistoryItem?
+function M.get(id)
+    ensure_db()
+    local result = M.db:exec(SELECT_ITEM .. " WHERE id = ?", { id })
     local rows = result:all()
     result:close()
-
-    ---@type nurl.HistoryItem[]
-    local history = {}
-
-    for _, row in ipairs(rows) do
-        local time = row:get_string(1)
-        local request_url = row:get_string(2)
-        local request_query = row:get_string(3)
-        local request_title = row:get_string(4)
-        local request_method = row:get_string(5)
-        local request_auth = row:get_string(6)
-        local request_headers = row:get_string(7)
-        local request_data = row:get_string(8)
-        local request_form = row:get_string(9)
-        local request_data_urlencode = row:get_string(10)
-        local request_curl_args = row:get_string(11)
-        local response_status_code = row:get_number(12)
-        local response_reason_phrase = row:get_string(13)
-        local response_protocol = row:get_string(14)
-        local response_headers = row:get_string(15)
-        local response_body = row:get_string(16)
-        local response_body_file = row:get_string(17)
-        local response_time_appconnect = row:get_number(18)
-        local response_time_connect = row:get_number(19)
-        local response_time_namelookup = row:get_number(20)
-        local response_time_pretransfer = row:get_number(21)
-        local response_time_redirect = row:get_number(22)
-        local response_time_starttransfer = row:get_number(23)
-        local response_time_total = row:get_number(24)
-        local response_size_download = row:get_number(25)
-        local response_size_header = row:get_number(26)
-        local response_size_request = row:get_number(27)
-        local response_size_upload = row:get_number(28)
-        local response_speed_download = row:get_number(29)
-        local response_speed_upload = row:get_number(30)
-        local curl_args = row:get_string(31)
-        local curl_result_code = row:get_number(32)
-        local curl_result_signal = row:get_number(33)
-        local curl_result_stdout = row:get_string(34)
-        local curl_result_stderr = row:get_string(35)
-
-        ---@type nurl.Request
-        local request = {
-            title = request_title,
-            url = vim.json.decode(request_url),
-            query = request_query and vim.json.decode(request_query),
-            method = request_method,
-            auth = request_auth and vim.json.decode(request_auth),
-            headers = request_headers and vim.json.decode(request_headers),
-            data = request_data and vim.json.decode(request_data),
-            form = request_form and vim.json.decode(request_form),
-            data_urlencode = request_data_urlencode
-                and vim.json.decode(request_data_urlencode),
-            curl_args = request_curl_args
-                and vim.json.decode(request_curl_args),
-        }
-
-        ---@type nurl.Response
-        local response = {
-            status_code = response_status_code,
-            reason_phrase = response_reason_phrase,
-            protocol = response_protocol,
-            headers = response_headers and vim.json.decode(response_headers),
-            body = response_body,
-            body_file = response_body_file,
-            time = {
-                time_appconnect = response_time_appconnect,
-                time_connect = response_time_connect,
-                time_namelookup = response_time_namelookup,
-                time_pretransfer = response_time_pretransfer,
-                time_redirect = response_time_redirect,
-                time_starttransfer = response_time_starttransfer,
-                time_total = response_time_total,
-            },
-            size = {
-                size_download = response_size_download,
-                size_header = response_size_header,
-                size_request = response_size_request,
-                size_upload = response_size_upload,
-            },
-            speed = {
-                speed_download = response_speed_download,
-                speed_upload = response_speed_upload,
-            },
-        }
-
-        ---@type nurl.Curl
-        local curl = Curl:new({
-            args = vim.json.decode(curl_args),
-            result = {
-                code = curl_result_code,
-                signal = curl_result_signal,
-                stdout = curl_result_stdout,
-                stderr = curl_result_stderr,
-            },
-        })
-
-        table.insert(history, { time, request, response, curl })
+    if rows[1] then
+        return decode_row(rows[1])
     end
-
-    return history
 end
 
 return M

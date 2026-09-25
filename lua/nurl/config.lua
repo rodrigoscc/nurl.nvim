@@ -20,6 +20,18 @@ local defaults = {
         max_history_items = 10000,
         ---@type integer
         history_buffer = 500,
+        explorer = {
+            page_size = 50,
+            keys = {
+                ["<CR>"] = "open",
+                ["/"] = "search",
+                F = "filter",
+                C = "clear",
+                ["<C-r>"] = "resend",
+                q = "close",
+                ["?"] = "help",
+            },
+        },
     },
     ---Window config for the response window. Refer to :help nvim_open_win for the available keys.
     ---@type table

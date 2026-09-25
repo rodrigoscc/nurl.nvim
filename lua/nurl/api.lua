@@ -472,26 +472,30 @@ function M.get_active_env()
 end
 
 function M.pick_history()
-    local history_items = history.all()
+    require("nurl.ui.history_explorer").open()
+end
 
-    pickers.pick_request_history_item(
-        "Nurl: history",
-        history_items,
-        function(item)
-            local exec_datetime, request, response, curl = unpack(item)
+---@param item nurl.HistoryItem
+---@param win? integer Existing response window to reuse
+---@return integer, table<nurl.BufferType, integer>
+function M.open_history_item(item, win)
+    local exec_datetime, request, response, curl = unpack(item)
 
-            local item_handle =
-                RequestHandle:rebuild(exec_datetime, request, response, curl)
+    local item_handle =
+        RequestHandle:rebuild(exec_datetime, request, response, curl)
 
-            local entry = { handle = item_handle }
-            registry:push(entry)
+    local entry = { handle = item_handle }
+    registry:push(entry)
 
-            local response_window = ResponseWindow:new({
-                handle_id = item_handle.id,
-            })
-            response_window:open({ enter = true })
-        end
-    )
+    local response_window = ResponseWindow:new({
+        handle_id = item_handle.id,
+        win = win,
+    })
+    local opened_win = response_window:open({ enter = true })
+    response_window:on_buffers_unloaded(function()
+        registry:remove(item_handle.id)
+    end)
+    return opened_win, response_window.buffers
 end
 
 return M

@@ -33,6 +33,17 @@ M.highlights = {
     NurlInfoStatusClientError = "DiagnosticError",
     NurlInfoStatusServerError = "DiagnosticError",
 
+    NurlHistoryTime = "Comment",
+    NurlHistoryMethod = "Function",
+    NurlHistoryStatus = "Normal",
+    NurlHistoryStatusSuccess = "DiagnosticOk",
+    NurlHistoryStatusRedirect = "DiagnosticWarn",
+    NurlHistoryStatusError = "DiagnosticError",
+    NurlHistoryDuration = "Comment",
+    NurlHistoryTitle = "Title",
+    NurlHistoryUrl = "Normal",
+    NurlHistoryMatch = "Search",
+
     NurlTestPass = "DiagnosticOk",
     NurlTestFail = "DiagnosticError",
     NurlTestError = "Exception",
