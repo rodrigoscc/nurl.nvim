@@ -131,6 +131,16 @@ background worker so the explorer remains responsive, and changing filters
 discards older results. Configure the explorer through `history.explorer`
 (`page_size` and buffer-local `keys`; set a mapping to `false` to disable it).
 
+### History retention
+
+History has no item-count limit. `history.max_size_bytes` defaults to 512 MiB
+and counts the SQLite database, its WAL/SHM files, and file-backed responses
+referenced by saved history. When the budget is exceeded, the oldest entries
+are removed until usage is roughly 80% of the budget. Their response files are
+deleted, and SQLite is compacted in the background to reclaim disk space. The
+newest entry is always kept, even if it alone exceeds the budget. Response
+files that are not saved in history are outside this budget.
+
 ### Overrides
 
 Override request fields directly from the command-line for quick one-off changes.
@@ -699,7 +709,8 @@ require("nurl").setup({
     history = {
         enabled = true,
         db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
-        max_history_items = 10000,
+        -- Budget includes SQLite storage and response files referenced by history
+        max_size_bytes = 512 * 1024 * 1024,
     },
 
     -- Directory for non-displayable response bodies (images, etc.)

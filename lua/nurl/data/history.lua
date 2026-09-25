@@ -1,6 +1,7 @@
 local config = require("nurl.config")
 local Curl = require("nurl.curl")
 local fs = require("nurl.data.fs")
+local retention = require("nurl.data.history_retention")
 local requests = require("nurl.requests")
 
 local M = {}
@@ -27,6 +28,43 @@ local M = {}
 
 ---@type nurl.Db | nil
 M.db = nil
+M.retention_running = false
+
+local retention_pending = false
+
+local function check_retention()
+    if not M.db then
+        return
+    end
+    if M.retention_running then
+        retention_pending = true
+        return
+    end
+
+    local max_bytes = config.history.max_size_bytes
+    if not retention.over_budget(M.db, max_bytes) then
+        return
+    end
+
+    M.retention_running = true
+    local ok, err = pcall(retention.enforce_async, M.db.path, max_bytes, function(failure)
+        M.retention_running = false
+        if failure then
+            vim.notify(
+                "Failed to prune request history: " .. failure,
+                vim.log.levels.ERROR
+            )
+        end
+        if retention_pending then
+            retention_pending = false
+            check_retention()
+        end
+    end)
+    if not ok then
+        M.retention_running = false
+        error(err)
+    end
+end
 
 function M.setup()
     local Db = require("nurl.data.db")
@@ -59,6 +97,8 @@ function M.insert_history_entry(handle)
 
     assert(response ~= nil, "Request must be completed")
     assert(curl ~= nil, "Request must be completed")
+    local body_file_stat = response.body_file
+        and vim.uv.fs_stat(response.body_file)
 
     local result = M.db:exec(
         [[INSERT INTO
@@ -81,6 +121,7 @@ request_history (
     response_headers,
     response_body,
     response_body_file,
+    response_body_file_size,
     response_time_appconnect,
     response_time_connect,
     response_time_namelookup,
@@ -102,6 +143,7 @@ request_history (
 )
 VALUES
 (
+    ?,
     ?,
     ?,
     ?,
@@ -159,6 +201,7 @@ VALUES
             response.headers and vim.json.encode(response.headers) or vim.NIL,
             response.body,
             response.body_file or vim.NIL,
+            body_file_stat and body_file_stat.size or 0,
             response.time.time_appconnect,
             response.time.time_connect,
             response.time.time_namelookup,
@@ -180,40 +223,11 @@ VALUES
         }
     )
 
+    local insert_code = result.code
     result:close()
+    assert(insert_code == 101, "Failed to insert request history entry")
 
-    M.delete_old_items()
-end
-
-function M.delete_old_items()
-    local result = M.db:exec(
-        [[WITH stats AS (
-    SELECT COUNT(*) AS total FROM request_history
-)
-DELETE FROM request_history
-WHERE id IN (
-    SELECT id FROM request_history
-    ORDER BY time ASC
-    LIMIT ?
-)
-AND (SELECT total FROM stats) >= ?
-RETURNING response_body_file;]],
-        {
-            config.history.history_buffer,
-            config.history.max_history_items + config.history.history_buffer,
-        }
-    )
-
-    local rows = result:all()
-    result:close()
-
-    for _, row in ipairs(rows) do
-        local body_file = row:get_string(1)
-
-        if body_file then
-            fs.delete_dir(vim.fs.dirname(body_file))
-        end
-    end
+    check_retention()
 end
 
 local function ensure_db()
