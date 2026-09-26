@@ -103,6 +103,8 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
 | `:Nurl yank .` | Yank curl at cursor |
 | `:Nurl yank %` | Current buffer picker -> yank |
 | `:Nurl yank <filepath>` | File picker -> yank |
+| `:'<,'>Nurl json_to_lua` | Replace the selected JSON with a Lua table |
+| `:'<,'>Nurl lua_to_json` | Replace the selected Lua table with JSON |
 
 When using `%` or `<filepath>`, if the file contains only one request, the action runs immediately without opening a picker.
 
@@ -143,6 +145,34 @@ default). When a saved request goes over the limit, the oldest entries are
 deleted along with their saved response files, down to 10% below the limit
 (at most 1,000 entries below). A single save deletes at most 1,000 entries, so
 lowering the limit shrinks history gradually.
+
+### Converting JSON
+
+To use JSON from elsewhere as a request body, paste it, select it and run
+`:'<,'>Nurl json_to_lua`:
+
+```lua
+data = {"title": "Hello", "tags": ["a"], "author": null},
+```
+
+becomes
+
+```lua
+data = {
+    author = vim.NIL,
+    tags = {
+        "a",
+    },
+    title = "Hello",
+},
+```
+
+Select just the JSON (character-wise, e.g. `v%` on the opening brace) or whole
+lines; without a selection the whole buffer is converted. `null` becomes
+`vim.NIL` and `{}` becomes `vim.empty_dict()`, so the request sends the same
+JSON. `:'<,'>Nurl lua_to_json` converts a Lua table back to JSON. Keys are
+sorted both ways, since Lua tables do not keep their order. Both are also
+available as `Nurl.json_to_lua(text)` and `Nurl.lua_to_json(text)`.
 
 ### Overrides
 
@@ -687,6 +717,11 @@ Nurl.activate_env("production")
 Nurl.env.get("variable") -- get variable value
 Nurl.env.set("variable", val) -- set variable value
 Nurl.env.var("variable") -- get resolver function
+
+-- Convert between JSON text and Lua table source
+Nurl.json_to_lua('{"id": 1}') -- "{\n    id = 1,\n}"
+Nurl.lua_to_json("{ id = 1 }") -- '{\n    "id": 1\n}'
+Nurl.json_to_lua(json, { indent = "  " }) -- custom indentation
 
 -- Winbar components
 Nurl.winbar.status_code()

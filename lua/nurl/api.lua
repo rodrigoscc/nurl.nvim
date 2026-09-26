@@ -15,6 +15,7 @@ local TestReport = require("nurl.test.report")
 local ctx = require("nurl.test.ctx")
 local RequestHandle = require("nurl.request_handle")
 local registry = require("nurl.registry")
+local convert = require("nurl.convert")
 
 local M = {}
 
@@ -27,6 +28,10 @@ M.env = environments
 M.helpers = helpers
 
 M.registry = registry
+
+M.json_to_lua = convert.json_to_lua
+
+M.lua_to_json = convert.lua_to_json
 
 ---@type nurl.Stack
 M.last_requests = Stack:new(5, {

@@ -34,6 +34,8 @@ local grammar = P({
 
     subcommand_part = (C(
         P("env_file")
+            + P("json_to_lua")
+            + P("lua_to_json")
             + P("history")
             + P("jump")
             + P("yank")

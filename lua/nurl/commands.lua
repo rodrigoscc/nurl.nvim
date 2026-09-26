@@ -1,6 +1,15 @@
 local parsing = require("nurl.commands_parsing")
 
-local SUBCOMMANDS = { "jump", "history", "resend", "env", "env_file", "yank" }
+local SUBCOMMANDS = {
+    "jump",
+    "history",
+    "resend",
+    "env",
+    "env_file",
+    "yank",
+    "json_to_lua",
+    "lua_to_json",
+}
 
 local M = {}
 
@@ -94,7 +103,18 @@ local function history_subcommand()
     require("nurl").pick_history()
 end
 
----@type table<string, fun(args: string[])>
+---@param name "json_to_lua" | "lua_to_json"
+local function conversion_subcommand(name)
+    return function(_, _, params)
+        local convert = require("nurl.convert")
+        local ok, err = pcall(convert.replace_region, convert[name], params)
+        if not ok then
+            vim.notify(err, vim.log.levels.ERROR)
+        end
+    end
+end
+
+---@type table<string, fun(arg?: string, overrides: nurl.Override[], params: table)>
 M.subcommand_handlers = {
     jump = jump_subcommand,
     history = history_subcommand,
@@ -102,6 +122,8 @@ M.subcommand_handlers = {
     env = env_subcommand,
     env_file = end_file_subcommand,
     yank = yank_subcommand,
+    json_to_lua = conversion_subcommand("json_to_lua"),
+    lua_to_json = conversion_subcommand("lua_to_json"),
 }
 
 function M.run(params)
@@ -112,7 +134,7 @@ function M.run(params)
 
     if command.subcommand then
         local handler = M.subcommand_handlers[command.subcommand]
-        handler(command.arg, command.overrides)
+        handler(command.arg, command.overrides, params)
     else
         default_command(command.arg, command.overrides)
     end
@@ -142,6 +164,7 @@ end
 function M.setup()
     vim.api.nvim_create_user_command("Nurl", M.run, {
         nargs = "*",
+        range = true,
         desc = "Nurl: HTTP client",
         complete = M.complete,
     })
