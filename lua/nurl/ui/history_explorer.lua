@@ -486,11 +486,12 @@ function M.open()
         search_generation = 0,
     }, Explorer)
 
-    vim.cmd.tabnew()
+    -- Open the tab page on the list itself; :tabnew would leave an empty
+    -- buffer behind.
+    self.list_buf = buffer("nurl://history/list")
+    vim.cmd("tab sbuffer " .. self.list_buf)
     self.tab = vim.api.nvim_get_current_tabpage()
     self.list_win = vim.api.nvim_get_current_win()
-    self.list_buf = buffer("nurl://history/list")
-    vim.api.nvim_win_set_buf(self.list_win, self.list_buf)
     vim.wo[self.list_win].wrap = false
     vim.wo[self.list_win].cursorline = true
 

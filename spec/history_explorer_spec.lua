@@ -220,6 +220,22 @@ INSERT INTO request_history (
         assert.is_true(loaded() > original_count)
     end)
 
+    it("does not leave empty buffers behind", function()
+        history.page = function()
+            return {}, false
+        end
+        local function buffers()
+            return #vim.api.nvim_list_bufs()
+        end
+
+        local before = buffers()
+        for _ = 1, 3 do
+            explorer.open()
+            vim.cmd.tabclose()
+        end
+        assert.are.equal(before, buffers())
+    end)
+
     it("keeps the list and selection when opening and closing a response", function()
         test_path = vim.fn.tempname() .. ".sqlite3"
         history.db = Db:new(test_path)
