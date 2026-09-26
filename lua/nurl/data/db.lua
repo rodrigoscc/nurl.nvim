@@ -18,6 +18,7 @@ ffi.cdef([[
     int sqlite3_bind_int64(sqlite3_stmt*, int, long long);
     int sqlite3_bind_double(sqlite3_stmt*, int, double);
     int sqlite3_bind_null(sqlite3_stmt*, int);
+    int sqlite3_bind_parameter_count(sqlite3_stmt*);
     const unsigned char *sqlite3_column_text(sqlite3_stmt*, int);
     int sqlite3_column_type(sqlite3_stmt*, int iCol);
     long long sqlite3_column_int64(sqlite3_stmt*, int);
@@ -340,9 +341,21 @@ function Db:exec(query, binds)
         )
     end
 
-    for i, value in ipairs(binds) do
-        if bind(stmt[0], i, value) ~= 0 then
-            error(("Failed to bind %d=%s"):format(i, value))
+    -- Bind by parameter position rather than with ipairs, which would stop at
+    -- the first nil and leave every later parameter NULL.
+    local count = sqlite.sqlite3_bind_parameter_count(stmt[0])
+    local values = table.maxn(binds)
+    if values > count then
+        sqlite.sqlite3_finalize(stmt[0])
+        error(
+            ("Got %d values for %d parameters: %s"):format(values, count, query)
+        )
+    end
+
+    for i = 1, count do
+        if bind(stmt[0], i, binds[i]) ~= 0 then
+            sqlite.sqlite3_finalize(stmt[0])
+            error(("Failed to bind %d=%s"):format(i, tostring(binds[i])))
         end
     end
 
