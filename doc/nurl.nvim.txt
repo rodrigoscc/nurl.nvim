@@ -1,5 +1,5 @@
 *nurl.nvim.txt*
-                        For Neovim >= 0.10.0    Last change: 2026 September 25
+                        For Neovim >= 0.10.0    Last change: 2026 September 26
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -127,11 +127,11 @@ action runs immediately without opening a picker.
 HISTORY EXPLORER                         *nurl.nvim-commands-history-explorer*
 
 `:Nurl history` opens a paged history list in a new tab. Navigate with normal
-motions (`j`, `k`, `gg`, `G`); scrolling near the end loads more entries.
-A lower pane previews the selected request, including its full body. The
-preview loads only the selected request, not the saved response body. Opening
-a response creates a response window beside the list. Close that window with
-`q` to return to the explorer at the same position and filters.
+motions (`j`, `k`, `gg`, `G`); scrolling near the end loads more entries. A
+lower pane previews the selected request, including its full body. The preview
+loads only the selected request, not the saved response body. Opening a
+response creates a response window beside the list. Close that window with `q`
+to return to the explorer at the same position and filters.
 
   -----------------------------------------------------------------------
   Key                         Action
