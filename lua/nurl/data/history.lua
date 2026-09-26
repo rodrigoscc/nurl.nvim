@@ -179,6 +179,22 @@ function M.delete_old_items()
         "history.max_history_items must be a positive integer"
     )
 
+    -- Counting reads every entry, but the id range is never smaller than the
+    -- number of entries and only reads the ends of the index. Skip the count
+    -- while the range is within the limit. MAX and MIN are separate queries
+    -- because SQLite only reads them from the index when each is on its own.
+    local result = M.db:exec([[
+SELECT COALESCE(
+    (SELECT MAX(id) FROM request_history)
+        - (SELECT MIN(id) FROM request_history) + 1,
+    0
+)]])
+    local id_range = result:one():get_number(1)
+    result:close()
+    if id_range <= max_items then
+        return
+    end
+
     delete_entries(
         [[id IN (
     SELECT id FROM request_history ORDER BY time ASC, id ASC

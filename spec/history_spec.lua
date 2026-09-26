@@ -250,6 +250,29 @@ INSERT INTO request_history (
         }, saved_urls())
     end)
 
+    it("does not count history while it is under max_history_items", function()
+        config.setup({ history = { max_history_items = 3 } })
+        local queries = {}
+        local exec = history.db.exec
+        history.db.exec = function(db, query, ...)
+            table.insert(queries, query)
+            return exec(db, query, ...)
+        end
+
+        local ok, err = pcall(function()
+            for i = 1, 3 do
+                history.insert_history_entry(completed_request(i))
+            end
+        end)
+        history.db.exec = nil
+        assert(ok, err)
+
+        for _, query in ipairs(queries) do
+            assert.is_nil(query:find("COUNT(*)", 1, true))
+        end
+        assert.are.equal(3, #saved_urls())
+    end)
+
     it("deletes the oldest entries by request time", function()
         config.setup({ history = { max_history_items = 3 } })
 
