@@ -170,8 +170,20 @@ local function delete_entries(where, binds)
     end
 end
 
----Keep only the newest `history.max_history_items` entries, in the same
----(time, id) order as the history explorer.
+-- Most entries deleted when a request is saved, so one save never stalls.
+local PRUNE_BATCH = 1000
+
+---@param query string
+---@return integer
+local function count(query)
+    local result = M.db:exec(query)
+    local value = result:one():get_number(1)
+    result:close()
+    return value
+end
+
+---Keep at most `history.max_history_items` entries, deleting the oldest in the
+---same (time, id) order as the history explorer.
 function M.delete_old_items()
     local max_items = config.history.max_history_items
     assert(
@@ -183,24 +195,29 @@ function M.delete_old_items()
     -- number of entries and only reads the ends of the index. Skip the count
     -- while the range is within the limit. MAX and MIN are separate queries
     -- because SQLite only reads them from the index when each is on its own.
-    local result = M.db:exec([[
+    local id_range = count([[
 SELECT COALESCE(
     (SELECT MAX(id) FROM request_history)
         - (SELECT MIN(id) FROM request_history) + 1,
     0
 )]])
-    local id_range = result:one():get_number(1)
-    result:close()
     if id_range <= max_items then
         return
     end
 
+    local entries = count("SELECT COUNT(*) FROM request_history")
+    if entries <= max_items then
+        return
+    end
+
+    -- Delete down to a little below the limit, so the following saves skip
+    -- the count until history fills up again.
+    local headroom = math.min(PRUNE_BATCH, math.floor(max_items / 10))
     delete_entries(
         [[id IN (
-    SELECT id FROM request_history ORDER BY time ASC, id ASC
-    LIMIT MAX(0, (SELECT COUNT(*) FROM request_history) - ?)
+    SELECT id FROM request_history ORDER BY time ASC, id ASC LIMIT ?
 )]],
-        { max_items }
+        { math.min(entries - max_items + headroom, PRUNE_BATCH) }
     )
 end
 

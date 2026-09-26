@@ -273,6 +273,61 @@ INSERT INTO request_history (
         assert.are.equal(3, #saved_urls())
     end)
 
+    local function insert_rows(count)
+        local begin = history.db:exec("BEGIN")
+        begin:close()
+        for i = 1, count do
+            local result = history.db:exec(
+                "INSERT INTO request_history (time, request_url_raw) VALUES (?, ?)",
+                { ("2026-01-01T00:00:00.%05d"):format(i), "old" }
+            )
+            result:close()
+        end
+        local commit = history.db:exec("COMMIT")
+        commit:close()
+    end
+
+    it("deletes a batch below max_history_items to skip later counts", function()
+        config.setup({ history = { max_history_items = 20 } })
+        insert_rows(20)
+        local counts = 0
+        local exec = history.db.exec
+        history.db.exec = function(db, query, ...)
+            if query:find("COUNT(*)", 1, true) then
+                counts = counts + 1
+            end
+            return exec(db, query, ...)
+        end
+
+        local ok, err = pcall(function()
+            -- Over the limit: delete down to 10% below it.
+            history.insert_history_entry(completed_request(1))
+            assert.are.equal(18, #saved_urls())
+            -- Back under the limit, so these saves do not count history.
+            history.insert_history_entry(completed_request(2))
+            history.insert_history_entry(completed_request(3))
+            assert.are.equal(20, #saved_urls())
+        end)
+        history.db.exec = nil
+        assert(ok, err)
+        assert.are.equal(1, counts)
+    end)
+
+    it("deletes at most 1000 entries per saved request", function()
+        config.setup({ history = { max_history_items = 10 } })
+        insert_rows(1010)
+
+        history.insert_history_entry(completed_request(1))
+        assert.are.equal(11, #saved_urls())
+
+        history.insert_history_entry(completed_request(2))
+        assert.are.equal(9, #saved_urls())
+        assert.are.same(
+            { "https://example.org/1", "https://example.org/2" },
+            vim.list_slice(saved_urls(), 8)
+        )
+    end)
+
     it("deletes the oldest entries by request time", function()
         config.setup({ history = { max_history_items = 3 } })
 

@@ -138,9 +138,11 @@ including after a resize.
 
 ### History retention
 
-History keeps the newest `history.max_history_items` entries (1,000,000 by
-default). After each request is saved, older entries are deleted along with
-their saved response files.
+History keeps at most `history.max_history_items` entries (1,000,000 by
+default). When a saved request goes over the limit, the oldest entries are
+deleted along with their saved response files, down to 10% below the limit
+(at most 1,000 entries below). A single save deletes at most 1,000 entries, so
+lowering the limit shrinks history gradually.
 
 ### Overrides
 
