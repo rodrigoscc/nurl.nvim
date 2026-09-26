@@ -344,6 +344,13 @@ INSERT INTO request_history (
         vim.fs.rm(dir, { recursive = true, force = true })
     end)
 
+    it("does not sync to disk on every commit", function()
+        local result = history.db:exec("PRAGMA synchronous")
+        local row = result:one()
+        result:close()
+        assert.are.equal(1, row:get_number(1)) -- NORMAL
+    end)
+
     it("closes the connection when opening history fails", function()
         if not vim.uv.fs_stat("/proc/self/fd") then
             return

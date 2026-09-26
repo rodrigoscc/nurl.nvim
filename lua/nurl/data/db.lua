@@ -216,6 +216,21 @@ local function initialize(db)
         )
     end
 
+    -- With WAL, NORMAL cannot corrupt the database and avoids an fsync on
+    -- every saved request. Only the latest entries can be lost on power loss.
+    result = db:exec("PRAGMA synchronous=NORMAL")
+    local synchronous_code = result.code
+    result:close()
+
+    if synchronous_code ~= SQLITE_DONE then
+        error(
+            ("Failed to set synchronous mode %d: %s"):format(
+                synchronous_code,
+                db:errormsg()
+            )
+        )
+    end
+
     result = db:exec([[CREATE TABLE IF NOT EXISTS request_history (
     id INTEGER PRIMARY KEY,
     time TEXT,
