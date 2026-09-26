@@ -400,10 +400,20 @@ function Explorer:close()
         return
     end
 
-    self.closed = true
+    -- The list buffer is wiped once it is no longer displayed, which marks the
+    -- explorer as closed. If closing fails, the explorer remains usable.
+    if #vim.api.nvim_list_tabpages() > 1 then
+        vim.api.nvim_set_current_tabpage(self.tab)
+        vim.cmd.tabclose()
+        return
+    end
 
-    vim.api.nvim_set_current_tabpage(self.tab)
-    vim.cmd.tabclose()
+    -- The last tab page cannot be closed, so leave an empty window instead.
+    if vim.api.nvim_win_is_valid(self.preview_win) then
+        vim.api.nvim_win_close(self.preview_win, true)
+    end
+    vim.api.nvim_set_current_win(self.list_win)
+    vim.cmd.enew()
 end
 
 function Explorer:open_entry(resend)

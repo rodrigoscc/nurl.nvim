@@ -236,6 +236,32 @@ INSERT INTO request_history (
         assert.are.equal(before, buffers())
     end)
 
+    it("closes when it is the last tab page", function()
+        history.page = function()
+            return {}, false
+        end
+
+        explorer.open()
+        local list_buf = vim.api.nvim_get_current_buf()
+        vim.cmd.tabonly()
+
+        local q
+        for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(list_buf, "n")) do
+            if mapping.lhs == "q" then
+                q = mapping.callback
+            end
+        end
+        local ok, err = pcall(q)
+        assert(ok, err)
+
+        assert.is_false(vim.api.nvim_buf_is_valid(list_buf))
+        assert.are.equal(1, #vim.api.nvim_list_tabpages())
+        assert.are.equal(1, #vim.api.nvim_list_wins())
+        assert.is_nil(
+            vim.api.nvim_buf_get_name(0):find("nurl://history", 1, true)
+        )
+    end)
+
     it("keeps the list and selection when opening and closing a response", function()
         test_path = vim.fn.tempname() .. ".sqlite3"
         history.db = Db:new(test_path)
