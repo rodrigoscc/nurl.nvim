@@ -198,19 +198,8 @@ end
 ---@alias sqlite3* ffi.cdata*
 ---@alias sqlite3_stmt* ffi.cdata*
 
-function Db:new(path)
-    local db = setmetatable({}, self)
-    self.__index = self
-
-    db.path = path
-
-    db.handle = ffi.new("sqlite3*[1]")
-    if sqlite.sqlite3_open(db.path, db.handle) ~= 0 then
-        error("Failed to open database: " .. db.path)
-    end
-
-    db.db = db.handle[0]
-
+---@param db nurl.Db
+local function initialize(db)
     if sqlite.sqlite3_busy_timeout(db.db, 1000) ~= 0 then
         error("Failed to set history database busy timeout")
     end
@@ -362,6 +351,28 @@ WHERE response_body_file IS NOT NULL;]])
                 db:errormsg()
             )
         )
+    end
+end
+
+function Db:new(path)
+    local db = setmetatable({}, self)
+    self.__index = self
+
+    db.path = path
+
+    db.handle = ffi.new("sqlite3*[1]")
+    local code = sqlite.sqlite3_open(db.path, db.handle)
+    db.db = db.handle[0]
+    if code ~= 0 then
+        -- sqlite3_open usually returns a connection even when it fails.
+        db:close()
+        error("Failed to open database: " .. path)
+    end
+
+    local ok, err = pcall(initialize, db)
+    if not ok then
+        db:close()
+        error(err, 0)
     end
 
     ffi.gc(db.handle, function()

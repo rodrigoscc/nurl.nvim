@@ -1,4 +1,5 @@
 local Db = require("nurl.data.db")
+local fs = require("nurl.data.fs")
 local history = require("nurl.data.history")
 
 describe("history explorer queries", function()
@@ -176,5 +177,25 @@ INSERT INTO request_history (
             1,
             #history.page({ request_body = "unique-request_data_urlencode" })
         )
+    end)
+
+    it("closes the connection when opening history fails", function()
+        if not vim.uv.fs_stat("/proc/self/fd") then
+            return
+        end
+        local bad = vim.fn.tempname()
+        fs.write(bad, string.rep("not a database\n", 1000))
+        local function open_files()
+            return #vim.fn.readdir("/proc/self/fd")
+        end
+
+        local before = open_files()
+        for _ = 1, 10 do
+            assert.is_false(pcall(Db.new, Db, bad))
+        end
+        collectgarbage()
+        collectgarbage()
+        assert.are.equal(before, open_files())
+        vim.fn.delete(bad)
     end)
 end)
