@@ -110,8 +110,10 @@ When using `%` or `<filepath>`, if the file contains only one request, the actio
 
 `:Nurl history` opens a paged history list in a new tab. Navigate with normal
 motions (`j`, `k`, `gg`, `G`); scrolling near the end loads more entries.
-Opening a response creates a response window beside the list. Close that
-window with `q` to return to the explorer at the same position and filters.
+A lower pane previews the selected request, including its full body. The
+preview loads only the selected request, not the saved response body. Opening
+a response creates a response window beside the list. Close that window with
+`q` to return to the explorer at the same position and filters.
 
 | Key | Action |
 |-----|--------|
@@ -130,6 +132,8 @@ responses; file-backed response bodies are excluded. Body searches run in a
 background worker so the explorer remains responsive, and changing filters
 discards older results. Configure the explorer through `history.explorer`
 (`page_size` and buffer-local `keys`; set a mapping to `false` to disable it).
+`page_size` is a minimum: larger windows load enough entries to fill the list,
+including after a resize.
 
 ### History retention
 

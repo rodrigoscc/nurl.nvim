@@ -1,8 +1,10 @@
 local config = require("nurl.config")
 local history = require("nurl.data.history")
+local preview = require("nurl.preview")
 
 local M = {}
 local list_namespace = vim.api.nvim_create_namespace("nurl.history_explorer")
+local page_prefetch = 5
 
 local filter_fields = {
     { label = "URL / title", key = "search" },
@@ -129,6 +131,49 @@ function Explorer:selected()
     return self.entries[row]
 end
 
+function Explorer:update_preview()
+    if
+        not self:alive()
+        or not vim.api.nvim_buf_is_valid(self.preview_buf)
+        or not vim.api.nvim_win_is_valid(self.preview_win)
+    then
+        return
+    end
+
+    local entry = self:selected()
+    if not entry or entry.id == self.preview_id then
+        return
+    end
+
+    self.preview_id = entry.id
+    local ok, request = pcall(history.get_request, entry.id)
+    if ok and request then
+        ok, request = pcall(preview.render, request)
+    end
+
+    if ok and request then
+        set_lines(self.preview_buf, request)
+    else
+        set_lines(self.preview_buf, { "Unable to preview this request." })
+        if not ok then
+            vim.notify(
+                "Failed to preview request: " .. request,
+                vim.log.levels.ERROR
+            )
+        end
+    end
+end
+
+function Explorer:schedule_preview()
+    self.preview_generation = self.preview_generation + 1
+    local generation = self.preview_generation
+    vim.defer_fn(function()
+        if generation == self.preview_generation then
+            self:update_preview()
+        end
+    end, 50)
+end
+
 function Explorer:response_target()
     local win = self.response_win
 
@@ -175,6 +220,7 @@ function Explorer:finish_page(generation, rows, more, err)
                 self.list_buf,
                 { "History search failed. Press F to change filters." }
             )
+            set_lines(self.preview_buf, { "Unable to load request preview." })
         end
         return
     end
@@ -217,6 +263,31 @@ function Explorer:finish_page(generation, rows, more, err)
         end
     elseif was_empty then
         set_lines(self.list_buf, { "No matching history entries." })
+        set_lines(self.preview_buf, { "No matching history entries." })
+    end
+
+    if was_empty and #lines > 0 then
+        self:schedule_preview()
+    end
+
+    self:fill_window()
+end
+
+function Explorer:visible_page_size()
+    return math.max(
+        self.opts.page_size,
+        vim.api.nvim_win_get_height(self.list_win) + page_prefetch
+    )
+end
+
+function Explorer:fill_window()
+    if
+        self:alive()
+        and self.has_more
+        and not self.loading
+        and #self.entries < self:visible_page_size()
+    then
+        self:load_page()
     end
 end
 
@@ -228,6 +299,7 @@ function Explorer:load_page()
     self.loading = true
     local generation = self.search_generation
     local cursor = self.entries[#self.entries]
+    local page_size = self:visible_page_size()
 
     if
         (self.filters.request_body and self.filters.request_body ~= "")
@@ -239,7 +311,7 @@ function Explorer:load_page()
             history.page_async,
             self.filters,
             cursor,
-            self.opts.page_size,
+            page_size,
             function(rows, more, failure)
                 self:finish_page(generation, rows, more, failure)
             end
@@ -249,7 +321,7 @@ function Explorer:load_page()
         end
     else
         local ok, rows, more =
-            pcall(history.page, self.filters, cursor, self.opts.page_size)
+            pcall(history.page, self.filters, cursor, page_size)
         self:finish_page(generation, ok and rows or nil, more, not ok and rows)
     end
 end
@@ -263,10 +335,13 @@ function Explorer:reload()
     self.has_more = true
     self.loading = false
     self.search_generation = self.search_generation + 1
+    self.preview_generation = self.preview_generation + 1
+    self.preview_id = nil
 
     vim.api.nvim_buf_clear_namespace(self.list_buf, list_namespace, 0, -1)
 
     set_lines(self.list_buf, { "Loading history…" })
+    set_lines(self.preview_buf, { "Loading request…" })
 
     vim.api.nvim_win_set_cursor(self.list_win, { 1, 0 })
 
@@ -419,6 +494,17 @@ function M.open()
     vim.wo[self.list_win].wrap = false
     vim.wo[self.list_win].cursorline = true
 
+    self.preview_buf = buffer("nurl://history/request")
+    vim.bo[self.preview_buf].filetype = "http"
+    self.preview_win = vim.api.nvim_open_win(self.preview_buf, false, {
+        split = "below",
+        win = self.list_win,
+        height = math.max(4, math.min(12, math.floor(vim.o.lines / 3))),
+    })
+    vim.wo[self.preview_win].wrap = true
+    vim.wo[self.preview_win].winbar = "Nurl: request preview"
+    self.preview_generation = 0
+
     for lhs, action in pairs(opts.keys) do
         if action then
             vim.keymap.set("n", lhs, function()
@@ -436,9 +522,22 @@ function M.open()
         callback = function()
             if self:alive() then
                 local row = vim.api.nvim_win_get_cursor(self.list_win)[1]
-                if row >= #self.entries - 5 then
+                self:schedule_preview()
+                if row >= #self.entries - page_prefetch then
                     self:load_page()
                 end
+            end
+        end,
+    })
+
+    self.resize_autocmd = vim.api.nvim_create_autocmd({
+        "WinResized",
+        "VimResized",
+        "TabEnter",
+    }, {
+        callback = function()
+            if self:alive() and vim.api.nvim_get_current_tabpage() == self.tab then
+                self:fill_window()
             end
         end,
     })
@@ -448,6 +547,7 @@ function M.open()
         once = true,
         callback = function()
             self.closed = true
+            vim.api.nvim_del_autocmd(self.resize_autocmd)
         end,
     })
 

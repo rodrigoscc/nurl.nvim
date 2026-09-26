@@ -448,6 +448,40 @@ function M.page_async(filters, cursor, limit, callback)
     work:queue(M.db.path, worker_root, query, vim.json.encode(binds))
 end
 
+---Load only the selected request for the explorer preview. In particular,
+---this does not read the stored response body from SQLite.
+---@param id integer
+---@return nurl.Request?
+function M.get_request(id)
+    ensure_db()
+    local result = M.db:exec([[
+SELECT request_url, request_query, request_method, request_headers,
+    request_data, request_form, request_data_urlencode
+FROM request_history WHERE id = ?]], { id })
+    local rows = result:all()
+    result:close()
+
+    local row = rows[1]
+    if not row then
+        return nil
+    end
+
+    local function decode(index)
+        local value = row:get_string(index)
+        return value and vim.json.decode(value)
+    end
+
+    return {
+        url = decode(1),
+        query = decode(2),
+        method = row:get_string(3),
+        headers = decode(4) or {},
+        data = decode(5),
+        form = decode(6),
+        data_urlencode = decode(7),
+    }
+end
+
 local SELECT_ITEM = [[SELECT
     time,
     request_url,

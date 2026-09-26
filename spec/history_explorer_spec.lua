@@ -116,6 +116,110 @@ describe("history explorer searches", function()
         )
     end)
 
+    it("previews the selected request body without loading response bodies into the list", function()
+        test_path = vim.fn.tempname() .. ".sqlite3"
+        history.db = Db:new(test_path)
+        for i = 1, 2 do
+            local result = history.db:exec([[
+INSERT INTO request_history (
+    time, request_url, request_url_raw, request_method, request_headers,
+    request_data, response_status_code, response_body, response_time_total
+) VALUES (?, ?, ?, 'POST', '{}', ?, 200, ?, 0.1)]], {
+                ("2026-09-24T12:00:%02d"):format(i),
+                vim.json.encode("https://example.org/" .. i),
+                "https://example.org/" .. i,
+                vim.json.encode(
+                    "request-"
+                        .. i
+                        .. "\n"
+                        .. string.rep("body line\n", 200)
+                        .. "end-of-request-"
+                        .. i
+                ),
+                string.rep("response-" .. i, 10000),
+            })
+            result:close()
+        end
+
+        explorer.open()
+        local list_win = vim.api.nvim_get_current_win()
+        local list_buf = vim.api.nvim_get_current_buf()
+        local preview_buf
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+            local bufnr = vim.api.nvim_win_get_buf(win)
+            if bufnr ~= list_buf then
+                preview_buf = bufnr
+            end
+        end
+        assert.is_true(preview_buf ~= nil)
+        local function preview_lines()
+            return table.concat(
+                vim.api.nvim_buf_get_lines(preview_buf, 0, -1, false),
+                "\n"
+            )
+        end
+
+        assert.is_true(vim.wait(3000, function()
+            return preview_lines():find("request-2", 1, true) ~= nil
+        end))
+        assert.is_true(
+            preview_lines():find("end-of-request-2", 1, true) ~= nil
+        )
+        assert.is_nil(preview_lines():find("response-2", 1, true))
+        assert.is_nil(table.concat(
+            vim.api.nvim_buf_get_lines(list_buf, 0, -1, false),
+            "\n"
+        ):find("request-", 1, true))
+
+        vim.api.nvim_win_set_cursor(list_win, { 2, 0 })
+        vim.api.nvim_exec_autocmds("CursorMoved", { buffer = list_buf })
+        assert.is_true(vim.wait(3000, function()
+            return preview_lines():find("request-1", 1, true) ~= nil
+        end))
+        assert.is_nil(preview_lines():find("response-1", 1, true))
+    end)
+
+    it("fills the visible list when the window opens or grows", function()
+        config.setup({ history = { explorer = { page_size = 2 } } })
+        test_path = vim.fn.tempname() .. ".sqlite3"
+        history.db = Db:new(test_path)
+        for i = 1, 100 do
+            local url = "https://example.org/" .. i
+            local result = history.db:exec([[
+INSERT INTO request_history (
+    time, request_url, request_url_raw, request_method,
+    response_status_code, response_time_total
+) VALUES ('2026-09-24T12:00:00', ?, ?, 'GET', 200, 0.1)]], {
+                vim.json.encode(url),
+                url,
+            })
+            result:close()
+        end
+
+        explorer.open()
+        local list_win = vim.api.nvim_get_current_win()
+        local list_buf = vim.api.nvim_get_current_buf()
+        local preview_win
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+            if win ~= list_win then
+                preview_win = win
+            end
+        end
+        local function loaded()
+            return #vim.api.nvim_buf_get_lines(list_buf, 0, -1, false)
+        end
+
+        assert.is_true(loaded() >= vim.api.nvim_win_get_height(list_win))
+        assert.is_true(loaded() > 2)
+
+        local original_count = loaded()
+        vim.api.nvim_win_set_height(preview_win, 1)
+        vim.api.nvim_exec_autocmds("WinResized", {})
+        assert.is_true(vim.api.nvim_win_get_height(list_win) > original_count)
+        assert.is_true(loaded() >= vim.api.nvim_win_get_height(list_win))
+        assert.is_true(loaded() > original_count)
+    end)
+
     it("keeps the list and selection when opening and closing a response", function()
         test_path = vim.fn.tempname() .. ".sqlite3"
         history.db = Db:new(test_path)
@@ -124,12 +228,13 @@ describe("history explorer searches", function()
         local result = history.db:exec([[
 INSERT INTO request_history (
     time, request_url, request_url_raw, request_method, request_headers,
-    response_status_code, response_reason_phrase, response_protocol,
+    request_data, response_status_code, response_reason_phrase, response_protocol,
     response_headers, response_body, response_time_total, curl_args
-) VALUES ('2026-09-24T12:00:00', ?, ?, 'GET', '{}',
+) VALUES ('2026-09-24T12:00:00', ?, ?, 'POST', '{}', ?,
     200, 'OK', 'HTTP/1.1', '{}', 'saved response', 0.1, '[]')]], {
             vim.json.encode("https://example.org"),
             "https://example.org",
+            vim.json.encode("request payload"),
         })
         result:close()
 
@@ -137,7 +242,31 @@ INSERT INTO request_history (
         local list_win = vim.api.nvim_get_current_win()
         local list_buf = vim.api.nvim_get_current_buf()
         local tab = vim.api.nvim_get_current_tabpage()
-        assert.are.equal(1, #vim.api.nvim_tabpage_list_wins(tab))
+        assert.are.equal(2, #vim.api.nvim_tabpage_list_wins(tab))
+        local preview_buf
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+            local bufnr = vim.api.nvim_win_get_buf(win)
+            if
+                vim.api.nvim_buf_get_name(bufnr):find(
+                    "history/request",
+                    1,
+                    true
+                )
+            then
+                preview_buf = bufnr
+            end
+        end
+        assert.is_true(vim.wait(3000, function()
+            return preview_buf
+                and table.concat(
+                    vim.api.nvim_buf_get_lines(preview_buf, 0, -1, false),
+                    "\n"
+                ):find("request payload", 1, true) ~= nil
+        end))
+        assert.is_nil(table.concat(
+            vim.api.nvim_buf_get_lines(preview_buf, 0, -1, false),
+            "\n"
+        ):find("saved response", 1, true))
 
         vim.ui.input = function(_, callback)
             callback("example.org")
@@ -159,7 +288,7 @@ INSERT INTO request_history (
             end
         end
         assert.are.equal(tab, vim.api.nvim_get_current_tabpage())
-        assert.are.equal(2, #vim.api.nvim_tabpage_list_wins(tab))
+        assert.are.equal(3, #vim.api.nvim_tabpage_list_wins(tab))
         assert.are.equal("body", vim.b.nurl_data.buffer_type)
 
         local response_buf = vim.api.nvim_get_current_buf()
@@ -167,6 +296,7 @@ INSERT INTO request_history (
         assert.are.equal(list_win, vim.api.nvim_get_current_win())
         assert.are.equal(list_buf, vim.api.nvim_get_current_buf())
         assert.are.equal(1, vim.api.nvim_win_get_cursor(list_win)[1])
+        assert.are.equal(2, #vim.api.nvim_tabpage_list_wins(tab))
         assert.is_true(
             vim.wo[list_win].winbar:find("example.org", 1, true) ~= nil
         )
