@@ -231,47 +231,106 @@ function Explorer:finish_page(generation, rows, more, err)
     end
 
     local was_empty = #self.entries == 0
-    local start_row = #self.entries
 
     self.has_more = more
 
+    vim.list_extend(self.entries, rows)
+
+    if #rows > 0 then
+        self:render_rows(rows, not was_empty)
+    elseif was_empty then
+        self:show_empty()
+    end
+
+    if was_empty and #rows > 0 then
+        self:schedule_preview()
+    end
+
+    self:fill_window()
+end
+
+---Render rows after the listed entries, or replace the whole list.
+function Explorer:render_rows(rows, append)
+    local start_row = append and vim.api.nvim_buf_line_count(self.list_buf)
+        or 0
     local lines = {}
     local highlights = {}
 
     for _, row in ipairs(rows) do
-        table.insert(self.entries, row)
-
         local line, spans = format_row(row, self.filters.search)
         table.insert(lines, line)
         table.insert(highlights, spans)
     end
 
-    if #lines > 0 then
-        set_lines(self.list_buf, lines, not was_empty)
+    if not append then
+        vim.api.nvim_buf_clear_namespace(self.list_buf, list_namespace, 0, -1)
+    end
+    set_lines(self.list_buf, lines, append)
 
-        for index, spans in ipairs(highlights) do
-            for _, span in ipairs(spans) do
-                vim.api.nvim_buf_set_extmark(
-                    self.list_buf,
-                    list_namespace,
-                    start_row + index - 1,
-                    span.start_col,
-                    {
-                        end_col = span.end_col,
-                        hl_group = span.group,
-                        hl_mode = "combine",
-                        priority = span.group == "NurlHistoryMatch" and 120
-                            or 100,
-                    }
-                )
-            end
+    for index, spans in ipairs(highlights) do
+        for _, span in ipairs(spans) do
+            vim.api.nvim_buf_set_extmark(
+                self.list_buf,
+                list_namespace,
+                start_row + index - 1,
+                span.start_col,
+                {
+                    end_col = span.end_col,
+                    hl_group = span.group,
+                    hl_mode = "combine",
+                    priority = span.group == "NurlHistoryMatch" and 120 or 100,
+                }
+            )
         end
-    elseif was_empty then
-        set_lines(self.list_buf, { "No matching history entries." })
-        set_lines(self.preview_buf, { "No matching history entries." })
+    end
+end
+
+function Explorer:show_empty()
+    set_lines(self.list_buf, { "No matching history entries." })
+    set_lines(self.preview_buf, { "No matching history entries." })
+end
+
+---Delete the selected entry, or [count] entries from the cursor down.
+function Explorer:delete_entries()
+    local row = vim.api.nvim_win_get_cursor(self.list_win)[1]
+    local last = math.min(row + vim.v.count1 - 1, #self.entries)
+    if row > last then
+        return
     end
 
-    if was_empty and #lines > 0 then
+    local count = last - row + 1
+    local prompt = count == 1 and "Delete this history entry?"
+        or ("Delete %d history entries?"):format(count)
+    if vim.fn.confirm(prompt, "&Yes\n&No", 2) ~= 1 then
+        return
+    end
+
+    local ids = {}
+    for i = row, last do
+        table.insert(ids, self.entries[i].id)
+    end
+
+    local ok, err = pcall(history.delete, ids)
+    if not ok then
+        vim.notify("Failed to delete history: " .. err, vim.log.levels.ERROR)
+        -- Some entries may have been deleted; show what history has now.
+        self:reload()
+        return
+    end
+
+    for _ = row, last do
+        table.remove(self.entries, row)
+    end
+
+    if #self.entries == 0 then
+        self:show_empty()
+    else
+        self:render_rows(self.entries, false)
+        vim.api.nvim_win_set_cursor(
+            self.list_win,
+            { math.min(row, #self.entries), 0 }
+        )
+        self.preview_id = nil
         self:schedule_preview()
     end
 
@@ -473,6 +532,8 @@ function Explorer:action(action)
         self:open_entry(false)
     elseif action == "resend" then
         self:open_entry(true)
+    elseif action == "delete" then
+        self:delete_entries()
     elseif action == "search" then
         self:change_filter(filter_fields[1])
     elseif action == "filter" then

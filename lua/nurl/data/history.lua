@@ -499,6 +499,17 @@ function M.page_async(filters, cursor, limit, callback)
     work:queue(M.db.path, worker_root, query, vim.json.encode(binds))
 end
 
+---Delete entries by id, along with their saved response files.
+---@param ids integer[]
+function M.delete(ids)
+    ensure_db()
+    if #ids == 0 then
+        return
+    end
+    local placeholders = ("?,"):rep(#ids):sub(1, -2)
+    delete_entries(("id IN (%s)"):format(placeholders), ids)
+end
+
 ---Load only the selected request for the explorer preview. In particular,
 ---this does not read the stored response body from SQLite.
 ---@param id integer

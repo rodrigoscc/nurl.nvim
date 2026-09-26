@@ -26,6 +26,7 @@ local defaults = {
                 F = "filter",
                 C = "clear",
                 ["<C-r>"] = "resend",
+                dd = "delete",
                 q = "close",
                 ["?"] = "help",
             },

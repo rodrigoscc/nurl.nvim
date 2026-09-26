@@ -183,6 +183,55 @@ describe("history explorer searches", function()
         assert.is_nil(vim.wo.winbar:find("response_file", 1, true))
     end)
 
+    it("deletes entries from the cursor down after confirmation", function()
+        local rows = {}
+        for i = 1, 4 do
+            table.insert(rows, {
+                id = i,
+                time = ("2026-09-24T12:00:0%d"):format(5 - i),
+                method = "GET",
+                status = 200,
+                duration = 0.1,
+                url = "https://example.org/" .. i,
+            })
+        end
+        history.page = function()
+            return vim.deepcopy(rows), false
+        end
+        local deleted = {}
+        local original_delete = history.delete
+        history.delete = function(ids)
+            vim.list_extend(deleted, ids)
+        end
+        local answer = 2
+        local original_confirm = vim.fn.confirm
+        vim.fn.confirm = function()
+            return answer
+        end
+
+        local ok, err = pcall(function()
+            explorer.open()
+            local list = vim.api.nvim_get_current_buf()
+            vim.api.nvim_win_set_cursor(0, { 2, 0 })
+
+            vim.api.nvim_feedkeys("2dd", "x", false)
+            assert.are.same({}, deleted)
+
+            answer = 1
+            vim.api.nvim_feedkeys("2dd", "x", false)
+            assert.are.same({ 2, 3 }, deleted)
+
+            local lines = vim.api.nvim_buf_get_lines(list, 0, -1, false)
+            assert.are.equal(2, #lines)
+            assert.is_truthy(lines[1]:find("example.org/1", 1, true))
+            assert.is_truthy(lines[2]:find("example.org/4", 1, true))
+            assert.are.equal(2, vim.api.nvim_win_get_cursor(0)[1])
+        end)
+        history.delete = original_delete
+        vim.fn.confirm = original_confirm
+        assert(ok, err)
+    end)
+
     it("routes :Nurl history and the old API to the explorer", function()
         history.page = function()
             return {}, false

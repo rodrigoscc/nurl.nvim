@@ -324,6 +324,26 @@ INSERT INTO request_history (
         vim.fs.rm(dir, { recursive = true, force = true })
     end)
 
+    it("deletes entries by id with their response files", function()
+        local dir = vim.fn.tempname()
+        local file = fs.unique_path(dir, "response", "bin")
+        fs.write(file, "body")
+        for i = 1, 3 do
+            history.insert_history_entry(
+                completed_request(i, i == 2 and file or nil)
+            )
+        end
+        local ids = vim.tbl_map(function(row)
+            return row.id
+        end, (history.page({})))
+
+        history.delete({ ids[2], ids[3] }) -- entries 2 and 1
+
+        assert.are.same({ "https://example.org/3" }, saved_urls())
+        assert.is_false(fs.exists(file))
+        vim.fs.rm(dir, { recursive = true, force = true })
+    end)
+
     it("closes the connection when opening history fails", function()
         if not vim.uv.fs_stat("/proc/self/fd") then
             return

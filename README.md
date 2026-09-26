@@ -122,6 +122,7 @@ a response creates a response window beside the list. Close that window with
 | `F` | Filter by method, status, time, request body, text response body, or whether the response body was saved to a file |
 | `C` | Clear filters |
 | `<C-r>` | Resend the selected request |
+| `dd` | Delete the selected entry (`3dd` deletes three) and its saved response file |
 | `q` | Close the explorer |
 | `?` | Show keymaps |
 
