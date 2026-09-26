@@ -95,20 +95,19 @@ describe("convert", function()
             assert.are.equal(
                 [[
 {
-  "author": {
-    "name": "Ada"
-  },
-  "tags": [
-    "a",
-    "b"
-  ],
-  "title": "Hello",
-  "url": "https://example.org/a"
+    "author": {
+        "name": "Ada"
+    },
+    "tags": [
+        "a",
+        "b"
+    ],
+    "title": "Hello",
+    "url": "https://example.org/a"
 }]],
                 convert.lua_to_json(
                     [[{ title = "Hello", tags = { "a", "b" }, author = { name = "Ada" },
-                    url = "https://example.org/a" }]],
-                    { indent = "  " }
+                    url = "https://example.org/a" }]]
                 )
             )
         end)
