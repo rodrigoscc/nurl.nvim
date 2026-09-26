@@ -291,6 +291,17 @@ function Explorer:fill_window()
     end
 end
 
+-- Only unfiltered and date range pages are served by the time index. Any
+-- other filter scans every entry, so it runs away from the UI.
+local function scans_entries(filters)
+    for key, value in pairs(filters) do
+        if value ~= "" and key ~= "from" and key ~= "to" then
+            return true
+        end
+    end
+    return false
+end
+
 function Explorer:load_page()
     if not self:alive() or not self.has_more or self.loading then
         return
@@ -301,10 +312,7 @@ function Explorer:load_page()
     local cursor = self.entries[#self.entries]
     local page_size = self:visible_page_size()
 
-    if
-        (self.filters.request_body and self.filters.request_body ~= "")
-        or (self.filters.response_body and self.filters.response_body ~= "")
-    then
+    if scans_entries(self.filters) then
         vim.wo[self.list_win].winbar = self.list_winbar .. "  (searching…)"
 
         local ok, err = pcall(

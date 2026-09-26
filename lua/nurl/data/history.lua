@@ -415,7 +415,7 @@ local function query_in_worker(path, root, sql, params)
     return ok, data
 end
 
----Run body searches on a separate SQLite connection in libuv's worker pool.
+---Run searches on a separate SQLite connection in libuv's worker pool.
 ---The worker only receives serialized values and never touches Neovim buffers.
 ---@param filters nurl.HistoryFilters
 ---@param cursor nurl.HistorySummary?

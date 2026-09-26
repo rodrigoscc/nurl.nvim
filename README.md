@@ -128,9 +128,9 @@ a response creates a response window beside the list. Close that window with
 Filters can be combined. Status accepts codes (`404`) and classes (`4xx`);
 dates accept `YYYY-MM-DD` or an ISO date/time prefix. Body searches are
 case-insensitive substring searches of saved request data/form fields or text
-responses; file-backed response bodies are excluded. Body searches run in a
-background worker so the explorer remains responsive, and changing filters
-discards older results. Configure the explorer through `history.explorer`
+responses; file-backed response bodies are excluded. Filters other than dates
+run in a background worker so the explorer remains responsive, and changing
+filters discards older results. Configure the explorer through `history.explorer`
 (`page_size` and buffer-local `keys`; set a mapping to `false` to disable it).
 `page_size` is a minimum: larger windows load enough entries to fill the list,
 including after a resize.

@@ -94,6 +94,54 @@ describe("history explorer searches", function()
         )
     end)
 
+    it("runs searches that scan every entry in the background", function()
+        local sync_filters = {}
+        local async_filters = {}
+        history.page = function(filters)
+            table.insert(sync_filters, vim.deepcopy(filters))
+            return {}, false
+        end
+        history.page_async = function(filters, _, _, callback)
+            table.insert(async_filters, vim.deepcopy(filters))
+            callback({}, false)
+        end
+
+        explorer.open()
+        local list = vim.api.nvim_get_current_buf()
+        local field_index, input
+        vim.ui.select = function(fields, _, callback)
+            callback(fields[field_index])
+        end
+        vim.ui.input = function(_, callback)
+            callback(input)
+        end
+        local function filter(index, value)
+            field_index, input = index, value
+            for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(list, "n")) do
+                if mapping.lhs == "F" then
+                    mapping.callback()
+                end
+            end
+        end
+
+        filter(4, "2026-09-01") -- from: uses the time index
+        filter(1, "example") -- URL / title
+        filter(2, "POST") -- method
+        filter(3, "5xx") -- status
+
+        assert.are.same({ {}, { from = "2026-09-01" } }, sync_filters)
+        assert.are.same({
+            { from = "2026-09-01", search = "example" },
+            { from = "2026-09-01", search = "example", method = "POST" },
+            {
+                from = "2026-09-01",
+                search = "example",
+                method = "POST",
+                status = "5xx",
+            },
+        }, async_filters)
+    end)
+
     it("routes :Nurl history and the old API to the explorer", function()
         history.page = function()
             return {}, false
@@ -322,6 +370,13 @@ INSERT INTO request_history (
         assert.is_true(
             vim.wo[list_win].winbar:find("example.org", 1, true) ~= nil
         )
+        assert.is_true(vim.wait(3000, function()
+            return vim.api.nvim_buf_get_lines(list_buf, 0, 1, false)[1]:find(
+                "example.org",
+                1,
+                true
+            ) ~= nil
+        end))
 
         for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(list_buf, "n")) do
             if mapping.lhs == "<CR>" then
