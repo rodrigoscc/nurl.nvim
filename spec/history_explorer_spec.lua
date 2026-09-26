@@ -232,6 +232,23 @@ describe("history explorer searches", function()
         assert(ok, err)
     end)
 
+    it("shows dates relative to today", function()
+        local now = os.time({ year = 2026, month = 9, day = 26, hour = 10 })
+        local function format(time)
+            return explorer.format_time(time, now)
+        end
+
+        assert.are.equal("today 09:05", format("2026-09-26T09:05:59"))
+        assert.are.equal("yesterday 23:59", format("2026-09-25T23:59:00"))
+        assert.are.equal("Thu 14:32", format("2026-09-24T14:32:10"))
+        assert.are.equal("Sun 08:00", format("2026-09-20T08:00:00"))
+        assert.are.equal("Sep 19 18:20", format("2026-09-19T18:20:00"))
+        assert.are.equal("Jan 3 07:15", format("2026-01-03T07:15:00"))
+        assert.are.equal("Dec 31, 2025", format("2025-12-31T23:00:00"))
+        assert.are.equal("Oct 1 12:00", format("2026-10-01T12:00:00"))
+        assert.are.equal("not a date", format("not a date"))
+    end)
+
     it("routes :Nurl history and the old API to the explorer", function()
         history.page = function()
             return {}, false

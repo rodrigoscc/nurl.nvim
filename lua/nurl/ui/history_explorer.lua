@@ -47,6 +47,63 @@ local function set_lines(bufnr, lines, append)
     vim.bo[bufnr].modifiable = false
 end
 
+local weekdays = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" }
+local months = {
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+}
+
+---Format a saved local ISO time relative to today: "today 14:32",
+---"yesterday 09:05", "Thu 18:20", "Sep 3 14:32", or "Sep 3, 2025".
+---@param time string
+---@param now? integer
+---@return string
+function M.format_time(time, now)
+    local year, month, day, hour, min =
+        time:match("^(%d+)-(%d+)-(%d+)T(%d+):(%d+)")
+    if not year then
+        return time
+    end
+    year, month, day = tonumber(year), tonumber(month), tonumber(day)
+
+    -- Compare calendar days at noon so daylight saving changes do not matter.
+    local today = os.date("*t", now or os.time())
+    local date = os.time({ year = year, month = month, day = day, hour = 12 })
+    local days = math.floor(
+        (
+            os.time({
+                year = today.year,
+                month = today.month,
+                day = today.day,
+                hour = 12,
+            }) - date
+        ) / 86400
+            + 0.5
+    )
+    local clock = hour .. ":" .. min
+
+    if days == 0 then
+        return "today " .. clock
+    elseif days == 1 then
+        return "yesterday " .. clock
+    elseif days > 1 and days < 7 then
+        return weekdays[os.date("*t", date).wday] .. " " .. clock
+    elseif year == today.year then
+        return ("%s %d %s"):format(months[month], day, clock)
+    end
+    return ("%s %d, %d"):format(months[month], day, year)
+end
+
 local function format_row(row, search)
     local parts = {}
     local spans = {}
@@ -73,7 +130,8 @@ local function format_row(row, search)
         status_group = "NurlHistoryStatusError"
     end
 
-    add(row.time:sub(1, 16), "NurlHistoryTime")
+    -- "yesterday 14:32" is the widest format.
+    add(("%-15s"):format(M.format_time(row.time)), "NurlHistoryTime")
     add("  ")
     add(string.format("%-7s", row.method), "NurlHistoryMethod")
     add("  ")
