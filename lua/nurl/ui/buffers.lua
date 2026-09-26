@@ -145,15 +145,7 @@ local function populate_headers_buffer(bufnr, response)
         }, " "),
     }
 
-    for name, value in pairs(response.headers) do
-        if type(value) == "table" then
-            for _, item in ipairs(value) do
-                table.insert(headers_lines, name .. ": " .. item)
-            end
-        else
-            table.insert(headers_lines, name .. ": " .. value)
-        end
-    end
+    vim.list_extend(headers_lines, responses.header_lines(response))
 
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, headers_lines)
     vim.api.nvim_set_option_value("filetype", "http", { buf = bufnr })

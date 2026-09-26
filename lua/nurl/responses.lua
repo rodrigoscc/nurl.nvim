@@ -29,6 +29,7 @@ local M = {}
 ---@field reason_phrase string
 ---@field protocol string
 ---@field headers table<string, string | string[]>
+---@field header_list? [string, string][] headers in the order the server sent them
 ---@field body string
 ---@field body_file? string
 ---@field time nurl.ResponseTime
@@ -36,9 +37,11 @@ local M = {}
 ---@field speed nurl.ResponseSpeed
 
 ---@param lines string[]
----@return table<string, string>
+---@return table<string, string | string[]> headers
+---@return [string, string][] header_list headers in the order they were sent
 local function parse_headers(lines)
     local headers = {}
+    local header_list = {}
 
     for _, line in ipairs(lines) do
         -- Trim to remove extra space chars, since we're not using {text = true} in vim.system
@@ -47,9 +50,37 @@ local function parse_headers(lines)
         local value = table.concat(parts, ": ", 2)
 
         headers = tables.collect_value(headers, name, value)
+        table.insert(header_list, { name, value })
     end
 
-    return headers
+    return headers, header_list
+end
+
+---Header lines in the order the server sent them. Responses without a
+---recorded order, such as those saved in history by older versions, list
+---their headers alphabetically.
+---@param response nurl.Response
+---@return string[]
+function M.header_lines(response)
+    local lines = {}
+
+    if response.header_list then
+        for _, header in ipairs(response.header_list) do
+            table.insert(lines, header[1] .. ": " .. header[2])
+        end
+        return lines
+    end
+
+    local names = vim.tbl_keys(response.headers)
+    table.sort(names)
+    for _, name in ipairs(names) do
+        local value = response.headers[name]
+        for _, item in ipairs(type(value) == "table" and value or { value }) do
+            table.insert(lines, name .. ": " .. item)
+        end
+    end
+
+    return lines
 end
 
 --- Extracts the protocol, status code and reason phrase from the start line.
@@ -238,7 +269,7 @@ function M.parse(stdout, stderr)
     local body_lines =
         vim.iter(stdout):slice(separation_line_idx + 1, #stdout):totable()
 
-    local headers = parse_headers(headers_lines)
+    local headers, header_list = parse_headers(headers_lines)
 
     local protocol, status_code, reason_phrase = parse_start_line(start_line)
 
@@ -258,6 +289,7 @@ function M.parse(stdout, stderr)
         status_code = status_code,
         reason_phrase = reason_phrase,
         headers = headers,
+        header_list = header_list,
         body = body,
         body_file = body_file,
         time = {

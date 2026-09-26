@@ -214,9 +214,22 @@ INSERT INTO request_history (
                 headers = {},
                 body = "",
                 body_file = body_file,
-                time = {},
-                size = {},
-                speed = {},
+                time = {
+                    time_appconnect = 0,
+                    time_connect = 0,
+                    time_namelookup = 0,
+                    time_pretransfer = 0,
+                    time_redirect = 0,
+                    time_starttransfer = 0,
+                    time_total = 0.1,
+                },
+                size = {
+                    size_download = 0,
+                    size_header = 0,
+                    size_request = 0,
+                    size_upload = 0,
+                },
+                speed = { speed_download = 0, speed_upload = 0 },
             },
             curl = {
                 args = {},
@@ -427,6 +440,43 @@ INSERT INTO request_history (
         local row = result:one()
         result:close()
         assert.are.equal(1, row:get_number(1)) -- NORMAL
+    end)
+
+    it("keeps the order of response headers", function()
+        local request = completed_request(1)
+        request.response.headers = { b = "2", a = { "1", "3" } }
+        request.response.header_list = { { "b", "2" }, { "a", "1" }, { "a", "3" } }
+        history.insert_history_entry(request)
+
+        local id = history.page({})[1].id
+        local response = history.get(id)[3]
+        assert.are.same(
+            { "b: 2", "a: 1", "a: 3" },
+            require("nurl.responses").header_lines(response)
+        )
+        assert.are.same({ "1", "3" }, response.headers.a)
+    end)
+
+    it("loads response headers saved without their order", function()
+        insert(
+            "2026-09-24T12:00:00",
+            "https://example.org",
+            "GET",
+            200,
+            nil,
+            "body"
+        )
+        local result = history.db:exec(
+            [[UPDATE request_history SET response_headers = '{"b":"2","a":"1"}']]
+        )
+        result:close()
+
+        local response = history.get(history.page({})[1].id)[3]
+        assert.are.same({ a = "1", b = "2" }, response.headers)
+        assert.are.same(
+            { "a: 1", "b: 2" },
+            require("nurl.responses").header_lines(response)
+        )
     end)
 
     it("closes the connection when opening history fails", function()

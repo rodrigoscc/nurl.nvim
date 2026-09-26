@@ -133,15 +133,7 @@ function M.response_to_http_message(response)
 
     table.insert(lines, start_line)
 
-    for name, value in pairs(response.headers) do
-        if type(value) == "table" then
-            for _, item in ipairs(value) do
-                table.insert(lines, name .. ": " .. item)
-            end
-        else
-            table.insert(lines, name .. ": " .. value)
-        end
-    end
+    vim.list_extend(lines, responses.header_lines(response))
 
     if response.body_file then
         table.insert(lines, "") -- separation line

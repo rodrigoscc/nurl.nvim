@@ -53,6 +53,39 @@ describe("responses", function()
             assert.are.equal("Service Unavailable", result.reason_phrase)
         end)
 
+        it("keeps headers in the order the server sent them", function()
+            local stdout = {
+                "HTTP/1.1 200 OK",
+                "Vary: Accept",
+                "Set-Cookie: a=1",
+                "Content-Type: application/json",
+                "Set-Cookie: b=2",
+                "",
+                "{}",
+            }
+            local stderr =
+                { "0.1,0.2,0.3,0.4,0.5,0.6,0.7,100,50,25,10,1000,500" }
+
+            local result = responses.parse(stdout, stderr)
+
+            assert.are.same({
+                "Vary: Accept",
+                "Set-Cookie: a=1",
+                "Content-Type: application/json",
+                "Set-Cookie: b=2",
+            }, responses.header_lines(result))
+            assert.are.same({ "a=1", "b=2" }, result.headers["Set-Cookie"])
+        end)
+
+        it("lists headers without a recorded order alphabetically", function()
+            assert.are.same(
+                { "a: 1", "b: 2", "b: 3", "c: 4" },
+                responses.header_lines({
+                    headers = { c = "4", a = "1", b = { "2", "3" } },
+                })
+            )
+        end)
+
         it("parses headers correctly", function()
             local stdout = {
                 "HTTP/1.1 200 OK",

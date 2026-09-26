@@ -3,6 +3,7 @@ local Curl = require("nurl.curl")
 local fs = require("nurl.data.fs")
 local worker_root = require("nurl.data.worker_root")
 local requests = require("nurl.requests")
+local tables = require("nurl.utils.tables")
 
 local uv = vim.uv or vim.loop
 
@@ -270,7 +271,10 @@ function M.insert_history_entry(handle)
         response.status_code,
         response.reason_phrase,
         response.protocol,
-        response.headers and vim.json.encode(response.headers) or vim.NIL,
+        -- Save headers as [name, value] pairs so their order is kept.
+        response.headers
+                and vim.json.encode(response.header_list or response.headers)
+            or vim.NIL,
         response.body,
         response.body_file or vim.NIL,
         response.time.time_appconnect,
@@ -618,6 +622,24 @@ local SELECT_ITEM = [[SELECT
     curl_result_stderr
 FROM request_history]]
 
+---Response headers are saved as [name, value] pairs, or as a name to value
+---table by older versions.
+---@param json string
+---@return table<string, string | string[]> headers
+---@return [string, string][]? header_list
+local function decode_headers(json)
+    local value = vim.json.decode(json)
+    if not vim.islist(value) then
+        return value, nil
+    end
+
+    local headers = {}
+    for _, header in ipairs(value) do
+        headers = tables.collect_value(headers, header[1], header[2])
+    end
+    return headers, value
+end
+
 ---@param row nurl.Row
 ---@return nurl.HistoryItem
 local function decode_row(row)
@@ -636,6 +658,10 @@ local function decode_row(row)
     local response_reason_phrase = row:get_string(13)
     local response_protocol = row:get_string(14)
     local response_headers = row:get_string(15)
+    local headers, header_list
+    if response_headers then
+        headers, header_list = decode_headers(response_headers)
+    end
     local response_body = row:get_string(16)
     local response_body_file = row:get_string(17)
     local response_time_appconnect = row:get_number(18)
@@ -677,7 +703,8 @@ local function decode_row(row)
         status_code = response_status_code,
         reason_phrase = response_reason_phrase,
         protocol = response_protocol,
-        headers = response_headers and vim.json.decode(response_headers),
+        headers = headers,
+        header_list = header_list,
         body = response_body,
         body_file = response_body_file,
         time = {
