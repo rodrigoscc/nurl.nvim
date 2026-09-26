@@ -181,6 +181,24 @@ INSERT INTO request_history (
         )
     end)
 
+    it("filters by whether the response body was saved to a file", function()
+        insert("2026-09-24T12:00:01", "https://example.org/inline", "GET", 200, nil, "text")
+        insert("2026-09-24T12:00:02", "https://example.org/file", "GET", 200, nil, "", "/tmp/response.png")
+
+        local function urls(filters)
+            return vim.tbl_map(function(row)
+                return row.url
+            end, (history.page(filters)))
+        end
+
+        assert.are.same({ "https://example.org/file" }, urls({ response_file = "yes" }))
+        assert.are.same({ "https://example.org/inline" }, urls({ response_file = "no" }))
+        assert.are.same(
+            { "https://example.org/file", "https://example.org/inline" },
+            urls({})
+        )
+    end)
+
     local function completed_request(index, body_file, time)
         return {
             exec_datetime = time or ("2026-09-24T12:00:%02d"):format(index),

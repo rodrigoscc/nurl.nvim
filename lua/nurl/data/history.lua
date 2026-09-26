@@ -27,6 +27,7 @@ local M = {}
 ---@field to? string
 ---@field request_body? string
 ---@field response_body? string
+---@field response_file? "yes" | "no" whether the response body was saved to a file
 
 ---@type nurl.Db | nil
 M.db = nil
@@ -362,6 +363,12 @@ local function page_query(filters, cursor, limit)
             "response_body_file IS NULL AND response_body LIKE ? ESCAPE '\\'",
             like_pattern(filters.response_body)
         )
+    end
+
+    if filters.response_file == "yes" then
+        condition("response_body_file IS NOT NULL")
+    elseif filters.response_file == "no" then
+        condition("response_body_file IS NULL")
     end
 
     if cursor then

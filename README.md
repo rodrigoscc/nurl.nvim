@@ -119,7 +119,7 @@ a response creates a response window beside the list. Close that window with
 |-----|--------|
 | `<CR>` | Open the selected response |
 | `/` | Filter by URL or title |
-| `F` | Filter by method, status, time, request body, or text response body |
+| `F` | Filter by method, status, time, request body, text response body, or whether the response body was saved to a file |
 | `C` | Clear filters |
 | `<C-r>` | Resend the selected request |
 | `q` | Close the explorer |

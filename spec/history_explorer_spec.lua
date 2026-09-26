@@ -142,6 +142,47 @@ describe("history explorer searches", function()
         }, async_filters)
     end)
 
+    it("filters responses whose body was saved to a file", function()
+        local async_filters = {}
+        history.page = function()
+            return {}, false
+        end
+        history.page_async = function(filters, _, _, callback)
+            table.insert(async_filters, vim.deepcopy(filters))
+            callback({}, false)
+        end
+
+        explorer.open()
+        local list = vim.api.nvim_get_current_buf()
+        local choice
+        vim.ui.select = function(items, _, callback)
+            if type(items[1]) == "table" then
+                callback(items[#items]) -- the response file filter
+            else
+                assert.are.same({ "yes", "no", "any" }, items)
+                callback(choice)
+            end
+        end
+        local function filter(value)
+            choice = value
+            for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(list, "n")) do
+                if mapping.lhs == "F" then
+                    mapping.callback()
+                end
+            end
+        end
+
+        filter("yes")
+        assert.are.same({ { response_file = "yes" } }, async_filters)
+        assert.is_true(
+            vim.wo.winbar:find("response_file=yes", 1, true) ~= nil
+        )
+
+        filter("any")
+        assert.are.equal(1, #async_filters)
+        assert.is_nil(vim.wo.winbar:find("response_file", 1, true))
+    end)
+
     it("routes :Nurl history and the old API to the explorer", function()
         history.page = function()
             return {}, false

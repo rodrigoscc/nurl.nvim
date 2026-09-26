@@ -14,6 +14,11 @@ local filter_fields = {
     { label = "To (YYYY-MM-DD or ISO datetime)", key = "to" },
     { label = "Request body", key = "request_body" },
     { label = "Response body", key = "response_body" },
+    {
+        label = "Response body saved to file",
+        key = "response_file",
+        choices = { "yes", "no" },
+    },
 }
 
 local function buffer(name)
@@ -375,6 +380,19 @@ function Explorer:reload()
 end
 
 function Explorer:change_filter(field)
+    if field.choices then
+        vim.ui.select(vim.list_extend(vim.deepcopy(field.choices), { "any" }), {
+            prompt = field.label,
+        }, function(choice)
+            if choice == nil or not self:alive() then
+                return
+            end
+            self.filters[field.key] = choice ~= "any" and choice or nil
+            self:reload()
+        end)
+        return
+    end
+
     vim.ui.input({
         prompt = field.label .. ": ",
         default = self.filters[field.key] or "",
