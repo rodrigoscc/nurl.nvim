@@ -1,9 +1,14 @@
 local M = {}
 
----@param bytes number
+-- Shown for values curl did not report.
+local MISSING = "-"
+
+---@param bytes? number
 ---@return string
 function M.format_bytes(bytes)
-    if bytes < 1024 then
+    if bytes == nil then
+        return MISSING
+    elseif bytes < 1024 then
         return string.format("%d B", bytes)
     elseif bytes < 1024 * 1024 then
         return string.format("%.1f KB", bytes / 1024)
@@ -14,10 +19,12 @@ function M.format_bytes(bytes)
     end
 end
 
----@param bytes_per_sec number
+---@param bytes_per_sec? number
 ---@return string
 function M.format_speed(bytes_per_sec)
-    if bytes_per_sec < 1024 then
+    if bytes_per_sec == nil then
+        return MISSING
+    elseif bytes_per_sec < 1024 then
         return string.format("%d B/s", bytes_per_sec)
     elseif bytes_per_sec < 1024 * 1024 then
         return string.format("%.1f KB/s", bytes_per_sec / 1024)
@@ -28,10 +35,12 @@ function M.format_speed(bytes_per_sec)
     end
 end
 
----@param seconds number
+---@param seconds? number
 ---@return string
 function M.format_duration(seconds)
-    if seconds < 1 then
+    if seconds == nil then
+        return MISSING
+    elseif seconds < 1 then
         return string.format("%.0fms", seconds * 1000)
     else
         return string.format("%.2fs", seconds)

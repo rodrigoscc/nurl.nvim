@@ -65,7 +65,7 @@ function M.time()
     local entry = registry:get(vim.b[0].nurl_data.handle_id)
     local response = entry.handle.response
 
-    if response ~= nil then
+    if response ~= nil and response.time.time_total ~= nil then
         return string.format(
             " %%#%s#· %s%%*",
             config.highlight.groups.winbar_time,

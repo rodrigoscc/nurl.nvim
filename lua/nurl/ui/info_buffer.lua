@@ -322,62 +322,82 @@ function M.render(bufnr, exec_datetime, request, response)
     local time = response.time
     builder:section("Timing")
 
-    local dns = non_negative(time.time_namelookup)
-    local tcp = non_negative(time.time_connect - time.time_namelookup)
-    local has_tls = time.time_appconnect > 0
-    local tls = has_tls
-            and non_negative(time.time_appconnect - time.time_connect)
-        or 0
-    local setup_end = has_tls and time.time_appconnect or time.time_connect
-    local pretransfer = non_negative(time.time_pretransfer - setup_end)
-    local server = non_negative(time.time_starttransfer - time.time_pretransfer)
-    local redirect = non_negative(time.time_redirect)
-    local transfer = non_negative(time.time_total - time.time_starttransfer)
+    -- Timings are missing if curl's timing output could not be parsed.
+    local has_timing = true
+    for _, key in ipairs({
+        "time_namelookup",
+        "time_connect",
+        "time_appconnect",
+        "time_pretransfer",
+        "time_starttransfer",
+        "time_redirect",
+        "time_total",
+    }) do
+        if time[key] == nil then
+            has_timing = false
+        end
+    end
 
-    builder:timing_field(
-        "dns",
-        numbers.format_duration(dns),
-        dns,
-        time.time_total
-    )
-    builder:timing_field(
-        "tcp",
-        numbers.format_duration(tcp),
-        tcp,
-        time.time_total
-    )
-    builder:timing_field(
-        "tls",
-        numbers.format_duration(tls),
-        tls,
-        time.time_total
-    )
-    builder:timing_field(
-        "pretransfer",
-        numbers.format_duration(pretransfer),
-        pretransfer,
-        time.time_total
-    )
-    builder:timing_field(
-        "server",
-        numbers.format_duration(server),
-        server,
-        time.time_total
-    )
-    builder:timing_field(
-        "redirect",
-        numbers.format_duration(redirect),
-        redirect,
-        time.time_total
-    )
-    builder:timing_field(
-        "transfer",
-        numbers.format_duration(transfer),
-        transfer,
-        time.time_total
-    )
-    builder:blankline()
-    builder:timing_total("total", numbers.format_duration(time.time_total))
+    if not has_timing then
+        builder:field("timing", "unavailable")
+    else
+        local dns = non_negative(time.time_namelookup)
+        local tcp = non_negative(time.time_connect - time.time_namelookup)
+        local has_tls = time.time_appconnect > 0
+        local tls = has_tls
+                and non_negative(time.time_appconnect - time.time_connect)
+            or 0
+        local setup_end = has_tls and time.time_appconnect or time.time_connect
+        local pretransfer = non_negative(time.time_pretransfer - setup_end)
+        local server = non_negative(time.time_starttransfer - time.time_pretransfer)
+        local redirect = non_negative(time.time_redirect)
+        local transfer = non_negative(time.time_total - time.time_starttransfer)
+
+        builder:timing_field(
+            "dns",
+            numbers.format_duration(dns),
+            dns,
+            time.time_total
+        )
+        builder:timing_field(
+            "tcp",
+            numbers.format_duration(tcp),
+            tcp,
+            time.time_total
+        )
+        builder:timing_field(
+            "tls",
+            numbers.format_duration(tls),
+            tls,
+            time.time_total
+        )
+        builder:timing_field(
+            "pretransfer",
+            numbers.format_duration(pretransfer),
+            pretransfer,
+            time.time_total
+        )
+        builder:timing_field(
+            "server",
+            numbers.format_duration(server),
+            server,
+            time.time_total
+        )
+        builder:timing_field(
+            "redirect",
+            numbers.format_duration(redirect),
+            redirect,
+            time.time_total
+        )
+        builder:timing_field(
+            "transfer",
+            numbers.format_duration(transfer),
+            transfer,
+            time.time_total
+        )
+        builder:blankline()
+        builder:timing_total("total", numbers.format_duration(time.time_total))
+    end
 
     local size = response.size
     builder:section("Size")
