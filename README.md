@@ -747,7 +747,7 @@ require("nurl").setup({
                 ["<S-Tab>"] = "previous_buffer",
                 ["<C-r>"] = "rerun",
                 ["<C-x>"] = "cancel",
-                ["<C-m>"] = { "toggle_secondary", opts = { buffer = "info" } },
+                gi = { "toggle_secondary", opts = { buffer = "info" } },
                 q = "close",
             },
         },
