@@ -1,4 +1,5 @@
 local Db = require("nurl.data.db")
+local config = require("nurl.config")
 local fs = require("nurl.data.fs")
 local history = require("nurl.data.history")
 
@@ -11,6 +12,7 @@ describe("history explorer queries", function()
     end)
 
     after_each(function()
+        config.setup()
         history.db:close()
         history.db = nil
         vim.fn.delete(path)
@@ -177,6 +179,131 @@ INSERT INTO request_history (
             1,
             #history.page({ request_body = "unique-request_data_urlencode" })
         )
+    end)
+
+    local function completed_request(index, body_file, time)
+        return {
+            exec_datetime = time or ("2026-09-24T12:00:%02d"):format(index),
+            request = {
+                url = "https://example.org/" .. index,
+                method = "GET",
+                headers = {},
+            },
+            response = {
+                status_code = 200,
+                reason_phrase = "OK",
+                protocol = "HTTP/1.1",
+                headers = {},
+                body = "",
+                body_file = body_file,
+                time = {},
+                size = {},
+                speed = {},
+            },
+            curl = {
+                args = {},
+                result = { code = 0, signal = 0, stdout = "", stderr = "" },
+            },
+        }
+    end
+
+    local function saved_urls()
+        local result = history.db:exec(
+            "SELECT request_url_raw FROM request_history ORDER BY time, id"
+        )
+        local rows = result:all()
+        result:close()
+        return vim.tbl_map(function(row)
+            return row:get_string(1)
+        end, rows)
+    end
+
+    it("keeps only the newest max_history_items entries", function()
+        config.setup({ history = { max_history_items = 3 } })
+
+        for i = 1, 5 do
+            history.insert_history_entry(completed_request(i))
+        end
+
+        assert.are.same({
+            "https://example.org/3",
+            "https://example.org/4",
+            "https://example.org/5",
+        }, saved_urls())
+    end)
+
+    it("deletes the oldest entries by request time", function()
+        config.setup({ history = { max_history_items = 3 } })
+
+        -- A slow request that started first is saved last.
+        history.insert_history_entry(completed_request(2))
+        history.insert_history_entry(completed_request(3))
+        history.insert_history_entry(
+            completed_request(1, nil, "2026-09-24T12:00:01")
+        )
+        history.insert_history_entry(completed_request(4))
+
+        assert.are.same({
+            "https://example.org/2",
+            "https://example.org/3",
+            "https://example.org/4",
+        }, saved_urls())
+    end)
+
+    it("keeps max_history_items entries when ids have gaps", function()
+        config.setup({ history = { max_history_items = 3 } })
+        for i = 1, 3 do
+            history.insert_history_entry(completed_request(i))
+        end
+        local result =
+            history.db:exec("DELETE FROM request_history WHERE id = 2")
+        result:close()
+
+        history.insert_history_entry(completed_request(4))
+
+        assert.are.same({
+            "https://example.org/1",
+            "https://example.org/3",
+            "https://example.org/4",
+        }, saved_urls())
+    end)
+
+    it("keeps history and reports an invalid max_history_items", function()
+        config.setup({ history = { max_history_items = false } })
+        local notify = vim.notify
+        local messages = {}
+        vim.notify = function(message)
+            table.insert(messages, message)
+        end
+
+        local ok, err = pcall(function()
+            for i = 1, 2 do
+                history.insert_history_entry(completed_request(i))
+            end
+        end)
+        vim.notify = notify
+
+        assert(ok, err)
+        assert.are.equal(2, #saved_urls())
+        assert.are.equal(2, #messages)
+        assert.matches("max_history_items must be a positive integer", messages[1])
+    end)
+
+    it("deletes the response files of deleted entries", function()
+        config.setup({ history = { max_history_items = 1 } })
+        local dir = vim.fn.tempname()
+        local files = {}
+        for i = 1, 2 do
+            files[i] = fs.unique_path(dir, "response", "bin")
+            fs.write(files[i], "body " .. i)
+            history.insert_history_entry(completed_request(i, files[i]))
+        end
+
+        assert.are.same({ "https://example.org/2" }, saved_urls())
+        assert.is_false(fs.exists(files[1]))
+        assert.is_false(fs.exists(vim.fs.dirname(files[1])))
+        assert.is_true(fs.exists(files[2]))
+        vim.fs.rm(dir, { recursive = true, force = true })
     end)
 
     it("closes the connection when opening history fails", function()

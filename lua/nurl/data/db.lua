@@ -236,7 +236,6 @@ local function initialize(db)
     response_headers TEXT,
     response_body TEXT,
     response_body_file TEXT,
-    response_body_file_size INTEGER,
     response_time_appconnect REAL,
     response_time_connect REAL,
     response_time_namelookup REAL,
@@ -268,60 +267,6 @@ local function initialize(db)
         )
     end
 
-    local columns_result = db:exec("PRAGMA table_info(request_history)")
-    local columns = columns_result:all()
-    columns_result:close()
-    local has_file_size = false
-    for _, row in ipairs(columns) do
-        if row:get_string(2) == "response_body_file_size" then
-            has_file_size = true
-            break
-        end
-    end
-
-    if not has_file_size then
-        local begin = db:exec("BEGIN IMMEDIATE")
-        local begin_code = begin.code
-        begin:close()
-        assert(begin_code == SQLITE_DONE, "Failed to begin history migration")
-
-        local ok, err = pcall(function()
-            local migration = db:exec([[
-ALTER TABLE request_history ADD COLUMN response_body_file_size INTEGER]])
-            local migration_code = migration.code
-            migration:close()
-            assert(
-                migration_code == SQLITE_DONE,
-                "Failed to migrate history file sizes"
-            )
-
-            local files_result = db:exec([[
-SELECT id, response_body_file FROM request_history
-WHERE response_body_file IS NOT NULL]])
-            local files = files_result:all()
-            files_result:close()
-            for _, row in ipairs(files) do
-                local stat = vim.uv.fs_stat(row:get_string(2))
-                local update = db:exec([[
-UPDATE request_history SET response_body_file_size = ? WHERE id = ?]], {
-                    stat and stat.size or 0,
-                    row:get_number(1),
-                })
-                local update_code = update.code
-                update:close()
-                assert(
-                    update_code == SQLITE_DONE,
-                    "Failed to backfill history file size"
-                )
-            end
-        end)
-        local finish = db:exec(ok and "COMMIT" or "ROLLBACK")
-        local finish_code = finish.code
-        finish:close()
-        assert(ok, err)
-        assert(finish_code == SQLITE_DONE, "Failed to finish history migration")
-    end
-
     result = db:exec(
         [[CREATE INDEX IF NOT EXISTS idx_request_history_time ON request_history(time);]]
     )
@@ -331,22 +276,6 @@ UPDATE request_history SET response_body_file_size = ? WHERE id = ?]], {
     if index_code ~= SQLITE_DONE then
         error(
             ("Failed to create index on time column %d: %s"):format(
-                index_code,
-                db:errormsg()
-            )
-        )
-    end
-
-    result = db:exec([[
-CREATE INDEX IF NOT EXISTS idx_request_history_body_file
-ON request_history(response_body_file, response_body_file_size)
-WHERE response_body_file IS NOT NULL;]])
-    index_code = result.code
-    result:close()
-
-    if index_code ~= SQLITE_DONE then
-        error(
-            ("Failed to create index on response body file %d: %s"):format(
                 index_code,
                 db:errormsg()
             )

@@ -137,13 +137,9 @@ including after a resize.
 
 ### History retention
 
-History has no item-count limit. `history.max_size_bytes` defaults to 512 MiB
-and counts the SQLite database, its WAL/SHM files, and file-backed responses
-referenced by saved history. When the budget is exceeded, the oldest entries
-are removed until usage is roughly 80% of the budget. Their response files are
-deleted, and SQLite is compacted in the background to reclaim disk space. The
-newest entry is always kept, even if it alone exceeds the budget. Response
-files that are not saved in history are outside this budget.
+History keeps the newest `history.max_history_items` entries (1,000,000 by
+default). After each request is saved, older entries are deleted along with
+their saved response files.
 
 ### Overrides
 
@@ -713,8 +709,8 @@ require("nurl").setup({
     history = {
         enabled = true,
         db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
-        -- Budget includes SQLite storage and response files referenced by history
-        max_size_bytes = 512 * 1024 * 1024,
+        -- Older entries and their saved response files are deleted
+        max_history_items = 1000000,
     },
 
     -- Directory for non-displayable response bodies (images, etc.)

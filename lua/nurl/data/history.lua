@@ -1,9 +1,10 @@
 local config = require("nurl.config")
 local Curl = require("nurl.curl")
 local fs = require("nurl.data.fs")
-local retention = require("nurl.data.history_retention")
 local worker_root = require("nurl.data.worker_root")
 local requests = require("nurl.requests")
+
+local uv = vim.uv or vim.loop
 
 local M = {}
 
@@ -29,80 +30,10 @@ local M = {}
 
 ---@type nurl.Db | nil
 M.db = nil
-M.retention_running = false
 
-local retention_pending = false
+local SQLITE_DONE = 101
 
-local function check_retention()
-    if not M.db then
-        return
-    end
-    if M.retention_running then
-        retention_pending = true
-        return
-    end
-
-    local max_bytes = config.history.max_size_bytes
-    if not retention.over_budget(M.db, max_bytes) then
-        return
-    end
-
-    M.retention_running = true
-    local ok, err = pcall(retention.enforce_async, M.db.path, max_bytes, function(failure)
-        M.retention_running = false
-        if failure then
-            vim.notify(
-                "Failed to prune request history: " .. failure,
-                vim.log.levels.ERROR
-            )
-        end
-        if retention_pending then
-            retention_pending = false
-            check_retention()
-        end
-    end)
-    if not ok then
-        M.retention_running = false
-        error(err)
-    end
-end
-
-function M.setup()
-    local Db = require("nurl.data.db")
-
-    local db_file = vim.fn.fnamemodify(config.history.db_file, ":p")
-    fs.mkdir(vim.fs.dirname(db_file))
-    M.db = Db:new(db_file)
-
-    local group = vim.api.nvim_create_augroup("nurl.history", {})
-    vim.api.nvim_create_autocmd("ExitPre", {
-        group = group,
-        callback = function()
-            if M.db then
-                M.db:close()
-                M.db = nil
-            end
-        end,
-    })
-end
-
----@param handle nurl.RequestHandle
-function M.insert_history_entry(handle)
-    if M.db == nil then
-        M.setup()
-    end
-
-    local request = handle.request
-    local response = handle.response
-    local curl = handle.curl
-
-    assert(response ~= nil, "Request must be completed")
-    assert(curl ~= nil, "Request must be completed")
-    local body_file_stat = response.body_file
-        and vim.uv.fs_stat(response.body_file)
-
-    local result = M.db:exec(
-        [[INSERT INTO
+local INSERT_ENTRY = [[INSERT INTO
 request_history (
     time,
     request_url,
@@ -122,7 +53,6 @@ request_history (
     response_headers,
     response_body,
     response_body_file,
-    response_body_file_size,
     response_time_appconnect,
     response_time_connect,
     response_time_namelookup,
@@ -179,56 +109,170 @@ VALUES
     ?,
     ?,
     ?,
-    ?,
     ?
-);]],
-        {
-            handle.exec_datetime,
-            vim.json.encode(request.url),
-            requests.build_url(request.url),
-            request.query and vim.json.encode(request.query) or vim.NIL,
-            request.title or vim.NIL,
-            request.method,
-            request.auth and vim.json.encode(request.auth) or vim.NIL,
-            request.headers and vim.json.encode(request.headers) or vim.NIL,
-            request.data and vim.json.encode(request.data) or vim.NIL,
-            request.form and vim.json.encode(request.form) or vim.NIL,
-            request.data_urlencode and vim.json.encode(request.data_urlencode)
-                or vim.NIL,
-            request.curl_args and vim.json.encode(request.curl_args) or vim.NIL,
-            response.status_code,
-            response.reason_phrase,
-            response.protocol,
-            response.headers and vim.json.encode(response.headers) or vim.NIL,
-            response.body,
-            response.body_file or vim.NIL,
-            body_file_stat and body_file_stat.size or 0,
-            response.time.time_appconnect,
-            response.time.time_connect,
-            response.time.time_namelookup,
-            response.time.time_pretransfer,
-            response.time.time_redirect,
-            response.time.time_starttransfer,
-            response.time.time_total,
-            response.size.size_download,
-            response.size.size_header,
-            response.size.size_request,
-            response.size.size_upload,
-            response.speed.speed_download,
-            response.speed.speed_upload,
-            vim.json.encode(curl.args) or vim.NIL,
-            curl.result.code,
-            curl.result.signal,
-            curl.result.stdout,
-            curl.result.stderr,
-        }
+);]]
+
+---@return string? err
+local function delete_body_file(path)
+    local removed, err, name = uv.fs_unlink(path)
+    if not removed and name ~= "ENOENT" then
+        return ("Could not remove history response file %s: %s"):format(
+            path,
+            err
+        )
+    end
+
+    -- Each response is saved in its own directory. Leave the directory alone
+    -- if another file is present rather than recursively deleting it.
+    local dir = path:match("^(.*)[/\\][^/\\]+$")
+    if dir then
+        local success, dir_err, dir_name = uv.fs_rmdir(dir)
+        if
+            not success
+            and dir_name ~= "ENOENT"
+            and dir_name ~= "ENOTEMPTY"
+            and dir_name ~= "EEXIST"
+        then
+            return ("Could not remove history response directory %s: %s"):format(
+                dir,
+                dir_err
+            )
+        end
+    end
+end
+
+---Delete matching entries along with their saved response files.
+---@param where string
+---@param binds any[]
+local function delete_entries(where, binds)
+    local result = M.db:exec(
+        "DELETE FROM request_history WHERE "
+            .. where
+            .. " RETURNING response_body_file",
+        binds
+    )
+    local rows = result:all()
+    local code = result.code
+    result:close()
+    assert(code == SQLITE_DONE, "Failed to delete request history")
+
+    local failures = {}
+    for _, row in ipairs(rows) do
+        local body_file = row:get_string(1)
+        local err = body_file and delete_body_file(body_file)
+        if err then
+            table.insert(failures, err)
+        end
+    end
+    if #failures > 0 then
+        error(table.concat(failures, "\n"))
+    end
+end
+
+---Keep only the newest `history.max_history_items` entries, in the same
+---(time, id) order as the history explorer.
+function M.delete_old_items()
+    local max_items = config.history.max_history_items
+    assert(
+        type(max_items) == "number" and max_items >= 1 and max_items % 1 == 0,
+        "history.max_history_items must be a positive integer"
     )
 
-    local insert_code = result.code
-    result:close()
-    assert(insert_code == 101, "Failed to insert request history entry")
+    delete_entries(
+        [[id IN (
+    SELECT id FROM request_history ORDER BY time ASC, id ASC
+    LIMIT MAX(0, (SELECT COUNT(*) FROM request_history) - ?)
+)]],
+        { max_items }
+    )
+end
 
-    check_retention()
+function M.setup()
+    local Db = require("nurl.data.db")
+
+    local db_file = vim.fn.fnamemodify(config.history.db_file, ":p")
+    fs.mkdir(vim.fs.dirname(db_file))
+    M.db = Db:new(db_file)
+
+    local group = vim.api.nvim_create_augroup("nurl.history", {})
+    vim.api.nvim_create_autocmd("ExitPre", {
+        group = group,
+        callback = function()
+            if M.db then
+                M.db:close()
+                M.db = nil
+            end
+        end,
+    })
+end
+
+---@param handle nurl.RequestHandle
+function M.insert_history_entry(handle)
+    if M.db == nil then
+        M.setup()
+    end
+
+    local request = handle.request
+    local response = handle.response
+    local curl = handle.curl
+
+    assert(response ~= nil, "Request must be completed")
+    assert(curl ~= nil, "Request must be completed")
+
+    local binds = {
+        handle.exec_datetime,
+        vim.json.encode(request.url),
+        requests.build_url(request.url),
+        request.query and vim.json.encode(request.query) or vim.NIL,
+        request.title or vim.NIL,
+        request.method,
+        request.auth and vim.json.encode(request.auth) or vim.NIL,
+        request.headers and vim.json.encode(request.headers) or vim.NIL,
+        request.data and vim.json.encode(request.data) or vim.NIL,
+        request.form and vim.json.encode(request.form) or vim.NIL,
+        request.data_urlencode and vim.json.encode(request.data_urlencode)
+            or vim.NIL,
+        request.curl_args and vim.json.encode(request.curl_args) or vim.NIL,
+        response.status_code,
+        response.reason_phrase,
+        response.protocol,
+        response.headers and vim.json.encode(response.headers) or vim.NIL,
+        response.body,
+        response.body_file or vim.NIL,
+        response.time.time_appconnect,
+        response.time.time_connect,
+        response.time.time_namelookup,
+        response.time.time_pretransfer,
+        response.time.time_redirect,
+        response.time.time_starttransfer,
+        response.time.time_total,
+        response.size.size_download,
+        response.size.size_header,
+        response.size.size_request,
+        response.size.size_upload,
+        response.speed.speed_download,
+        response.speed.speed_upload,
+        vim.json.encode(curl.args) or vim.NIL,
+        curl.result.code,
+        curl.result.signal,
+        curl.result.stdout,
+        curl.result.stderr,
+    }
+
+    local result = M.db:exec(INSERT_ENTRY, binds)
+    local code = result.code
+    result:close()
+    assert(code == SQLITE_DONE, "Failed to insert request history entry")
+
+    -- The entry is saved at this point, so do not report a failure to delete
+    -- old entries as a failure to save it.
+    local ok, err = pcall(M.delete_old_items)
+    if not ok then
+        vim.notify(
+            "Failed to delete old request history: " .. err,
+            vim.log.levels.ERROR
+        )
+    end
 end
 
 local function ensure_db()
@@ -454,10 +498,13 @@ end
 ---@return nurl.Request?
 function M.get_request(id)
     ensure_db()
-    local result = M.db:exec([[
+    local result = M.db:exec(
+        [[
 SELECT request_url, request_query, request_method, request_headers,
     request_data, request_form, request_data_urlencode
-FROM request_history WHERE id = ?]], { id })
+FROM request_history WHERE id = ?]],
+        { id }
+    )
     local rows = result:all()
     result:close()
 

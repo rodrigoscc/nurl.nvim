@@ -16,8 +16,8 @@ local defaults = {
         enabled = true,
         ---@type string
         db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
-        ---@type integer Maximum disk usage for the history database and its saved response files
-        max_size_bytes = 512 * 1024 * 1024,
+        ---@type integer Oldest entries beyond this count are deleted
+        max_history_items = 1000000,
         explorer = {
             page_size = 50,
             keys = {
