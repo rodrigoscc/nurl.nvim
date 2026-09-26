@@ -810,12 +810,15 @@ require("nurl").setup({
             winbar_title = "NurlWinbarTitle",
             winbar_tab_active = "NurlWinbarTabActive",
             winbar_tab_inactive = "NurlWinbarTabInactive",
-            winbar_success_status_code = "NurlWinbarSuccessStatusCode",
-            winbar_error_status_code = "NurlWinbarErrorStatusCode",
             winbar_loading = "NurlWinbarLoading",
             winbar_time = "NurlWinbarTime",
             winbar_warning = "NurlWinbarWarning",
             winbar_error = "NurlWinbarError",
+            status = "NurlStatus",
+            status_success = "NurlStatusSuccess",
+            status_redirect = "NurlStatusRedirect",
+            status_client_error = "NurlStatusClientError",
+            status_server_error = "NurlStatusServerError",
         },
     },
 })
@@ -836,13 +839,16 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 
 | Group | Description |
 |-------|-------------|
+| `NurlStatus` | 1xx status codes, everywhere status codes are shown |
+| `NurlStatusSuccess` | 2xx status codes |
+| `NurlStatusRedirect` | 3xx status codes |
+| `NurlStatusClientError` | 4xx status codes |
+| `NurlStatusServerError` | 5xx status codes |
 | `NurlSpinner` | Loading spinner |
 | `NurlElapsedTime` | Elapsed time display |
 | `NurlWinbarTitle` | Request title in winbar |
 | `NurlWinbarTabActive` | Active tab |
 | `NurlWinbarTabInactive` | Inactive tab |
-| `NurlWinbarSuccessStatusCode` | 2xx status codes |
-| `NurlWinbarErrorStatusCode` | 4xx/5xx status codes |
 | `NurlWinbarLoading` | Loading state |
 | `NurlWinbarTime` | Response time |
 | `NurlWinbarWarning` | Warning messages |
@@ -856,23 +862,14 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 | `NurlInfoQueryValue` | Query parameter values |
 | `NurlInfoSeparator` | Separators (?, &, =) |
 | `NurlInfoMethod` | HTTP method |
-| `NurlInfoStatus` | Status code (fallback) |
-| `NurlInfoStatusSuccess` | 2xx status codes |
-| `NurlInfoStatusRedirect` | 3xx status codes |
-| `NurlInfoStatusClientError` | 4xx status codes |
-| `NurlInfoStatusServerError` | 5xx status codes |
 | `NurlHistoryTime` | History timestamp |
 | `NurlHistoryMethod` | History request method |
-| `NurlHistoryStatus` | Other history status codes |
-| `NurlHistoryStatusSuccess` | History 2xx status codes |
-| `NurlHistoryStatusRedirect` | History 3xx status codes |
-| `NurlHistoryStatusError` | History 4xx/5xx status codes |
 | `NurlHistoryDuration` | History request duration |
 | `NurlHistoryTitle` | History request title |
 | `NurlHistoryUrl` | History request URL |
 | `NurlHistoryMatch` | URL/title filter matches in history |
 | `NurlTestPass` | Passing test count |
-| `NurlTestFail` | Failing test count and "Failure" header |
+| `NurlTestFail` | Failing test count, "Failure" header, and the Test tab when tests fail |
 | `NurlTestError` | Error count and "Error" header |
 | `NurlTestLabel` | "Passed in:" and "Expected:" labels |
 | `NurlTestValueActual` | Actual values (diff delete style) |

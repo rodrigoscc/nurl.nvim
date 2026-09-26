@@ -1,3 +1,5 @@
+local config = require("nurl.config")
+
 local M = {}
 
 M.highlights = {
@@ -6,8 +8,6 @@ M.highlights = {
     NurlWinbarTitle = "@attribute",
     NurlWinbarTabActive = "Special",
     NurlWinbarTabInactive = "@comment",
-    NurlWinbarSuccessStatusCode = "DiagnosticOk",
-    NurlWinbarErrorStatusCode = "DiagnosticError",
     NurlWinbarLoading = "DiagnosticInfo",
     NurlWinbarTime = "@comment",
     NurlWinbarWarning = "DiagnosticWarn",
@@ -27,18 +27,15 @@ M.highlights = {
 
     NurlInfoMethod = "Function",
 
-    NurlInfoStatus = "Normal",
-    NurlInfoStatusSuccess = "DiagnosticOk",
-    NurlInfoStatusRedirect = "DiagnosticInfo",
-    NurlInfoStatusClientError = "DiagnosticError",
-    NurlInfoStatusServerError = "DiagnosticError",
+    -- Status codes, shared by every view.
+    NurlStatus = "Normal",
+    NurlStatusSuccess = "DiagnosticOk",
+    NurlStatusRedirect = "DiagnosticInfo",
+    NurlStatusClientError = "DiagnosticError",
+    NurlStatusServerError = "DiagnosticError",
 
     NurlHistoryTime = "Comment",
     NurlHistoryMethod = "Function",
-    NurlHistoryStatus = "Normal",
-    NurlHistoryStatusSuccess = "DiagnosticOk",
-    NurlHistoryStatusRedirect = "DiagnosticWarn",
-    NurlHistoryStatusError = "DiagnosticError",
     NurlHistoryDuration = "Comment",
     NurlHistoryTitle = "Title",
     NurlHistoryUrl = "Normal",
@@ -53,6 +50,23 @@ M.highlights = {
     NurlTestSuiteName = "@markup.strong",
     NurlTestSeparator = "NonText",
 }
+
+---Highlight group for a status code, used wherever one is shown.
+---@param status_code integer
+---@return string
+function M.status_group(status_code)
+    local groups = config.highlight.groups
+    if status_code >= 200 and status_code < 300 then
+        return groups.status_success
+    elseif status_code >= 300 and status_code < 400 then
+        return groups.status_redirect
+    elseif status_code >= 400 and status_code < 500 then
+        return groups.status_client_error
+    elseif status_code >= 500 then
+        return groups.status_server_error
+    end
+    return groups.status
+end
 
 function M.setup_highlights()
     for highlight, opts in pairs(M.highlights) do

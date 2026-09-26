@@ -1,10 +1,14 @@
 local config = require("nurl.config")
+local highlights = require("nurl.ui.highlights")
 local strings = require("nurl.utils.strings")
 local requests = require("nurl.requests")
 local numbers = require("nurl.utils.numbers")
 local registry = require("nurl.registry")
 
 local M = {}
+
+-- Status icons by class: 1xx, 2xx, 3xx, 4xx and 5xx.
+local status_icons = { "󰋽", "󰄬", "󰁔", "󰅚", "󰅚" }
 
 function M.request_title()
     local entry = registry:get(vim.b[0].nurl_data.handle_id)
@@ -28,19 +32,13 @@ function M.status_code()
     local response = entry.handle.response
 
     if response ~= nil then
-        if response.status_code <= 299 then
-            return string.format(
-                "%%#%s#󰄬 %s%%*",
-                config.highlight.groups.winbar_success_status_code,
-                response.status_code
-            )
-        else
-            return string.format(
-                "%%#%s#󰅚 %s%%*",
-                config.highlight.groups.winbar_error_status_code,
-                response.status_code
-            )
-        end
+        local status_code = response.status_code
+        return string.format(
+            "%%#%s#%s %s%%*",
+            highlights.status_group(status_code),
+            status_icons[math.floor(status_code / 100)] or status_icons[1],
+            status_code
+        )
     end
 
     if entry.handle:is_failed() then
@@ -83,7 +81,7 @@ end
 ---@return string
 local function get_active_tab_highlight(buffer_name, has_test_failures)
     if buffer_name == "test" and has_test_failures then
-        return config.highlight.groups.winbar_error_status_code
+        return config.highlight.groups.test_fail
     end
 
     return config.highlight.groups.winbar_tab_active
@@ -94,7 +92,7 @@ end
 ---@return string
 local function get_inactive_tab_highlight(buffer_name, has_test_failures)
     if buffer_name == "test" and has_test_failures then
-        return config.highlight.groups.winbar_error_status_code
+        return config.highlight.groups.test_fail
     end
 
     return config.highlight.groups.winbar_tab_inactive

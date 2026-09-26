@@ -1,4 +1,5 @@
 local config = require("nurl.config")
+local highlights = require("nurl.ui.highlights")
 local strings = require("nurl.utils.strings")
 local requests = require("nurl.requests")
 local numbers = require("nurl.utils.numbers")
@@ -33,22 +34,6 @@ end
 local function round(value)
     -- Lua has no built-in round. Adding 0.5 before floor rounds positive values to nearest integer.
     return math.floor(value + 0.5)
-end
-
----@param status_code number
----@return string
-local function get_status_highlight(status_code)
-    if status_code >= 200 and status_code < 300 then
-        return config.highlight.groups.info_status_success
-    elseif status_code >= 300 and status_code < 400 then
-        return config.highlight.groups.info_status_redirect
-    elseif status_code >= 400 and status_code < 500 then
-        return config.highlight.groups.info_status_client_error
-    elseif status_code >= 500 then
-        return config.highlight.groups.info_status_server_error
-    else
-        return config.highlight.groups.info_status
-    end
 end
 
 ---@class InfoLine
@@ -322,7 +307,7 @@ function M.render(bufnr, exec_datetime, request, response)
     builder:field(
         "status",
         status_text,
-        get_status_highlight(response.status_code)
+        highlights.status_group(response.status_code)
     )
     builder:field("protocol", response.protocol)
 
@@ -406,13 +391,13 @@ function M.render(bufnr, exec_datetime, request, response)
     builder:field("download", numbers.format_speed(speed.speed_download))
     builder:field("upload", numbers.format_speed(speed.speed_upload))
 
-    local lines, highlights = builder:build()
+    local lines, line_highlights = builder:build()
 
     vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
 
     vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-    for _, hl in ipairs(highlights) do
+    for _, hl in ipairs(line_highlights) do
         vim.api.nvim_buf_set_extmark(
             bufnr,
             ns,

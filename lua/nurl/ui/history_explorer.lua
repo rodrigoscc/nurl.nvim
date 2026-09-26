@@ -1,5 +1,6 @@
 local config = require("nurl.config")
 local history = require("nurl.data.history")
+local highlights = require("nurl.ui.highlights")
 local preview = require("nurl.preview")
 
 local M = {}
@@ -121,21 +122,12 @@ local function format_row(row, search)
         length = length + #text
     end
 
-    local status_group = "NurlHistoryStatus"
-    if row.status >= 200 and row.status < 300 then
-        status_group = "NurlHistoryStatusSuccess"
-    elseif row.status >= 300 and row.status < 400 then
-        status_group = "NurlHistoryStatusRedirect"
-    elseif row.status >= 400 then
-        status_group = "NurlHistoryStatusError"
-    end
-
     -- "yesterday 14:32" is the widest format.
     add(("%-15s"):format(M.format_time(row.time)), "NurlHistoryTime")
     add("  ")
     add(string.format("%-7s", row.method), "NurlHistoryMethod")
     add("  ")
-    add(string.format("%-3d", row.status), status_group)
+    add(string.format("%-3d", row.status), highlights.status_group(row.status))
     add("  ")
     add(
         string.format("%7.0f ms", (row.duration or 0) * 1000),
@@ -312,12 +304,12 @@ function Explorer:render_rows(rows, append)
     local start_row = append and vim.api.nvim_buf_line_count(self.list_buf)
         or 0
     local lines = {}
-    local highlights = {}
+    local line_spans = {}
 
     for _, row in ipairs(rows) do
         local line, spans = format_row(row, self.filters.search)
         table.insert(lines, line)
-        table.insert(highlights, spans)
+        table.insert(line_spans, spans)
     end
 
     if not append then
@@ -325,7 +317,7 @@ function Explorer:render_rows(rows, append)
     end
     set_lines(self.list_buf, lines, append)
 
-    for index, spans in ipairs(highlights) do
+    for index, spans in ipairs(line_spans) do
         for _, span in ipairs(spans) do
             vim.api.nvim_buf_set_extmark(
                 self.list_buf,

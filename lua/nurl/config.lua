@@ -106,8 +106,6 @@ local defaults = {
             winbar_title = "NurlWinbarTitle",
             winbar_tab_active = "NurlWinbarTabActive",
             winbar_tab_inactive = "NurlWinbarTabInactive",
-            winbar_success_status_code = "NurlWinbarSuccessStatusCode",
-            winbar_error_status_code = "NurlWinbarErrorStatusCode",
             winbar_loading = "NurlWinbarLoading",
             winbar_time = "NurlWinbarTime",
             winbar_warning = "NurlWinbarWarning",
@@ -127,11 +125,11 @@ local defaults = {
 
             info_method = "NurlInfoMethod",
 
-            info_status = "NurlInfoStatus",
-            info_status_success = "NurlInfoStatusSuccess",
-            info_status_redirect = "NurlInfoStatusRedirect",
-            info_status_client_error = "NurlInfoStatusClientError",
-            info_status_server_error = "NurlInfoStatusServerError",
+            status = "NurlStatus",
+            status_success = "NurlStatusSuccess",
+            status_redirect = "NurlStatusRedirect",
+            status_client_error = "NurlStatusClientError",
+            status_server_error = "NurlStatusServerError",
 
             test_pass = "NurlTestPass",
             test_fail = "NurlTestFail",
