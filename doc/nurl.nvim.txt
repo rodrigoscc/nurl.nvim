@@ -141,11 +141,15 @@ to return to the explorer at the same position and filters.
   /                           Filter by URL or title
 
   F                           Filter by method, status, time, request
-                              body, or text response body
+                              body, text response body, or whether the
+                              response body was saved to a file
 
   C                           Clear filters
 
   <C-r>                       Resend the selected request
+
+  dd                          Delete the selected entry (3dd deletes
+                              three) and its saved response file
 
   q                           Close the explorer
 
@@ -154,23 +158,19 @@ to return to the explorer at the same position and filters.
 Filters can be combined. Status accepts codes (`404`) and classes (`4xx`);
 dates accept `YYYY-MM-DD` or an ISO date/time prefix. Body searches are
 case-insensitive substring searches of saved request data/form fields or text
-responses; file-backed response bodies are excluded. Body searches run in a
-background worker so the explorer remains responsive, and changing filters
-discards older results. Configure the explorer through `history.explorer`
-(`page_size` and buffer-local `keys`; set a mapping to `false` to disable it).
-`page_size` is a minimum: larger windows load enough entries to fill the list,
-including after a resize.
+responses; file-backed response bodies are excluded. Filters other than dates
+run in a background worker so the explorer remains responsive, and changing
+filters discards older results. Configure the explorer through
+`history.explorer` (`page_size` and buffer-local `keys`; set a mapping to
+`false` to disable it). `page_size` is a minimum: larger windows load enough
+entries to fill the list, including after a resize.
 
 
 HISTORY RETENTION                       *nurl.nvim-commands-history-retention*
 
-History has no item-count limit. `history.max_size_bytes` defaults to 512 MiB
-and counts the SQLite database, its WAL/SHM files, and file-backed responses
-referenced by saved history. When the budget is exceeded, the oldest entries
-are removed until usage is roughly 80% of the budget. Their response files are
-deleted, and SQLite is compacted in the background to reclaim disk space. The
-newest entry is always kept, even if it alone exceeds the budget. Response
-files that are not saved in history are outside this budget.
+History keeps the newest `history.max_history_items` entries (1,000,000 by
+default). After each request is saved, older entries are deleted along with
+their saved response files.
 
 
 OVERRIDES                                       *nurl.nvim-commands-overrides*
@@ -805,8 +805,8 @@ Methods:
         history = {
             enabled = true,
             db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
-            -- Budget includes SQLite storage and response files referenced by history
-            max_size_bytes = 512 * 1024 * 1024,
+            -- Older entries and their saved response files are deleted
+            max_history_items = 1000000,
         },
 
         -- Directory for non-displayable response bodies (images, etc.)
