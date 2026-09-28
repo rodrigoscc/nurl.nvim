@@ -271,6 +271,8 @@ local OUTPUT_FLAGS = {
     "--write-out",
     "--no-include",
     "--progress-meter",
+    -- size_header still counts the hidden headers, which splits the body wrong
+    "--suppress-connect-headers",
 }
 
 local function contains_output_flags(extra_args)

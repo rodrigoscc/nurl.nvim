@@ -144,9 +144,6 @@ function M.send(request, opts_or_callback, callback)
         local curl = requests.build_curl(expanded_request)
 
         local curl_handle = curl:run(function(system_completed)
-            local stdout = vim.split(system_completed.stdout, "\n")
-            local stderr = vim.split(system_completed.stderr, "\n")
-
             local response = nil
 
             local curl_success = system_completed.code == 0
@@ -154,7 +151,10 @@ function M.send(request, opts_or_callback, callback)
             local curl_interrupted = system_completed.signal ~= 0
 
             if curl_success then
-                response = responses.parse(stdout, stderr)
+                response = responses.parse(
+                    system_completed.stdout,
+                    system_completed.stderr
+                )
 
                 if not responses.is_displayable(response) then
                     response, curl = responses.move_body_to_file(response, curl)

@@ -253,36 +253,56 @@ local function guess_extension(headers, fallback)
     return fallback
 end
 
----@param stdout string[]
----@param stderr string[]
+---The last header block in curl's --include output. Curl prints a block for
+---every response it receives: proxy CONNECT replies, 1xx responses such as
+---100 Continue, and each redirect followed with --location. Only the last
+---one belongs to the final response.
+---@param headers string all header blocks
+---@return string[] lines status line followed by the header lines
+local function final_header_lines(headers)
+    local blocks = vim.split(headers, "\r?\n\r?\n", { trimempty = true })
+    return vim.split(blocks[#blocks], "\r?\n")
+end
+
+---@param stdout string curl output: all header blocks followed by the body
+---@param stderr string curl stderr, ending with the --write-out metrics
 ---@return nurl.Response
 function M.parse(stdout, stderr)
-    local separation_line_idx = vim.iter(ipairs(stdout)):find(function(_, line)
-        -- Trim to remove extra space chars, since we're not using {text = true} in vim.system
-        return vim.trim(line) == ""
-    end)
+    -- Other messages curl writes to stderr come before the metrics, which are
+    -- written once the transfer is done.
+    local stderr_lines = vim.split(vim.trim(stderr), "\n")
 
-    local start_line = vim.trim(stdout[1])
+    local metrics_line = vim.trim(stderr_lines[#stderr_lines])
 
-    local headers_lines =
-        vim.iter(stdout):slice(2, separation_line_idx - 1):totable()
-    local body_lines =
-        vim.iter(stdout):slice(separation_line_idx + 1, #stdout):totable()
-
-    local headers, header_list = parse_headers(headers_lines)
-
-    local protocol, status_code, reason_phrase = parse_start_line(start_line)
-
-    local time_line = vim.trim(stderr[1])
     local time_appconnect, time_connect, time_namelookup, time_pretransfer, time_redirect, time_starttransfer, time_total, size_download, size_header, size_request, size_upload, speed_download, speed_upload =
-        unpack(vim.iter(vim.split(time_line, ","))
-            :map(function(time)
-                return tonumber(time)
+        unpack(vim.iter(vim.split(metrics_line, ","))
+            :map(function(value)
+                return tonumber(value)
             end)
             :totable())
 
+    if size_header == nil then
+        error(
+            ("Could not find the curl metrics in stderr: %q"):format(stderr),
+            0
+        )
+    end
+    if size_header > #stdout then
+        error(
+            ("Curl reported %d bytes of headers but printed %d bytes"):format(
+                size_header,
+                #stdout
+            ),
+            0
+        )
+    end
+
+    local lines = final_header_lines(stdout:sub(1, size_header))
+    local protocol, status_code, reason_phrase = parse_start_line(lines[1])
+    local headers, header_list = parse_headers(vim.list_slice(lines, 2))
+
     local body_file = nil -- should be populated later
-    local body = table.concat(body_lines, "\n")
+    local body = stdout:sub(size_header + 1)
 
     return {
         protocol = protocol,
@@ -327,7 +347,7 @@ function M.move_body_to_file(response, curl)
     response.body_file = unique_path
     response.body = ""
 
-    curl:replace_body("@" .. unique_path)
+    curl:replace_body("@" .. unique_path, response.size.size_header)
 
     return response, curl
 end
