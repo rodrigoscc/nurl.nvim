@@ -243,6 +243,12 @@ describe("responses", function()
             end, "Curl reported 99 bytes of headers but printed 17 bytes")
         end)
 
+        it("errors when there are no response headers", function()
+            assert.has_error(function()
+                responses.parse(curl_output({}, "hello"))
+            end, "Curl printed no response headers")
+        end)
+
         it("handles empty body", function()
             local result = responses.parse(
                 curl_output({ { "HTTP/1.1 204 No Content" } }, "")

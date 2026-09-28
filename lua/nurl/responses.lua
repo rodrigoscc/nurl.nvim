@@ -297,9 +297,15 @@ function M.parse(stdout, stderr)
         )
     end
 
-    local lines = final_header_lines(stdout:sub(1, size_header))
-    local protocol, status_code, reason_phrase = parse_start_line(lines[1])
-    local headers, header_list = parse_headers(vim.list_slice(lines, 2))
+    if size_header == 0 then
+        error("Curl printed no response headers", 0)
+    end
+
+    local header_lines = final_header_lines(stdout:sub(1, size_header))
+
+    local protocol, status_code, reason_phrase =
+        parse_start_line(header_lines[1])
+    local headers, header_list = parse_headers(vim.list_slice(header_lines, 2))
 
     local body_file = nil -- should be populated later
     local body = stdout:sub(size_header + 1)
