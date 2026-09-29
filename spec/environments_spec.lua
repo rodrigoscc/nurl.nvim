@@ -120,6 +120,16 @@ describe("environments", function()
         assert.are.same({ [a] = "dev" }, vim.json.decode(read(active_file)))
     end)
 
+    it("reports an active environment the file no longer has", function()
+        Nurl.activate_env("prod")
+        write_environments(a, "return { dev = {} }")
+        env_project.reload(vim.fs.joinpath(a, ".nurl", "environments.lua"))
+
+        assert.has_error(function()
+            Nurl.env.get("name")
+        end, "Active env does not exist: prod")
+    end)
+
     it("does not activate an unknown environment", function()
         assert.has_error(function()
             Nurl.activate_env("staging")

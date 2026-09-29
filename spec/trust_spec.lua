@@ -151,6 +151,25 @@ describe("trust", function()
         assert.are.equal(1, #prompts)
     end)
 
+    it("refuses to use the active environment of a directory not trusted", function()
+        require("nurl").setup({
+            trust_file = trust_file,
+            active_environments_file = vim.fs.joinpath(root, "envs.json"),
+        })
+        require("nurl.env.active").set(project, "dev")
+        local message = (
+            "Cannot use environment dev: the Lua files in %s are not trusted. Run :Nurl trust to trust them."
+        ):format(nurl_dir)
+
+        assert.has_error(function()
+            Nurl.env.get("token")
+        end, message)
+        assert.has_error(function()
+            Nurl.send({ "https://example.org" })
+        end, message)
+        assert.are.equal(1, #prompts)
+    end)
+
     it("trusts every directory when disabled", function()
         require("nurl").setup({ trust_file = trust_file, trust = false })
 

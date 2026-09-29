@@ -23,6 +23,7 @@ local M = {}
 ---@field envs table<string, table<string, any>>
 ---@field active_name? string
 ---@field private loaded boolean whether the environments file ran
+---@field private unavailable? string why the environments are not available, when the file did not run
 ---@field private file? nurl.EnvFile the file being edited by set and unset
 ---@field private queue nurl.EnvOperation[]
 ---@field private saving boolean
@@ -74,7 +75,14 @@ function Project:_load()
     self.loaded = true
 
     local path = self.path
-    if not fs.exists(path) or not trust.allows(vim.fs.dirname(path)) then
+    if not fs.exists(path) then
+        return
+    end
+
+    if not trust.allows(vim.fs.dirname(path)) then
+        self.unavailable = ("the Lua files in %s are not trusted. Run :Nurl trust to trust them"):format(
+            vim.fs.dirname(path)
+        )
         return
     end
 
@@ -87,6 +95,7 @@ function Project:_load()
             ),
             vim.log.levels.ERROR
         )
+        self.unavailable = path .. " failed to load"
         return
     end
     self.envs = envs
@@ -161,10 +170,20 @@ function Project:env(name)
 
     local env = self.envs[self.active_name]
     if env == nil then
+        self:_check_available(self.active_name)
         error(("Active env does not exist: %s"):format(self.active_name))
     end
 
     return env
+end
+
+---Raise why an environment cannot be used when the environments file did not
+---run, rather than use the request without its variables.
+---@param name string
+function Project:_check_available(name)
+    if self.unavailable then
+        error(("Cannot use environment %s: %s."):format(name, self.unavailable))
+    end
 end
 
 ---@param name string
@@ -204,6 +223,7 @@ function Project:_target(name)
 
     local env = self.envs[name]
     if env == nil then
+        self:_check_available(name)
         error(('Env "%s" not found'):format(name))
     end
 
