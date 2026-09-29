@@ -180,10 +180,11 @@ return requests
         end)
 
         it("jumps to the only item without an action", function()
-            targets.choose("title", { targets.file(file)[2] })
+            targets.choose("title", { targets.file(file)[1] })
 
             assert.are.equal(file, vim.api.nvim_buf_get_name(0))
-            assert.are.equal(3, vim.api.nvim_win_get_cursor(0)[1])
+            -- The start of `{ "https://example.org/one" }` on line 2.
+            assert.are.same({ 2, 4 }, vim.api.nvim_win_get_cursor(0))
         end)
     end)
 end)

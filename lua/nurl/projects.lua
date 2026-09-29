@@ -109,7 +109,7 @@ end
 function M.jump_to(item)
     vim.cmd("edit " .. item.file)
     if item.start_row then
-        vim.api.nvim_win_set_cursor(0, { item.start_row, item.start_col + 1 })
+        vim.api.nvim_win_set_cursor(0, { item.start_row, item.start_col })
     end
 end
 
