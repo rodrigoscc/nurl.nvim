@@ -4,7 +4,8 @@ local variables = require("nurl.core.variables")
 ---@field request nurl.Request
 
 ---@class nurl.RequestOut
----@field curl nurl.Curl
+---@field status "completed" | "failed" | "cancelled"
+---@field curl? nurl.Curl missing when a pre hook cancelled the request
 ---@field request nurl.Request
 ---@field response? nurl.Response
 ---@field test_report? nurl.TestReport
@@ -27,7 +28,7 @@ local variables = require("nurl.core.variables")
 ---@field data_urlencode? table<string, string>
 ---@field curl_args? string[]
 ---@field save_history? boolean
----@field pre_hook? fun(next: fun(), input: nurl.RequestInput) | nil
+---@field pre_hook? fun(next: fun(), input: nurl.RequestInput, cancel: fun()) | nil
 ---@field post_hook? fun(out: nurl.RequestOut) | nil
 ---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
 
@@ -44,7 +45,7 @@ local variables = require("nurl.core.variables")
 ---@field data_urlencode? table<string, any> | fun(): table<string, any>
 ---@field curl_args? string[] | fun(): string[]
 ---@field save_history? boolean | fun(): boolean
----@field pre_hook? fun(next: fun(), input: nurl.RequestInput) | nil
+---@field pre_hook? fun(next: fun(), input: nurl.RequestInput, cancel: fun()) | nil
 ---@field post_hook? fun(out: nurl.RequestOut) | nil
 ---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
 

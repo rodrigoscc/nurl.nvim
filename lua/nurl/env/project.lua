@@ -164,7 +164,7 @@ function Project:activate(name)
     active.set(self.dir, name)
 end
 
----@return fun(next: fun(), input: nurl.RequestInput)?
+---@return fun(next: fun(), input: nurl.RequestInput, cancel: fun())?
 function Project:pre_hook()
     local env = self:env()
     return env and env.pre_hook

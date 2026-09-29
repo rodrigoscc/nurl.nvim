@@ -31,12 +31,13 @@ local function call_safely(name, fn, ...)
     end
 end
 
----@param hook? fun(next: fun(), input: nurl.RequestInput)
+---@param hook? fun(next: fun(), input: nurl.RequestInput, cancel: fun())
 ---@param input nurl.RequestInput
 ---@param next fun()
-local function run_pre_hook(hook, input, next)
+---@param cancel fun()
+local function run_pre_hook(hook, input, next, cancel)
     if hook then
-        hook(next, input)
+        hook(next, input, cancel)
     else
         next()
     end
@@ -89,15 +90,15 @@ function M.run(request, opts)
         ---@cast result vim.SystemCompleted
 
         local response, test_report
-        local finish = handle._resolve
+        local finish, status = handle._resolve, "completed"
 
         local curl_interrupted = result.signal ~= 0
         local curl_error = result.signal == 0 and result.code ~= 0
 
         if curl_interrupted then
-            finish = handle._cancelled
+            finish, status = handle._cancelled, "cancelled"
         elseif curl_error then
-            finish = handle._failed
+            finish, status = handle._failed, "failed"
         else
             local ok, parsed = pcall(parse_response, curl)
             if ok then
@@ -111,12 +112,13 @@ function M.run(request, opts)
                     "Could not parse the response: " .. parsed,
                     vim.log.levels.ERROR
                 )
-                finish = handle._failed
+                finish, status = handle._failed, "failed"
             end
         end
 
         ---@type nurl.RequestOut
         local out = {
+            status = status,
             request = expanded,
             response = response,
             curl = curl,
@@ -136,6 +138,11 @@ function M.run(request, opts)
     end
 
     local function send()
+        if handle.status ~= "pending" then
+            -- Cancelled by a pre hook.
+            return
+        end
+
         -- Build the command first, so that an invalid request fails before
         -- anything is shown.
         local curl = Curl.build(expanded)
@@ -153,12 +160,29 @@ function M.run(request, opts)
         handle:_started(system.pid, win)
     end
 
+    ---Called by a pre hook to decline the request, which then ends as
+    ---cancelled without being sent.
+    local function cancel()
+        if handle.status ~= "pending" then
+            return
+        end
+
+        handle:_cancelled(nil, nil, nil)
+
+        ---@type nurl.RequestOut
+        local out = { status = "cancelled", request = expanded }
+
+        -- Post hooks are for responses, and nothing was sent.
+        call_safely("Callback", opts.callback, out)
+        call_safely("Completing the request", opts.on_complete, handle, out)
+    end
+
     ---@type nurl.RequestInput
     local input = { request = expanded }
 
     run_pre_hook(env_project.current():pre_hook(), input, function()
-        run_pre_hook(expanded.pre_hook, input, send)
-    end)
+        run_pre_hook(expanded.pre_hook, input, send, cancel)
+    end, cancel)
 
     return handle
 end

@@ -150,6 +150,59 @@ describe("runner", function()
         }, calls)
     end)
 
+    it("lets a pre hook cancel the request", function()
+        local calls = { post_hook = 0, on_complete = 0 }
+        local out
+
+        local handle = runner.run({
+            url,
+            pre_hook = function(_, _, cancel)
+                cancel()
+            end,
+            post_hook = function()
+                calls.post_hook = calls.post_hook + 1
+            end,
+        }, {
+            on_start = function()
+                error("the request should not start")
+            end,
+            callback = function(o)
+                out = o
+            end,
+            on_complete = function()
+                calls.on_complete = calls.on_complete + 1
+            end,
+        })
+
+        assert.are.equal("cancelled", handle.status)
+        assert.are.same({ status = "cancelled", request = handle.request }, out)
+        assert.are.same({ post_hook = 0, on_complete = 1 }, calls)
+    end)
+
+    it("lets an environment pre hook cancel the request", function()
+        local project = env_project.current()
+        project.envs = {
+            test = {
+                pre_hook = function(_, _, cancel)
+                    cancel()
+                end,
+            },
+        }
+        project.active_name = "test"
+        local request_hook_ran = false
+
+        local handle = runner.run({
+            url,
+            pre_hook = function(next)
+                request_hook_ran = true
+                next()
+            end,
+        })
+
+        assert.are.equal("cancelled", handle.status)
+        assert.is_false(request_hook_ran)
+    end)
+
     it("marks the request done after the post hooks and callback", function()
         local handle
         local done = {}

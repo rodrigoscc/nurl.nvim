@@ -477,12 +477,14 @@ Hooks let you run code before/after requests. They can be defined per-request or
 
 ### pre_hook
 
-Called before sending. Must call `next()` to proceed.
+Called before sending. Call `next()` to send the request, or `cancel()` to
+decline it. A cancelled request runs the callback, but not the post hooks.
 
 ```lua
 ---@param next fun() Call to continue the request
 ---@param input nurl.RequestInput
-pre_hook = function(next, input)
+---@param cancel fun() Call to decline the request
+pre_hook = function(next, input, cancel)
     -- input.request contains the expanded request
     -- Modify input.request fields if needed
     input.request.headers["X-Custom"] = "value"
@@ -516,12 +518,14 @@ Apply to all requests when an environment is active:
 return {
     production = {
         base_url = "https://prod.example.com",
-        pre_hook = function(next, input)
+        pre_hook = function(next, input, cancel)
             vim.ui.select({ "Yes", "No" }, {
                 prompt = "Send to production?",
             }, function(choice)
                 if choice == "Yes" then
                     next()
+                else
+                    cancel()
                 end
             end)
         end,
@@ -591,7 +595,7 @@ The expanded request object (all functions resolved):
 ---@field data_urlencode? table      URL-encoded data
 ---@field curl_args? string[]        Extra curl flags
 ---@field save_history? boolean      Save request to history
----@field pre_hook? fun(next: fun(), input: nurl.RequestInput)
+---@field pre_hook? fun(next: fun(), input: nurl.RequestInput, cancel: fun())
 ---@field post_hook? fun(out: nurl.RequestOut)
 ---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
 ```
@@ -611,9 +615,10 @@ Passed to `post_hook` and `callback`:
 
 ```lua
 ---@class nurl.RequestOut
+---@field status string "completed", "failed" or "cancelled"
 ---@field request nurl.Request The request that was sent
----@field response? nurl.Response Parsed response (nil if curl failed)
----@field curl nurl.Curl Curl execution details
+---@field response? nurl.Response Parsed response (nil if curl failed or a pre hook cancelled it)
+---@field curl? nurl.Curl Curl execution details (nil if a pre hook cancelled it)
 ---@field win? integer Response window id
 ```
 
