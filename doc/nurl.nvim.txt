@@ -1,6 +1,8 @@
 *nurl.nvim.txt*
                         For Neovim >= 0.10.0    Last change: 2026 September 29
 
+nurl.nvim
+
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
 
