@@ -2,6 +2,7 @@ local config = require("nurl.config")
 local fs = require("nurl.infra.fs")
 local active = require("nurl.env.active")
 local env_file = require("nurl.env.file")
+local strings = require("nurl.utils.strings")
 
 local uv = vim.uv or vim.loop
 
@@ -25,6 +26,19 @@ local M = {}
 ---@field private saving boolean
 local Project = {}
 Project.__index = Project
+
+---Variables are written as `name = value` fields, which need a Lua
+---identifier as the name.
+---@param name string
+local function check_variable_name(name)
+    if not strings.is_identifier(name) then
+        error(
+            ("Invalid variable name %q: it must be a Lua identifier"):format(
+                name
+            )
+        )
+    end
+end
 
 ---@type table<string, nurl.EnvProject> projects by directory
 local projects = {}
@@ -197,6 +211,7 @@ function Project:set(env_name, name, value)
     then
         error("value type " .. value_type .. " not supported")
     end
+    check_variable_name(name)
 
     local target, env = self:_target(env_name)
     env[name] = value
@@ -216,7 +231,8 @@ end
 ---@return string
 local function lua_literal(value)
     if type(value) == "string" then
-        return string.format([["%s"]], value)
+        -- Escapes quotes, backslashes and control characters.
+        return vim.inspect(value)
     end
 
     return tostring(value)
@@ -240,7 +256,23 @@ function Project:_flush()
     ---@cast file nurl.EnvFile
 
     if op.op == "set" then
-        file:set_environment_variable(op.env, op.name, lua_literal(op.value))
+        local found = file:set_environment_variable(
+            op.env,
+            op.name,
+            lua_literal(op.value)
+        )
+        if not found then
+            -- Environments are only found when written as `name = { ... }`
+            -- in the table the file returns.
+            vim.notify(
+                ("Could not find environment %s in %s to save %s; the change won't persist"):format(
+                    op.env,
+                    self.path,
+                    op.name
+                ),
+                vim.log.levels.WARN
+            )
+        end
     else
         file:unset_environment_variable(op.env, op.name)
     end

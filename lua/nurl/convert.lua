@@ -1,37 +1,11 @@
+local strings = require("nurl.utils.strings")
+
 local M = {}
 
 ---@class nurl.ConvertOpts
 ---@field indent? string indentation for each nesting level, defaults to 4 spaces
 
 local DEFAULT_INDENT = "    "
-
-local lua_keywords = {}
-for _, keyword in ipairs({
-    "and",
-    "break",
-    "do",
-    "else",
-    "elseif",
-    "end",
-    "false",
-    "for",
-    "function",
-    "goto",
-    "if",
-    "in",
-    "local",
-    "nil",
-    "not",
-    "or",
-    "repeat",
-    "return",
-    "then",
-    "true",
-    "until",
-    "while",
-}) do
-    lua_keywords[keyword] = true
-end
 
 local empty_dict_mt = getmetatable(vim.empty_dict())
 
@@ -79,7 +53,7 @@ local function to_lua(value, indent, depth)
         table.sort(keys)
         for _, key in ipairs(keys) do
             local name = key
-            if not key:match("^[%a_][%w_]*$") or lua_keywords[key] then
+            if not strings.is_identifier(key) then
                 name = "[" .. vim.inspect(key) .. "]"
             end
             table.insert(

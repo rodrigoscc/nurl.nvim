@@ -22,4 +22,18 @@ describe("utils.strings", function()
             assert.are.equal("123abc", strings.title("123abc"))
         end)
     end)
+
+    describe("is_identifier", function()
+        it("accepts Lua names", function()
+            for _, name in ipairs({ "token", "_private", "api_key2" }) do
+                assert.is_true(strings.is_identifier(name), name)
+            end
+        end)
+
+        it("rejects other text and keywords", function()
+            for _, name in ipairs({ "api-key", "1st", "", "a b", "end", "nil" }) do
+                assert.is_false(strings.is_identifier(name), name)
+            end
+        end)
+    end)
 end)

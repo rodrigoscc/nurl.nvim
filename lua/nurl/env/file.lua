@@ -209,13 +209,14 @@ end
 ---@param environment string
 ---@param variable string
 ---@param new_text string
+---@return boolean found whether the environment's table was found to edit
 function File:set_environment_variable(environment, variable, new_text)
     local value_node =
         self:find_environment_variable_value_node(environment, variable)
 
     if value_node ~= nil then
         self:replace_node(value_node, new_text)
-        return
+        return true
     end
 
     local last_variable_node =
@@ -223,7 +224,7 @@ function File:set_environment_variable(environment, variable, new_text)
     if last_variable_node then
         local formatted = string.format("%s = %s", variable, new_text)
         self:insert_after_node(last_variable_node, formatted)
-        return
+        return true
     end
 
     -- Environment table is empty
@@ -231,8 +232,10 @@ function File:set_environment_variable(environment, variable, new_text)
     if env_table_node then
         local formatted = string.format("{ %s = %s }", variable, new_text)
         self:replace_node(env_table_node, formatted)
-        return
+        return true
     end
+
+    return false
 end
 
 ---@param environment string

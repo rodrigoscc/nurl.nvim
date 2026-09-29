@@ -186,6 +186,59 @@ describe("environments", function()
         )
     end)
 
+    it("escapes the values it writes", function()
+        local values = {
+            quote = 'say "hi"',
+            backslash = [[C:\temp]],
+            newline = "line 1\nline 2",
+            control = "tab\tbell\a",
+        }
+
+        for name, value in pairs(values) do
+            Nurl.env.set(name, value, "dev")
+        end
+
+        wait_for_file(a, "control =")
+        local written = dofile(vim.fs.joinpath(a, ".nurl", "environments.lua"))
+        for name, value in pairs(values) do
+            assert.are.equal(value, written.dev[name], name)
+        end
+    end)
+
+    for _, name in ipairs({ "api-key", "end", "1st", "" }) do
+        it(("refuses the variable name %q"):format(name), function()
+            local path = vim.fs.joinpath(a, ".nurl", "environments.lua")
+            local before = read(path)
+
+            assert.has_error(function()
+                Nurl.env.set(name, "x", "dev")
+            end, ("Invalid variable name %q: it must be a Lua identifier"):format(name))
+
+            assert.is_nil(Nurl.env.get(name, "dev"))
+            vim.wait(50)
+            assert.are.equal(before, read(path))
+        end)
+    end
+
+    it("warns when the environment is not written as a name in the file", function()
+        local path = write_environments(a, [[
+return {
+    ["my-env"] = {
+        token = "old",
+    },
+}
+]])
+
+        Nurl.env.set("token", "new", "my-env")
+
+        assert.are.equal("new", Nurl.env.get("token", "my-env"))
+        assert.is_true(vim.wait(1000, function()
+            return #notifications > 0
+        end))
+        assert.matches("Could not find environment my%-env in", notifications[1])
+        assert.matches('token = "old"', read(path))
+    end)
+
     it("refuses to set without an active environment", function()
         assert.has_error(function()
             Nurl.env.set("token", "new")

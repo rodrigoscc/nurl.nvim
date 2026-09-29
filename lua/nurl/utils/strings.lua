@@ -16,4 +16,39 @@ function M.escape_percentage(text)
     return escaped
 end
 
+local lua_keywords = {}
+for _, keyword in ipairs({
+    "and",
+    "break",
+    "do",
+    "else",
+    "elseif",
+    "end",
+    "false",
+    "for",
+    "function",
+    "goto",
+    "if",
+    "in",
+    "local",
+    "nil",
+    "not",
+    "or",
+    "repeat",
+    "return",
+    "then",
+    "true",
+    "until",
+    "while",
+}) do
+    lua_keywords[keyword] = true
+end
+
+---Whether text can be a Lua name, such as a table key without brackets.
+---@param text string
+---@return boolean
+function M.is_identifier(text)
+    return text:match("^[%a_][%w_]*$") ~= nil and not lua_keywords[text]
+end
+
 return M
