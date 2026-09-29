@@ -9,6 +9,8 @@ local SUBCOMMANDS = {
     "yank",
     "json_to_lua",
     "lua_to_json",
+    "trust",
+    "untrust",
 }
 
 local M = {}
@@ -156,6 +158,42 @@ function M.pick_history()
     require("nurl.ui.history_explorer").open(client())
 end
 
+---The directory a trust command is about: the one given, or the project's.
+---@param arg? string
+---@return string dir, string path its full path
+local function trust_target(arg)
+    local config = require("nurl.config")
+    local dir = (arg ~= nil and arg ~= "") and arg or config.dir
+    return dir, vim.fs.normalize(vim.fn.fnamemodify(dir, ":p"))
+end
+
+---Reload the environments of a directory, after its trust changed.
+---@param dir string
+local function reload_environments(dir)
+    local config = require("nurl.config")
+    require("nurl.env.project").reload(
+        vim.fs.joinpath(dir, config.environments_file)
+    )
+end
+
+---Let the Lua files in a directory run, by default the project's.
+---@param arg? string
+function M.trust(arg)
+    local dir, path = trust_target(arg)
+    require("nurl.trust").trust(dir)
+    reload_environments(dir)
+    vim.notify("nurl: trusted " .. path)
+end
+
+---Forget whether a directory is trusted, so that nurl asks again.
+---@param arg? string
+function M.untrust(arg)
+    local dir, path = trust_target(arg)
+    require("nurl.trust").forget(dir)
+    reload_environments(dir)
+    vim.notify("nurl: will ask before running the Lua files in " .. path)
+end
+
 local function resend_subcommand(arg, overrides)
     if arg == nil or arg == "" then
         M.pick_resend(overrides)
@@ -198,6 +236,8 @@ M.subcommand_handlers = {
     yank = M.yank,
     json_to_lua = conversion_subcommand("json_to_lua"),
     lua_to_json = conversion_subcommand("lua_to_json"),
+    trust = M.trust,
+    untrust = M.untrust,
 }
 
 function M.run(params)

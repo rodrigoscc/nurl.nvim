@@ -66,6 +66,7 @@ describe("environments", function()
         require("nurl").setup({
             formatters = {},
             active_environments_file = active_file,
+            trust = false,
         })
         vim.g.nurl_env_loads = nil
         vim.cmd.cd(a)
@@ -87,7 +88,7 @@ describe("environments", function()
     end)
 
     it("loads the environments file on first use only", function()
-        require("nurl").setup({ active_environments_file = active_file })
+        require("nurl").setup({ active_environments_file = active_file, trust = false })
         assert.is_nil(vim.g.nurl_env_loads)
 
         Nurl.env.get("name", "dev")
@@ -171,6 +172,7 @@ describe("environments", function()
         require("nurl").setup({
             formatters = { lua = { cmd = { "cat" } } },
             active_environments_file = active_file,
+            trust = false,
         })
         Nurl.activate_env("dev")
 

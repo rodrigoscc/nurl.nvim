@@ -41,6 +41,8 @@ local grammar = P({
             + P("yank")
             + P("env")
             + P("resend")
+            + P("untrust")
+            + P("trust")
     ) * (ws + -1) + Cc(nil)),
 
     arg_part = (C((1 - S(" \t=")) ^ 1) * (ws + -1) + Cc(nil)),

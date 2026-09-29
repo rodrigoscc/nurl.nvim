@@ -6,6 +6,11 @@ local defaults = {
     dir = ".nurl",
     environments_file = "environments.lua",
     active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
+    ---Ask before running the Lua files of a directory, such as the requests
+    ---and environments of a project just cloned.
+    ---@type boolean
+    trust = true,
+    trust_file = vim.fn.stdpath("data") .. "/nurl/trust.json",
     responses_files_dir = vim.fn.stdpath("data") .. "/nurl/responses_files",
     history = {
         ---@type boolean

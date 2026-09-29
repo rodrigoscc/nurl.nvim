@@ -1,5 +1,6 @@
 local config = require("nurl.config")
 local fs = require("nurl.infra.fs")
+local trust = require("nurl.trust")
 
 local M = {}
 
@@ -48,6 +49,10 @@ function M.file_requests(file_path)
     local read, contents = pcall(fs.read, file_path)
     if not read then
         vim.notify("Skipping file: " .. contents, vim.log.levels.WARN)
+        return {}
+    end
+
+    if not trust.allows(vim.fs.dirname(vim.fn.fnamemodify(file_path, ":p"))) then
         return {}
     end
 

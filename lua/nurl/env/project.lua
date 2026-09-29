@@ -2,6 +2,7 @@ local config = require("nurl.config")
 local fs = require("nurl.infra.fs")
 local active = require("nurl.env.active")
 local env_file = require("nurl.env.file")
+local trust = require("nurl.trust")
 local strings = require("nurl.utils.strings")
 
 local uv = vim.uv or vim.loop
@@ -59,7 +60,7 @@ local function load(dir)
         saving = false,
     }, Project)
 
-    if not fs.exists(path) then
+    if not fs.exists(path) or not trust.allows(vim.fs.dirname(path)) then
         return project
     end
 

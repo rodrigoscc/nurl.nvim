@@ -13,6 +13,7 @@ https://github.com/user-attachments/assets/8fdfdc50-6086-411c-9fd0-482a5b913d4d
 - [Commands](#commands)
 - [Request Format](#request-format)
 - [Environments](#environments)
+- [Trust](#trust)
 - [Tests](#tests)
 - [Hooks and Callbacks](#hooks-and-callbacks)
 - [Type Reference](#type-reference)
@@ -105,6 +106,8 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
 | `:Nurl yank <filepath>` | File picker -> yank |
 | `:'<,'>Nurl json_to_lua` | Replace the selected JSON with a Lua table |
 | `:'<,'>Nurl lua_to_json` | Replace the selected Lua table with JSON |
+| `:Nurl trust [dir]` | Trust the Lua files in a directory (default: the project's `.nurl`) |
+| `:Nurl untrust [dir]` | Ask again before running the Lua files in a directory |
 
 When using `%` or `<filepath>`, if the file contains only one request, the action runs immediately without opening a picker.
 
@@ -364,6 +367,20 @@ return {
 By default, all functions operate on the active environment. Pass an optional `env` argument to target a specific environment instead.
 
 Switch the active environment with `:Nurl env`.
+
+## Trust
+
+Request files and environments are Lua code, which runs with the same access as
+any plugin. So that opening a project you just cloned does not run its code,
+nurl asks the first time it would run the Lua files in a directory:
+
+- **Trust** runs them, now and in later sessions.
+- **Later** skips them until the next session.
+- **Never** skips them without asking again.
+
+One answer covers every file in the directory, such as a project's `.nurl`.
+Use `:Nurl trust` and `:Nurl untrust` to change it later. A trusted directory
+stays trusted when its files change. Set `trust = false` to never ask.
 
 ## Tests
 
@@ -751,6 +768,10 @@ require("nurl").setup({
 
     -- Active environments per working directory file name (in dir)
     active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
+
+    -- Ask before running the Lua files of a directory (see Trust)
+    trust = true,
+    trust_file = vim.fn.stdpath("data") .. "/nurl/trust.json",
 
     -- History settings
     history = {
