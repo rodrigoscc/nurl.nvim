@@ -3,3 +3,8 @@
 /.luarocks
 .scratch/
 .nurl/
+# The demo's request files, and what recording it downloads and renders
+!/demo/project/.nurl/
+/demo/.deps/
+/demo/nurl-demo.*
+/demo/__pycache__/

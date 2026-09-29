@@ -26,3 +26,5 @@ jobs:
           VALIDATE_PYTHON_BLACK: false
           VALIDATE_MARKDOWN: false
           VALIDATE_NATURAL_LANGUAGE: false
+          # Scripts and config to record the README demo
+          FILTER_REGEX_EXCLUDE: .*demo/.*
