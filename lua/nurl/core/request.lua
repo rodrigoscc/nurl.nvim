@@ -4,7 +4,7 @@ local variables = require("nurl.core.variables")
 ---@field request nurl.Request
 
 ---@class nurl.RequestOut
----@field status "completed" | "failed" | "cancelled"
+---@field status "completed" | "failed" | "cancelled" | "pending" | "started" pending and started only from a wait that timed out
 ---@field curl? nurl.Curl missing when a pre hook cancelled the request
 ---@field request nurl.Request
 ---@field response? nurl.Response

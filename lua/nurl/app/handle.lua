@@ -107,6 +107,7 @@ end
 function RequestHandle:wait(time, interval)
     if self:is_done() then
         return {
+            status = self.status,
             request = self.request,
             response = self.response,
             curl = self.curl,
@@ -123,6 +124,7 @@ function RequestHandle:wait(time, interval)
     end, interval)
 
     return {
+        status = self.status,
         request = self.request,
         response = self.response,
         curl = self.curl,

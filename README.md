@@ -633,7 +633,7 @@ Passed to `post_hook` and `callback`:
 
 ```lua
 ---@class nurl.RequestOut
----@field status string "completed", "failed" or "cancelled"
+---@field status string "completed", "failed" or "cancelled" ("pending" or "started" from a wait that timed out)
 ---@field request nurl.Request The request that was sent
 ---@field response? nurl.Response Parsed response (nil if curl failed or a pre hook cancelled it)
 ---@field curl? nurl.Curl Curl execution details (nil if a pre hook cancelled it)

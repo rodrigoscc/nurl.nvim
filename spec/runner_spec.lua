@@ -150,6 +150,25 @@ describe("runner", function()
         }, calls)
     end)
 
+    it("gives the status when waiting on the request", function()
+        local handle = runner.run({ url })
+
+        assert.are.equal("completed", handle:wait(5000).status)
+        -- Also once the request is already done.
+        assert.are.equal("completed", handle:wait().status)
+    end)
+
+    it("gives the status of a cancelled request when waiting on it", function()
+        local handle = runner.run({
+            url,
+            pre_hook = function(_, _, cancel)
+                cancel()
+            end,
+        })
+
+        assert.are.equal("cancelled", handle:wait().status)
+    end)
+
     it("lets a pre hook cancel the request", function()
         local calls = { post_hook = 0, on_complete = 0 }
         local out
