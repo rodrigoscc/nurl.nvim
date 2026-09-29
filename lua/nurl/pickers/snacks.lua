@@ -1,4 +1,4 @@
-local requests = require("nurl.requests")
+local request_format = require("nurl.core.request_format")
 local actions = require("snacks.picker.actions")
 local http_message = require("nurl.ui.http_message")
 
@@ -21,7 +21,7 @@ local function format_item(item)
 
         table.insert(
             ret,
-            { requests.full_url(item.preview), "SnacksPickerLabel" }
+            { request_format.full_url(item.preview), "SnacksPickerLabel" }
         )
         table.insert(ret, { " " })
     end

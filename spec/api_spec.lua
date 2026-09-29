@@ -1,5 +1,5 @@
 local RequestHandle = require("nurl.app.handle")
-local Curl = require("nurl.curl")
+local Curl = require("nurl.core.curl")
 
 describe("public API", function()
     before_each(function()

@@ -1,4 +1,4 @@
-local Curl = require("nurl.curl")
+local Curl = require("nurl.core.curl")
 local RequestHandle = require("nurl.app.handle")
 local info_tab = require("nurl.ui.response_view.tabs.info")
 

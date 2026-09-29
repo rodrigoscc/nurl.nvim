@@ -1,6 +1,6 @@
-local requests = require("nurl.requests")
+local request_format = require("nurl.core.request_format")
 local config = require("nurl.config")
-local responses = require("nurl.responses")
+local responses = require("nurl.core.response")
 local formatter = require("nurl.infra.formatter")
 
 local M = {}
@@ -69,7 +69,7 @@ end
 function M.request_to_http_message(request)
     local lines = {}
 
-    local url = requests.full_url(request)
+    local url = request_format.full_url(request)
     table.insert(lines, request.method .. " " .. url)
 
     local headers = request.headers or {}

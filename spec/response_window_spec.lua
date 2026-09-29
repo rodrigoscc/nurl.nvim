@@ -1,4 +1,4 @@
-local Curl = require("nurl.curl")
+local Curl = require("nurl.core.curl")
 
 describe("response window", function()
     before_each(function()

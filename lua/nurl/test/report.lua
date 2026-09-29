@@ -1,5 +1,3 @@
-local suites = require("nurl.test.suites")
-
 ---@class nurl.TestResult
 ---@field passed boolean
 ---@field expected any
@@ -15,6 +13,12 @@ local suites = require("nurl.test.suites")
 ---@field private results (nurl.TestSuite|nurl.TestResult)[]
 ---@field private suites_stack nurl.TestSuite[]
 local TestReport = {}
+
+---@param item nurl.TestSuite|nurl.TestResult
+---@return boolean
+function TestReport.is_suite(item)
+    return item.name ~= nil
+end
 
 function TestReport:new(o)
     o = o or { results = {}, suites_stack = {} }
@@ -97,7 +101,7 @@ end
 ---@param results (nurl.TestResult|nurl.TestSuite)[]
 local function results_has_failures(results)
     for _, item in ipairs(results) do
-        if suites.is_suite(item) then
+        if TestReport.is_suite(item) then
             ---@cast item nurl.TestSuite
             if results_has_failures(item.results) then
                 return true
@@ -114,7 +118,7 @@ end
 ---@return boolean
 function TestReport:has_failures()
     for _, item in ipairs(self.results) do
-        if suites.is_suite(item) then
+        if TestReport.is_suite(item) then
             ---@cast item nurl.TestSuite
             if results_has_failures(item.results) then
                 return true

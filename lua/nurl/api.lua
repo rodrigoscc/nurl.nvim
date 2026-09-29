@@ -2,7 +2,7 @@ local client = require("nurl.app.client")
 local commands = require("nurl.commands")
 local environments = require("nurl.environments")
 local winbar = require("nurl.ui.response_view.winbar")
-local variables = require("nurl.variables")
+local variables = require("nurl.core.variables")
 local helpers = require("nurl.helpers")
 local convert = require("nurl.convert")
 

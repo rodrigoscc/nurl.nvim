@@ -1,5 +1,5 @@
-local responses = require("nurl.responses")
-local Curl = require("nurl.curl")
+local responses = require("nurl.core.response")
+local Curl = require("nurl.core.curl")
 
 -- The --write-out values in the order requests.build_curl asks for them.
 local METRICS = {

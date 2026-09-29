@@ -1,5 +1,5 @@
 local items = require("nurl.pickers.items")
-local variables = require("nurl.variables")
+local variables = require("nurl.core.variables")
 
 describe("picker items", function()
     local notify = vim.notify

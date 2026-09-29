@@ -1,4 +1,5 @@
-local requests = require("nurl.requests")
+local requests = require("nurl.core.request")
+local Curl = require("nurl.core.curl")
 
 describe("requests", function()
     describe("expand", function()
@@ -212,7 +213,7 @@ describe("requests", function()
                 method = "GET",
                 headers = {},
             }
-            local curl = requests.build_curl(request)
+            local curl = Curl.build(request)
 
             assert.is_not_nil(curl)
             assert.is_not_nil(curl.args)
@@ -224,7 +225,7 @@ describe("requests", function()
                 method = "POST",
                 headers = {},
             }
-            local curl = requests.build_curl(request)
+            local curl = Curl.build(request)
 
             local has_method = false
             local has_url = false
@@ -247,7 +248,7 @@ describe("requests", function()
                 method = "GET",
                 headers = { ["Content-Type"] = "application/json" },
             }
-            local curl = requests.build_curl(request)
+            local curl = Curl.build(request)
 
             local has_header = false
             for i, arg in ipairs(curl.args) do
@@ -268,7 +269,7 @@ describe("requests", function()
                 method = "GET",
                 headers = { ["Set-Cookie"] = { "a=1", "b=2" } },
             }
-            local curl = requests.build_curl(request)
+            local curl = Curl.build(request)
 
             local headers = {}
             for i, arg in ipairs(curl.args) do
@@ -288,7 +289,7 @@ describe("requests", function()
                 headers = {},
                 data = '{"key":"value"}',
             }
-            local curl = requests.build_curl(request)
+            local curl = Curl.build(request)
 
             local has_data = false
             for i, arg in ipairs(curl.args) do
@@ -310,7 +311,7 @@ describe("requests", function()
                 headers = {},
                 form = { name = "test" },
             }
-            local curl = requests.build_curl(request)
+            local curl = Curl.build(request)
 
             local has_form = false
             for i, arg in ipairs(curl.args) do
@@ -328,7 +329,7 @@ describe("requests", function()
                 method = "GET",
                 headers = {},
             }
-            local curl = requests.build_curl(request)
+            local curl = Curl.build(request)
 
             local has_include = false
             local has_no_progress = false
@@ -357,7 +358,7 @@ describe("requests", function()
                 headers = {},
                 query = { page = "1", limit = "10" },
             }
-            local curl = requests.build_curl(request)
+            local curl = Curl.build(request)
 
             local query_flags = {}
             for i, arg in ipairs(curl.args) do
@@ -380,7 +381,7 @@ describe("requests", function()
                     headers = {},
                     query = { id = { "1", "2", "3" } },
                 }
-                local curl = requests.build_curl(request)
+                local curl = Curl.build(request)
 
                 local query_flags = {}
                 for i, arg in ipairs(curl.args) do
@@ -403,7 +404,7 @@ describe("requests", function()
                 headers = {},
                 query = nil,
             }
-            local curl = requests.build_curl(request)
+            local curl = Curl.build(request)
 
             for _, arg in ipairs(curl.args) do
                 assert.is_not.equal("--url-query", arg)
@@ -411,53 +412,4 @@ describe("requests", function()
         end)
     end)
 
-    describe("title", function()
-        it("returns title field when present", function()
-            local request = {
-                url = "https://example.com",
-                title = "My Request",
-                method = "GET",
-                headers = {},
-            }
-
-            assert.are.equal("My Request", requests.title(request))
-        end)
-
-        it("returns url when no title", function()
-            local request = {
-                url = "https://example.com/api",
-                method = "GET",
-                headers = {},
-            }
-
-            assert.are.equal("https://example.com/api", requests.title(request))
-        end)
-
-        it("appends query params to url when no title", function()
-            local request = {
-                url = "https://example.com",
-                method = "GET",
-                headers = {},
-                query = { foo = "bar", baz = "qux" },
-            }
-            local title = requests.title(request)
-
-            assert.is_true(title:match("^https://example.com%?") ~= nil)
-            assert.is_true(title:match("foo=bar") ~= nil)
-            assert.is_true(title:match("baz=qux") ~= nil)
-        end)
-
-        it("expands repeated query params in title", function()
-            local request = {
-                url = "https://example.com",
-                method = "GET",
-                headers = {},
-                query = { id = { "1", "2" } },
-            }
-            local title = requests.title(request)
-
-            assert.is_true(title:match("id=1") ~= nil)
-            assert.is_true(title:match("id=2") ~= nil)
-        end)
-    end)
 end)

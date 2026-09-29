@@ -1,7 +1,8 @@
 local config = require("nurl.config")
 local history = require("nurl.data.history")
-local requests = require("nurl.requests")
-local override = require("nurl.override")
+local requests = require("nurl.core.request")
+local Curl = require("nurl.core.curl")
+local override = require("nurl.core.override")
 local runner = require("nurl.app.runner")
 local RequestHandle = require("nurl.app.handle")
 local ResponseView = require("nurl.ui.response_view")
@@ -149,7 +150,7 @@ function M.yank(request)
     local expanded_request = requests.expand(request)
     -- Request is already fully expanded here.
     ---@cast expanded_request nurl.Request
-    local curl = requests.build_curl(expanded_request)
+    local curl = Curl.build(expanded_request)
     vim.fn.setreg("+", curl:string())
     vim.notify("Yanked curl command to clipboard")
 end

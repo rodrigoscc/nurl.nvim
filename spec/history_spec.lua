@@ -1,6 +1,6 @@
 local Db = require("nurl.data.db")
 local config = require("nurl.config")
-local fs = require("nurl.data.fs")
+local fs = require("nurl.infra.fs")
 local history = require("nurl.data.history")
 
 describe("history explorer queries", function()
@@ -452,7 +452,7 @@ INSERT INTO request_history (
         local response = history.get(id)[3]
         assert.are.same(
             { "b: 2", "a: 1", "a: 3" },
-            require("nurl.responses").header_lines(response)
+            require("nurl.core.response").header_lines(response)
         )
         assert.are.same({ "1", "3" }, response.headers.a)
     end)
@@ -475,7 +475,7 @@ INSERT INTO request_history (
         assert.are.same({ a = "1", b = "2" }, response.headers)
         assert.are.same(
             { "a: 1", "b: 2" },
-            require("nurl.responses").header_lines(response)
+            require("nurl.core.response").header_lines(response)
         )
     end)
 

@@ -1,5 +1,5 @@
-local fs = require("nurl.data.fs")
-local responses = require("nurl.responses")
+local fs = require("nurl.infra.fs")
+local responses = require("nurl.core.response")
 
 local M = {}
 

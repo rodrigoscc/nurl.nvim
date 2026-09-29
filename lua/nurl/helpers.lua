@@ -1,4 +1,4 @@
-local requests = require("nurl.requests")
+local requests = require("nurl.core.request")
 
 ---@class nurl.helpers
 local M = {}

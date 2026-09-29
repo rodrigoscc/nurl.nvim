@@ -5,9 +5,9 @@
 -- env hooks? confirm requests only on production! (if not GET ...)
 
 local config = require("nurl.config")
-local fs = require("nurl.data.fs")
+local fs = require("nurl.infra.fs")
 local file_parsing = require("nurl.utils.file_parsing")
-local variables = require("nurl.variables")
+local variables = require("nurl.core.variables")
 local uv = vim.uv or vim.loop
 
 ---@class nurl.env

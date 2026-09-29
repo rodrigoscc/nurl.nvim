@@ -1,7 +1,7 @@
 local config = require("nurl.config")
 local highlights = require("nurl.ui.highlights")
 local strings = require("nurl.utils.strings")
-local requests = require("nurl.requests")
+local requests = require("nurl.core.request")
 local numbers = require("nurl.utils.numbers")
 local TextBuilder = require("nurl.ui.text_builder")
 

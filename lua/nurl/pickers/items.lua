@@ -1,4 +1,5 @@
-local requests = require("nurl.requests")
+local requests = require("nurl.core.request")
+local request_format = require("nurl.core.request_format")
 
 local M = {}
 
@@ -35,7 +36,7 @@ function M.prepare(items)
             table.insert(prepared, {
                 item = vim.tbl_extend("force", item, { request = expanded }),
                 preview = preview,
-                text = requests.text(preview, { suffix = item.file }),
+                text = request_format.text(preview, { suffix = item.file }),
             })
         else
             local location = item.file

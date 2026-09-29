@@ -1,5 +1,5 @@
 local config = require("nurl.config")
-local suites = require("nurl.test.suites")
+local TestReport = require("nurl.test.report")
 local TextBuilder = require("nurl.ui.text_builder")
 
 local M = {}
@@ -16,7 +16,7 @@ local function count_results(results)
     local errors = 0
 
     for _, item in ipairs(results) do
-        if suites.is_suite(item) then
+        if TestReport.is_suite(item) then
             ---@cast item nurl.TestSuite
             local p, f, e = count_results(item.results)
             passed = passed + p
@@ -67,7 +67,7 @@ end
 ---@param errors nurl.FlattenedResult[]
 local function flatten_results(results, breadcrumb, failures, errors)
     for _, item in ipairs(results) do
-        if suites.is_suite(item) then
+        if TestReport.is_suite(item) then
             ---@cast item nurl.TestSuite
             local new_breadcrumb = breadcrumb == "" and item.name
                 or (breadcrumb .. " " .. item.name)

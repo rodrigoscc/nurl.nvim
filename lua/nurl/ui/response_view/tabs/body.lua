@@ -1,5 +1,5 @@
 local config = require("nurl.config")
-local responses = require("nurl.responses")
+local responses = require("nurl.core.response")
 local formatter = require("nurl.infra.formatter")
 
 local M = {}

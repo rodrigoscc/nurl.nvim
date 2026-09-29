@@ -1,8 +1,8 @@
 local config = require("nurl.config")
-local Curl = require("nurl.curl")
-local fs = require("nurl.data.fs")
+local Curl = require("nurl.core.curl")
+local fs = require("nurl.infra.fs")
 local worker_root = require("nurl.data.worker_root")
-local requests = require("nurl.requests")
+local requests = require("nurl.core.request")
 local tables = require("nurl.utils.tables")
 
 local uv = vim.uv or vim.loop

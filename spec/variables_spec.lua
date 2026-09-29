@@ -1,4 +1,4 @@
-local variables = require("nurl.variables")
+local variables = require("nurl.core.variables")
 
 describe("variables", function()
     describe("expand", function()

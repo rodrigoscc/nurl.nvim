@@ -1,4 +1,4 @@
-local fs = require("nurl.data.fs")
+local fs = require("nurl.infra.fs")
 local config = require("nurl.config")
 local formatter = require("nurl.infra.formatter")
 

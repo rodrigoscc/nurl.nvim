@@ -1,7 +1,7 @@
 local config = require("nurl.config")
 local highlights = require("nurl.ui.highlights")
 local strings = require("nurl.utils.strings")
-local requests = require("nurl.requests")
+local request_format = require("nurl.core.request_format")
 local numbers = require("nurl.utils.numbers")
 
 local M = {}
@@ -26,7 +26,7 @@ function M.request_title()
     local request = view.handle.request
 
     local title = request.title
-        or requests.full_url(request):gsub("^%w+://", "")
+        or request_format.full_url(request):gsub("^%w+://", "")
     title = strings.escape_percentage(title)
 
     return string.format(

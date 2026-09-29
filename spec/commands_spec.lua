@@ -1,6 +1,6 @@
 local pickers = require("nurl.pickers")
 local client = require("nurl.app.client")
-local Curl = require("nurl.curl")
+local Curl = require("nurl.core.curl")
 
 local REQUESTS = [[
 return {

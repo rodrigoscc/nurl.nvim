@@ -1,4 +1,4 @@
-local requests = require("nurl.requests")
+local request_format = require("nurl.core.request_format")
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
 local conf = require("telescope.config").values
@@ -47,7 +47,7 @@ local function make_display(entry)
     return displayer({
         { "", "TelescopeResultsIdentifier" },
         { entry.request.method, "TelescopeResultsFunction" },
-        { requests.full_url(entry.request), "TelescopeResultsTitle" },
+        { request_format.full_url(entry.request), "TelescopeResultsTitle" },
         file,
     })
 end

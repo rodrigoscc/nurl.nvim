@@ -1,6 +1,6 @@
 local ResponseView = require("nurl.ui.response_view")
 local RequestHandle = require("nurl.app.handle")
-local Curl = require("nurl.curl")
+local Curl = require("nurl.core.curl")
 
 ---A completed request, like one opened from history.
 ---@param status_code? integer

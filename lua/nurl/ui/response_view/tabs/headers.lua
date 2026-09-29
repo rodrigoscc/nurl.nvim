@@ -1,4 +1,4 @@
-local responses = require("nurl.responses")
+local responses = require("nurl.core.response")
 
 local M = {}
 

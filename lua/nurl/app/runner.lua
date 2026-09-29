@@ -1,7 +1,8 @@
 local environments = require("nurl.environments")
-local requests = require("nurl.requests")
+local requests = require("nurl.core.request")
+local Curl = require("nurl.core.curl")
 local config = require("nurl.config")
-local responses = require("nurl.responses")
+local responses = require("nurl.core.response")
 local body_store = require("nurl.infra.body_store")
 local process = require("nurl.infra.process")
 local RequestHandle = require("nurl.app.handle")
@@ -137,7 +138,7 @@ function M.run(request, opts)
     local function send()
         -- Build the command first, so that an invalid request fails before
         -- anything is shown.
-        local curl = requests.build_curl(expanded)
+        local curl = Curl.build(expanded)
 
         local win = opts.on_start and opts.on_start(handle) or nil
 

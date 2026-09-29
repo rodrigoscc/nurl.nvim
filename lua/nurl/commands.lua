@@ -47,7 +47,7 @@ end
 ---@return fun(item: nurl.RequestItem)
 local function with_overrides(action, overrides)
     return function(item)
-        local request = require("nurl.override")(item.request, overrides or {})
+        local request = require("nurl.core.override")(item.request, overrides or {})
         action(vim.tbl_extend("force", item, { request = request }))
     end
 end
