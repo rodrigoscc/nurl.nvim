@@ -179,6 +179,17 @@ return requests
             assert.are.equal(on_choose, picked.on_pick)
         end)
 
+        it("jumps to a file with special characters in its name", function()
+            local special = vim.fs.joinpath(dir, "a b")
+            vim.fn.mkdir(special, "p")
+            local path = write(special, "req %1 #2.lua", REQUESTS)
+
+            targets.choose("title", { targets.file(path)[1] })
+
+            assert.are.equal(path, vim.api.nvim_buf_get_name(0))
+            assert.are.same({ 2, 4 }, vim.api.nvim_win_get_cursor(0))
+        end)
+
         it("jumps to the only item without an action", function()
             targets.choose("title", { targets.file(file)[1] })
 

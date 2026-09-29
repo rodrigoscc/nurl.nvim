@@ -107,7 +107,7 @@ end
 
 ---@param item nurl.ProjectRequestItem
 function M.jump_to(item)
-    vim.cmd("edit " .. item.file)
+    vim.cmd("edit " .. vim.fn.fnameescape(item.file))
     if item.start_row then
         vim.api.nvim_win_set_cursor(0, { item.start_row, item.start_col })
     end
