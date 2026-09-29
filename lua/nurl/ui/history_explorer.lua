@@ -2,6 +2,7 @@ local config = require("nurl.config")
 local history = require("nurl.data.history")
 local highlights = require("nurl.ui.highlights")
 local preview = require("nurl.preview")
+local ResponseView = require("nurl.ui.response_view")
 
 local M = {}
 local list_namespace = vim.api.nvim_create_namespace("nurl.history_explorer")
@@ -229,33 +230,17 @@ function Explorer:schedule_preview()
     end, 50)
 end
 
+---The window of the last response opened from the explorer, while it still
+---shows that response. Opening another one reuses it.
+---@return integer?
 function Explorer:response_target()
-    local win = self.response_win
-
-    if not win or not vim.api.nvim_win_is_valid(win) then
+    local view = self.response_view
+    if not view or ResponseView.for_win(view.win) ~= view then
         return nil
     end
 
-    local current_buf = vim.api.nvim_win_get_buf(win)
-
-    for _, bufnr in pairs(self.response_buffers or {}) do
-        if bufnr == current_buf then
-            return win
-        end
-    end
-end
-
-local function delete_hidden_buffers(buffers)
-    -- Reusing a response window hides its old buffers. Keep any that are still
-    -- displayed elsewhere or have unsaved edits.
-    for _, bufnr in pairs(buffers or {}) do
-        if
-            vim.api.nvim_buf_is_valid(bufnr)
-            and not vim.bo[bufnr].modified
-            and #vim.fn.win_findbuf(bufnr) == 0
-        then
-            vim.api.nvim_buf_delete(bufnr, { force = true })
-        end
+    if view:type_of(vim.api.nvim_win_get_buf(view.win)) then
+        return view.win
     end
 end
 
@@ -564,14 +549,11 @@ function Explorer:open_entry(resend)
 
     if resend then
         require("nurl").send(item[2], { display = true })
-        delete_hidden_buffers(self.response_buffers)
-        self.response_win = nil
-        self.response_buffers = nil
+        self.response_view = nil
     else
-        local previous_buffers = self.response_buffers
-        self.response_win, self.response_buffers =
+        local _, view =
             require("nurl").open_history_item(item, self:response_target())
-        delete_hidden_buffers(previous_buffers)
+        self.response_view = view
     end
 end
 

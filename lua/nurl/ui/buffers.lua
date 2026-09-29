@@ -1,10 +1,8 @@
-local actions = require("nurl.actions")
 local config = require("nurl.config")
 local http = require("nurl.http")
 local responses = require("nurl.responses")
 local info_buffer = require("nurl.ui.info_buffer")
 local test_buffer = require("nurl.ui.test_buffer")
-local registry = require("nurl.registry")
 
 local M = {}
 
@@ -25,29 +23,6 @@ M.Buffer = {
 ---@class nurl.Buffer
 ---@field [1] nurl.BufferType
 ---@field keys table<string, string|nurl.BufferAction>
-
----@class nurl.BufferData
----@field buffer_type nurl.BufferType
----@field request nurl.Request
----@field curl nurl.Curl
----@field buffers table<nurl.BufferType, integer>
----@field response? nurl.Response
----@field has_test_failures boolean
-
----@param action string|nurl.BufferAction
----@return fun()
-local function expand_keymap_rhs(action)
-    local rhs
-    if type(action) == "string" then
-        rhs = actions.builtin[action]()
-    elseif type(action) == "table" and type(action[1]) == "string" then
-        rhs = actions.builtin[action[1]](action.opts)
-    else
-        rhs = action
-    end
-
-    return rhs
-end
 
 ---@param bufnr integer
 ---@param content string
@@ -75,6 +50,8 @@ local function open_file_in_buffer(bufnr, file)
     vim.api.nvim_buf_call(bufnr, function()
         vim.cmd("edit") -- WORKAROUND: Snacks.image won't render the file without this
     end)
+    -- above :edit lists the buffer, so mark it as unlisted again.
+    vim.bo[bufnr].buflisted = false
 end
 
 ---@param bufnr integer
@@ -185,155 +162,71 @@ local function populate_test_buffer(bufnr, test_report)
     test_buffer.render(bufnr, test_report)
 end
 
----@param buffer nurl.Buffer
----@param exec_datetime string
----@param request nurl.Request
----@param response? nurl.Response
----@param curl? nurl.Curl
----@param test_report? nurl.TestReport
----@return integer bufnr the created buffer number
-local function create_buffer(
-    buffer,
-    exec_datetime,
-    request,
-    response,
-    curl,
-    test_report
-)
-    local buf = vim.api.nvim_create_buf(true, true)
-
-    local type = buffer[1]
-
-    if type == "body" then
-        if response ~= nil then
-            populate_body_buffer(buf, response)
-        end
-    elseif type == "request" then
-        populate_request_buffer(buf, request)
-    elseif type == "headers" then
-        if response ~= nil then
-            populate_headers_buffer(buf, response)
-        end
-    elseif type == "info" then
-        if response ~= nil then
-            populate_info_buffer(buf, exec_datetime, request, response)
-        end
-    elseif type == "test" then
-        if response ~= nil then
-            populate_test_buffer(buf, test_report)
-        end
-    elseif type == "raw" then
-        if curl ~= nil then
-            populate_raw_buffer(buf, curl)
-        end
-    end
-
-    for lhs, rhs in pairs(buffer.keys) do
-        local expanded_rhs = expand_keymap_rhs(rhs)
-        vim.keymap.set("n", lhs, expanded_rhs, { buffer = buf })
-    end
-
-    return buf
-end
-
+---Fill a buffer with its part of the request. Parts that need the response
+---stay empty until the request is done.
 ---@param bufnr integer
----@param buffer nurl.Buffer
----@param exec_datetime string
----@param request nurl.Request
----@param response? nurl.Response
----@param curl nurl.Curl
----@param test_report? nurl.TestReport
-local function update_buffer(
-    bufnr,
-    buffer,
-    exec_datetime,
-    request,
-    response,
-    curl,
-    test_report
-)
-    if buffer[1] == "body" then
+---@param type nurl.BufferType
+---@param handle nurl.RequestHandle
+local function render(bufnr, type, handle)
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+    end
+
+    local response = handle.response
+
+    if type == M.Buffer.Body then
         if response ~= nil then
             populate_body_buffer(bufnr, response)
         end
-    elseif buffer[1] == "request" then
-        populate_request_buffer(bufnr, request)
-    elseif buffer[1] == "headers" then
+    elseif type == M.Buffer.Request then
+        populate_request_buffer(bufnr, handle.request)
+    elseif type == M.Buffer.Headers then
         if response ~= nil then
             populate_headers_buffer(bufnr, response)
         end
-    elseif buffer[1] == "info" then
+    elseif type == M.Buffer.Info then
         if response ~= nil then
-            populate_info_buffer(bufnr, exec_datetime, request, response)
+            populate_info_buffer(
+                bufnr,
+                handle.exec_datetime,
+                handle.request,
+                response
+            )
         end
-    elseif buffer[1] == "test" then
+    elseif type == M.Buffer.Test then
         if response ~= nil then
-            populate_test_buffer(bufnr, test_report)
+            populate_test_buffer(bufnr, handle.test_report)
         end
-    elseif buffer[1] == "raw" then
-        if curl ~= nil then
-            populate_raw_buffer(bufnr, curl)
+    elseif type == M.Buffer.Raw then
+        if handle.curl ~= nil then
+            populate_raw_buffer(bufnr, handle.curl)
         end
     end
-
-    for lhs, rhs in pairs(buffer.keys) do
-        local expanded_rhs = expand_keymap_rhs(rhs)
-        vim.keymap.set("n", lhs, expanded_rhs, { buffer = bufnr })
-    end
-
-    return bufnr
 end
 
----@param handle_id integer
+---Create a buffer for every configured part of the request.
+---@param handle nurl.RequestHandle
 ---@return table<nurl.BufferType, integer>
-function M.create(handle_id)
-    local entry = registry:get(handle_id)
-    local handle = entry.handle
-
+function M.create(handle)
     ---@type table<nurl.BufferType, integer>
     local buffers = {}
 
     for _, buffer in ipairs(config.buffers) do
-        local buf = create_buffer(
-            buffer,
-            handle.exec_datetime,
-            handle.request,
-            handle.response,
-            handle.curl,
-            handle.test_report
-        )
         local type = buffer[1]
-        buffers[type] = buf
-    end
-
-    for type, bufnr in pairs(buffers) do
-        vim.b[bufnr].nurl_data = {
-            handle_id = handle_id,
-            buffer_type = type,
-        }
+        local bufnr = vim.api.nvim_create_buf(false, true)
+        buffers[type] = bufnr
+        render(bufnr, type, handle)
     end
 
     return buffers
 end
 
----@param handle_id integer
+---Render the buffers again, such as once the request is done.
+---@param handle nurl.RequestHandle
 ---@param buffers table<nurl.BufferType, integer>
-function M.update(handle_id, buffers)
-    local entry = registry:get(handle_id)
-    local handle = entry.handle
-
-    for _, buffer in ipairs(config.buffers) do
-        local type = buffer[1]
-        local bufnr = buffers[type]
-        update_buffer(
-            bufnr,
-            buffer,
-            handle.exec_datetime,
-            handle.request,
-            handle.response,
-            handle.curl,
-            handle.test_report
-        )
+function M.update(handle, buffers)
+    for type, bufnr in pairs(buffers) do
+        render(bufnr, type, handle)
     end
 end
 

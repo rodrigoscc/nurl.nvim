@@ -3,16 +3,27 @@ local highlights = require("nurl.ui.highlights")
 local strings = require("nurl.utils.strings")
 local requests = require("nurl.requests")
 local numbers = require("nurl.utils.numbers")
-local registry = require("nurl.registry")
 
 local M = {}
+
+---@return nurl.ResponseView?
+local function current_view()
+    -- Required here: the view requires this module.
+    return require("nurl.ui.response_view").for_buf(
+        vim.api.nvim_get_current_buf()
+    )
+end
 
 -- Status icons by class: 1xx, 2xx, 3xx, 4xx and 5xx.
 local status_icons = { "󰋽", "󰄬", "󰁔", "󰅚", "󰅚" }
 
 function M.request_title()
-    local entry = registry:get(vim.b[0].nurl_data.handle_id)
-    local request = entry.handle.request
+    local view = current_view()
+    if not view then
+        return ""
+    end
+
+    local request = view.handle.request
 
     local title = request.title
         or requests.full_url(request):gsub("^%w+://", "")
@@ -28,8 +39,13 @@ function M.request_title()
 end
 
 function M.status_code()
-    local entry = registry:get(vim.b[0].nurl_data.handle_id)
-    local response = entry.handle.response
+    local view = current_view()
+    if not view then
+        return ""
+    end
+
+    local handle = view.handle
+    local response = handle.response
 
     if response ~= nil then
         local status_code = response.status_code
@@ -41,14 +57,14 @@ function M.status_code()
         )
     end
 
-    if entry.handle:is_failed() then
+    if handle:is_failed() then
         return string.format(
             "%%#%s#󰅚 Error%%*",
             config.highlight.groups.winbar_error
         )
     end
 
-    if entry.handle:is_cancelled() then
+    if handle:is_cancelled() then
         return string.format(
             "%%#%s#󰜺 Cancelled%%*",
             config.highlight.groups.winbar_warning
@@ -62,8 +78,8 @@ function M.status_code()
 end
 
 function M.time()
-    local entry = registry:get(vim.b[0].nurl_data.handle_id)
-    local response = entry.handle.response
+    local view = current_view()
+    local response = view and view.handle.response
 
     if response ~= nil and response.time.time_total ~= nil then
         return string.format(
@@ -99,12 +115,16 @@ local function get_inactive_tab_highlight(buffer_name, has_test_failures)
 end
 
 function M.tabs()
-    local entry = registry:get(vim.b[0].nurl_data.handle_id)
+    local view = current_view()
+    if not view then
+        return ""
+    end
 
-    local buffer_type = vim.b[0].nurl_data.buffer_type
+    local buffer_type = view:type_of(vim.api.nvim_get_current_buf())
+    ---@cast buffer_type nurl.BufferType
     local active_name = strings.title(buffer_type)
-    local has_test_failures = entry.handle.test_report
-            and entry.handle.test_report:has_failures()
+    local test_report = view.handle.test_report
+    local has_test_failures = test_report and test_report:has_failures()
         or false
 
     local dots = {}

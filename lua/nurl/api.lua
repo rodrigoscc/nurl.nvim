@@ -1,9 +1,9 @@
 local requests = require("nurl.requests")
 local config = require("nurl.config")
-local winbar = require("nurl.ui.winbar")
+local winbar = require("nurl.ui.response_view.winbar")
 local projects = require("nurl.projects")
 local environments = require("nurl.environments")
-local ResponseWindow = require("nurl.ui.response_window")
+local ResponseView = require("nurl.ui.response_view")
 local history = require("nurl.data.history")
 local Stack = require("nurl.utils.stack")
 local pickers = require("nurl.pickers")
@@ -12,7 +12,6 @@ local override = require("nurl.override")
 local helpers = require("nurl.helpers")
 local RequestHandle = require("nurl.app.handle")
 local runner = require("nurl.app.runner")
-local registry = require("nurl.registry")
 local convert = require("nurl.convert")
 
 local M = {}
@@ -24,8 +23,6 @@ M.lazy = variables.lazy
 M.env = environments
 
 M.helpers = helpers
-
-M.registry = registry
 
 M.json_to_lua = convert.json_to_lua
 
@@ -72,38 +69,29 @@ function M.send(request, opts_or_callback, callback)
         opts.display = {}
     end
 
-    local response_window
+    local view
 
     return runner.run(request, {
         callback = callback,
         on_start = function(handle)
-            registry:push({ handle = handle })
-
             if not opts.display then
                 return nil
             end
 
-            response_window = ResponseWindow:new({
+            view = ResponseView.open(handle, {
                 win = opts.display.win,
-                handle_id = handle.id,
-            })
-            local win = response_window:open({
                 focus_buffer = opts.display.focus_buffer,
             })
 
             -- Last request feature is targetted only to resend displayed requests
-            M.last_requests:push({ request = handle.request, win = win })
+            M.last_requests:push({ request = handle.request, win = view.win })
 
-            return win
+            return view.win
         end,
         on_complete = function(handle)
-            if response_window then
-                response_window:update()
-                response_window:on_buffers_unloaded(function()
-                    registry:remove(handle.id)
-                end)
-            else
-                registry:remove(handle.id)
+            -- The window may show another request by now.
+            if view and view.handle == handle then
+                view:update()
             end
 
             if
@@ -140,9 +128,9 @@ function M.resend_last_request(index, overrides)
     end
 
     local focus_buffer = nil
-    if win ~= nil then
-        local buf = vim.api.nvim_win_get_buf(win)
-        focus_buffer = vim.b[buf].nurl_data.buffer_type
+    local view = win and ResponseView.for_win(win)
+    if view then
+        focus_buffer = view:type_of(vim.api.nvim_win_get_buf(win))
     end
 
     local request = override(last.request, overrides)
@@ -234,11 +222,10 @@ end
 function M.send_request_at_cursor(overrides)
     overrides = overrides or {}
 
-    local at_nurl_buffer = vim.b.nurl_data ~= nil
+    local view = ResponseView.for_buf(vim.api.nvim_get_current_buf())
 
-    if at_nurl_buffer then
-        local entry = registry:get(vim.b.nurl_data.handle_id)
-        local buffer_request = entry.handle.request
+    if view then
+        local buffer_request = view.handle.request
         buffer_request = override(buffer_request, overrides)
         M.send(
             buffer_request,
@@ -279,11 +266,10 @@ end
 function M.yank_curl_at_cursor(overrides)
     overrides = overrides or {}
 
-    local is_at_nurl_buffer = vim.b.nurl_data ~= nil
+    local view = ResponseView.for_buf(vim.api.nvim_get_current_buf())
 
-    if is_at_nurl_buffer then
-        local entry = registry:get(vim.b.nurl_data.handle_id)
-        local buffer_request = entry.handle.request
+    if view then
+        local buffer_request = view.handle.request
         buffer_request = override(buffer_request, overrides)
         yank_curl(buffer_request)
     else
@@ -374,25 +360,15 @@ end
 
 ---@param item nurl.HistoryItem
 ---@param win? integer Existing response window to reuse
----@return integer, table<nurl.BufferType, integer>
+---@return integer win, nurl.ResponseView view
 function M.open_history_item(item, win)
     local exec_datetime, request, response, curl = unpack(item)
 
     local item_handle =
         RequestHandle:rebuild(exec_datetime, request, response, curl)
 
-    local entry = { handle = item_handle }
-    registry:push(entry)
-
-    local response_window = ResponseWindow:new({
-        handle_id = item_handle.id,
-        win = win,
-    })
-    local opened_win = response_window:open({ enter = true })
-    response_window:on_buffers_unloaded(function()
-        registry:remove(item_handle.id)
-    end)
-    return opened_win, response_window.buffers
+    local view = ResponseView.open(item_handle, { win = win, enter = true })
+    return view.win, view
 end
 
 return M

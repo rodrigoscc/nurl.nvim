@@ -44,7 +44,7 @@ function E:_get_centered_position()
 end
 
 function E:start()
-    self.bufnr = vim.api.nvim_create_buf(true, true)
+    self.bufnr = vim.api.nvim_create_buf(false, true)
 
     local pos = self:_get_centered_position()
     self.win = vim.api.nvim_open_win(self.bufnr, false, {

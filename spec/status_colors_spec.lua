@@ -2,7 +2,7 @@ local Curl = require("nurl.curl")
 local history = require("nurl.data.history")
 local explorer = require("nurl.ui.history_explorer")
 local highlights = require("nurl.ui.highlights")
-local registry = require("nurl.registry")
+local ResponseView = require("nurl.ui.response_view")
 
 describe("status colors", function()
     local original_page
@@ -98,8 +98,7 @@ describe("status colors", function()
             )
             assert.are.equal(group, winbar.highlights[1].group)
 
-            local handle_id = vim.b[vim.api.nvim_win_get_buf(win)].nurl_data.handle_id
-            local info = registry:get(handle_id).buffers.info
+            local info = ResponseView.for_win(win).buffers.info
             assert.is_true(buffer_groups(info)[group])
 
             history.page = function()
