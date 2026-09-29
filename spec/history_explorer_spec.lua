@@ -1,6 +1,5 @@
 local config = require("nurl.config")
-local Db = require("nurl.data.db")
-local history = require("nurl.data.history")
+local history = require("nurl.history")
 local explorer = require("nurl.ui.history_explorer")
 
 describe("history explorer searches", function()
@@ -273,7 +272,7 @@ describe("history explorer searches", function()
 
     it("previews the selected request body without loading response bodies into the list", function()
         test_path = vim.fn.tempname() .. ".sqlite3"
-        history.db = Db:new(test_path)
+        history.db = history.open(test_path)
         for i = 1, 2 do
             local result = history.db:exec([[
 INSERT INTO request_history (
@@ -337,7 +336,7 @@ INSERT INTO request_history (
     it("fills the visible list when the window opens or grows", function()
         config.setup({ history = { explorer = { page_size = 2 } } })
         test_path = vim.fn.tempname() .. ".sqlite3"
-        history.db = Db:new(test_path)
+        history.db = history.open(test_path)
         for i = 1, 100 do
             local url = "https://example.org/" .. i
             local result = history.db:exec([[
@@ -419,7 +418,7 @@ INSERT INTO request_history (
 
     it("keeps the list and selection when opening and closing a response", function()
         test_path = vim.fn.tempname() .. ".sqlite3"
-        history.db = Db:new(test_path)
+        history.db = history.open(test_path)
         config.setup({ buffers = { { "body", keys = { q = "close" } } } })
 
         local result = history.db:exec([[

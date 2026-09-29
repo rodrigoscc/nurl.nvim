@@ -1,14 +1,13 @@
-local Db = require("nurl.data.db")
 local config = require("nurl.config")
 local fs = require("nurl.infra.fs")
-local history = require("nurl.data.history")
+local history = require("nurl.history")
 
 describe("history explorer queries", function()
     local path
 
     before_each(function()
         path = vim.fn.tempname() .. ".sqlite3"
-        history.db = Db:new(path)
+        history.db = history.open(path)
     end)
 
     after_each(function()
@@ -491,7 +490,7 @@ INSERT INTO request_history (
 
         local before = open_files()
         for _ = 1, 10 do
-            assert.is_false(pcall(Db.new, Db, bad))
+            assert.is_false(pcall(history.open, bad))
         end
         collectgarbage()
         collectgarbage()

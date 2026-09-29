@@ -1,5 +1,5 @@
 local Curl = require("nurl.core.curl")
-local history = require("nurl.data.history")
+local history = require("nurl.history")
 local explorer = require("nurl.ui.history_explorer")
 local highlights = require("nurl.ui.highlights")
 local ResponseView = require("nurl.ui.response_view")

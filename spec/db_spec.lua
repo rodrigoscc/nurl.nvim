@@ -1,4 +1,4 @@
-local Db = require("nurl.data.db")
+local Db = require("nurl.infra.db")
 
 describe("db", function()
     local path, db
@@ -6,6 +6,9 @@ describe("db", function()
     before_each(function()
         path = vim.fn.tempname() .. ".sqlite3"
         db = Db:new(path)
+        local create =
+            db:exec("CREATE TABLE items (time TEXT, title TEXT, method TEXT)")
+        create:close()
     end)
 
     after_each(function()
@@ -17,14 +20,13 @@ describe("db", function()
 
     it("binds the values after a nil", function()
         local insert = db:exec(
-            [[INSERT INTO request_history (time, request_title, request_method)
-VALUES (?, ?, ?)]],
+            "INSERT INTO items (time, title, method) VALUES (?, ?, ?)",
             { "2026-09-26T10:00:00", nil, "GET" }
         )
         insert:close()
 
         local result = db:exec(
-            "SELECT time, request_title, request_method FROM request_history"
+            "SELECT time, title, method FROM items"
         )
         local row = result:one()
         result:close()

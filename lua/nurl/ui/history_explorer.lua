@@ -1,5 +1,5 @@
 local config = require("nurl.config")
-local history = require("nurl.data.history")
+local history = require("nurl.history")
 local highlights = require("nurl.ui.highlights")
 local http_message = require("nurl.ui.http_message")
 local ResponseView = require("nurl.ui.response_view")

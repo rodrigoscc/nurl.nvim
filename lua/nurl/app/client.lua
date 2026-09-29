@@ -1,5 +1,5 @@
 local config = require("nurl.config")
-local history = require("nurl.data.history")
+local history = require("nurl.history")
 local requests = require("nurl.core.request")
 local Curl = require("nurl.core.curl")
 local override = require("nurl.core.override")

@@ -53,6 +53,7 @@ local function bind(stmt, idx, value, value_type)
     end
 end
 
+---A SQLite connection. Tables are up to its users.
 ---@class nurl.Db
 ---@field private path string
 ---@field private db sqlite3*
@@ -231,73 +232,10 @@ local function initialize(db)
             )
         )
     end
-
-    result = db:exec([[CREATE TABLE IF NOT EXISTS request_history (
-    id INTEGER PRIMARY KEY,
-    time TEXT,
-    request_url TEXT,
-    request_url_raw TEXT,
-    request_query TEXT,
-    request_title TEXT,
-    request_method TEXT,
-    request_auth TEXT,
-    request_headers TEXT,
-    request_data TEXT,
-    request_form TEXT,
-    request_data_urlencode TEXT,
-    request_curl_args TEXT,
-    response_status_code INTEGER,
-    response_reason_phrase TEXT,
-    response_protocol TEXT,
-    response_headers TEXT,
-    response_body TEXT,
-    response_body_file TEXT,
-    response_time_appconnect REAL,
-    response_time_connect REAL,
-    response_time_namelookup REAL,
-    response_time_pretransfer REAL,
-    response_time_redirect REAL,
-    response_time_starttransfer REAL,
-    response_time_total REAL,
-    response_size_download INTEGER,
-    response_size_header INTEGER,
-    response_size_request INTEGER,
-    response_size_upload INTEGER,
-    response_speed_download INTEGER,
-    response_speed_upload INTEGER,
-    curl_args TEXT,
-    curl_result_code INTEGER,
-    curl_result_signal TEXT,
-    curl_result_stdout TEXT,
-    curl_result_stderr TEXT
-);]])
-    local create_code = result.code
-    result:close()
-
-    if create_code ~= SQLITE_DONE then
-        error(
-            ("Failed to create request_history table %d: %s"):format(
-                create_code,
-                db:errormsg()
-            )
-        )
-    end
-
-    result = db:exec(
-        [[CREATE INDEX IF NOT EXISTS idx_request_history_time ON request_history(time);]]
-    )
-    local index_code = result.code
-    result:close()
-
-    if index_code ~= SQLITE_DONE then
-        error(
-            ("Failed to create index on time column %d: %s"):format(
-                index_code,
-                db:errormsg()
-            )
-        )
-    end
 end
+
+Db.ROW = SQLITE_ROW
+Db.DONE = SQLITE_DONE
 
 function Db:new(path)
     local db = setmetatable({}, self)
