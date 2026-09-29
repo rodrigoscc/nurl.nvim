@@ -1,10 +1,6 @@
 ---@class nurl.config: nurl.Config
 local M = {}
 
----@class nurl.ResponseFormatter
----@field cmd string[]
----@field available? fun(): boolean
-
 ---@class nurl.Config
 local defaults = {
     dir = ".nurl",

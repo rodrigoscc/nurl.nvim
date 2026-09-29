@@ -1,6 +1,7 @@
 local requests = require("nurl.requests")
 local config = require("nurl.config")
 local responses = require("nurl.responses")
+local formatter = require("nurl.infra.formatter")
 
 local M = {}
 
@@ -47,16 +48,16 @@ end
 ---@param headers table<string, string | string[]>
 ---@return string
 local function format_body(content, headers)
-    local file_type = responses.guess_file_type(headers)
+    local found = formatter.find(
+        config.formatters,
+        responses.guess_file_type(headers)
+    )
 
-    local formatter = config.formatters[file_type]
-    if
-        formatter ~= nil
-        and (formatter.available == nil or formatter.available())
-    then
-        local result = vim.fn.system(formatter.cmd, content)
-        if vim.v.shell_error == 0 then
-            return vim.trim(result)
+    if found then
+        local result = formatter.run(found, content)
+        ---@cast result vim.SystemCompleted
+        if result.code == 0 then
+            return vim.trim(result.stdout)
         end
     end
 
@@ -148,6 +149,21 @@ function M.response_to_http_message(response)
         local body_lines = vim.split(body, "\n")
 
         vim.list_extend(lines, body_lines)
+    end
+
+    return lines
+end
+
+---A request as an HTTP message, followed by its response if there is one.
+---@param request nurl.Request
+---@param response? nurl.Response
+---@return string[]
+function M.render(request, response)
+    local lines = M.request_to_http_message(request)
+
+    if response then
+        vim.list_extend(lines, { "", "###", "" })
+        vim.list_extend(lines, M.response_to_http_message(response))
     end
 
     return lines

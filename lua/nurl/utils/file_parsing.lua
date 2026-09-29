@@ -1,5 +1,6 @@
 local fs = require("nurl.data.fs")
 local config = require("nurl.config")
+local formatter = require("nurl.infra.formatter")
 
 local M = {}
 
@@ -282,15 +283,12 @@ end
 
 ---@param on_save? fun(success: boolean)
 function File:save(on_save)
-    local formatter = config.formatters["lua"]
+    local found = formatter.find(config.formatters, "lua")
 
-    if
-        formatter ~= nil
-        and (formatter.available == nil or formatter.available())
-    then
-        vim.system(
-            formatter.cmd,
-            { text = true, stdin = self.contents },
+    if found then
+        formatter.run(
+            found,
+            self.contents,
             function(out)
                 if out.code ~= 0 then
                     vim.notify(

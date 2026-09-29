@@ -24,10 +24,4 @@ function Curl:string()
     return "curl " .. table.concat(args, " ")
 end
 
----@param new_text string
----@param header_size integer bytes of the header blocks before the body
-function Curl:replace_body(new_text, header_size)
-    self.result.stdout = self.result.stdout:sub(1, header_size) .. new_text
-end
-
 return Curl

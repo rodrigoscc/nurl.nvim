@@ -1,6 +1,6 @@
 local requests = require("nurl.requests")
 local actions = require("snacks.picker.actions")
-local preview = require("nurl.preview")
+local http_message = require("nurl.ui.http_message")
 
 local M = {}
 
@@ -67,7 +67,7 @@ function M.pick(title, items, on_pick)
             end
         end,
         preview = function(ctx)
-            ctx.preview:set_lines(preview.render(ctx.item.preview))
+            ctx.preview:set_lines(http_message.render(ctx.item.preview))
             ctx.preview:highlight({ ft = "http" })
         end,
     })

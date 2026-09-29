@@ -7,7 +7,7 @@ local action_state = require("telescope.actions.state")
 local entry_display = require("telescope.pickers.entry_display")
 local previewers = require("telescope.previewers")
 local projects = require("nurl.projects")
-local preview = require("nurl.preview")
+local http_message = require("nurl.ui.http_message")
 
 local M = {}
 
@@ -15,7 +15,7 @@ local function make_request_previewer()
     return previewers.new_buffer_previewer({
         title = "Request",
         define_preview = function(self, entry)
-            local lines = preview.render(entry.request)
+            local lines = http_message.render(entry.request)
             vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
             vim.bo[self.state.bufnr].filetype = "http"
         end,

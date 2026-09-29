@@ -1,5 +1,6 @@
 local config = require("nurl.config")
 local responses = require("nurl.responses")
+local formatter = require("nurl.infra.formatter")
 
 local M = {}
 
@@ -66,15 +67,12 @@ function M.render(bufnr, handle)
     end
 
     local file_type = responses.guess_file_type(response.headers)
-    local formatter = config.formatters[file_type]
+    local found = formatter.find(config.formatters, file_type)
 
-    if
-        formatter ~= nil
-        and (formatter.available == nil or formatter.available())
-    then
-        vim.system(
-            formatter.cmd,
-            { text = true, stdin = response.body },
+    if found then
+        formatter.run(
+            found,
+            response.body,
             function(out)
                 vim.schedule(function()
                     local content
@@ -84,7 +82,7 @@ function M.render(bufnr, handle)
                         content = response.body
                         vim.notify(
                             ('Formatter "%s" for "%s" failed: %s\n%s'):format(
-                                formatter.cmd[1],
+                                found.cmd[1],
                                 file_type,
                                 out.stdout,
                                 out.stderr

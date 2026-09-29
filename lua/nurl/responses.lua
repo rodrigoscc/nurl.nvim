@@ -1,7 +1,4 @@
-local config = require("nurl.config")
 local tables = require("nurl.utils.tables")
-
-local fs = require("nurl.data.fs")
 
 local M = {}
 
@@ -95,11 +92,7 @@ local function parse_start_line(line)
 
     local status_code = tonumber(status_code_str)
     if status_code == nil then
-        vim.notify(
-            "Start line contained an invalid status code: " .. status_code_str,
-            vim.log.levels.WARN
-        )
-        status_code = 0
+        error(("Invalid status line: %q"):format(line), 0)
     end
 
     return protocol, status_code, reason_phrase or ""
@@ -236,10 +229,11 @@ function M.is_displayable(response)
     return false
 end
 
+---The file extension for the content type, to save the body with.
 ---@param headers table<string, string | string[]>
----@param fallback string
+---@param fallback? string Default: "bin"
 ---@return string
-local function guess_extension(headers, fallback)
+function M.file_extension(headers, fallback)
     fallback = fallback or "bin"
 
     local content_type = M.get_content_type(headers)
@@ -338,24 +332,6 @@ function M.parse(stdout, stderr)
             speed_upload = speed_upload,
         },
     }
-end
-
----@param response nurl.Response
----@param curl nurl.Curl
----@return nurl.Response, nurl.Curl
-function M.move_body_to_file(response, curl)
-    local extension = guess_extension(response.headers, "bin")
-    local unique_path =
-        fs.unique_path(config.responses_files_dir, "response", extension)
-    -- TODO: what about too large files here?
-    fs.write(unique_path, response.body)
-
-    response.body_file = unique_path
-    response.body = ""
-
-    curl:replace_body("@" .. unique_path, response.size.size_header)
-
-    return response, curl
 end
 
 return M

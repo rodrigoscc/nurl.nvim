@@ -1,6 +1,8 @@
 local environments = require("nurl.environments")
 local requests = require("nurl.requests")
+local config = require("nurl.config")
 local responses = require("nurl.responses")
+local body_store = require("nurl.infra.body_store")
 local process = require("nurl.infra.process")
 local RequestHandle = require("nurl.app.handle")
 local TestReport = require("nurl.test.report")
@@ -46,7 +48,7 @@ local function parse_response(curl)
     local response = responses.parse(curl.result.stdout, curl.result.stderr)
 
     if not responses.is_displayable(response) then
-        responses.move_body_to_file(response, curl)
+        body_store.save(response, curl, config.responses_files_dir)
     end
 
     return response

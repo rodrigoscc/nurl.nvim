@@ -249,6 +249,12 @@ describe("responses", function()
             end, "Curl printed no response headers")
         end)
 
+        it("errors on an invalid status line", function()
+            assert.has_error(function()
+                responses.parse(curl_output({ { "HTTP/1.1 OK" } }, ""))
+            end, 'Invalid status line: "HTTP/1.1 OK"')
+        end)
+
         it("handles empty body", function()
             local result = responses.parse(
                 curl_output({ { "HTTP/1.1 204 No Content" } }, "")
@@ -331,17 +337,24 @@ describe("responses", function()
     end)
 end)
 
-describe("Curl:replace_body", function()
-    it("keeps every header block", function()
-        local stdout = curl_output({
+describe("body_store.save", function()
+    it("saves the body to a file and keeps every header block", function()
+        local body = "\137PNG\r\n\26\n"
+        local stdout, stderr = curl_output({
             { "HTTP/1.1 302 Found", "Location: /image" },
             { "HTTP/1.1 200 OK", "Content-Type: image/png" },
-        }, "\137PNG\r\n\26\n")
-        local headers = stdout:sub(1, #stdout - #"\137PNG\r\n\26\n")
+        }, body)
+        local headers = stdout:sub(1, #stdout - #body)
         local curl = Curl:new({ args = {}, result = { stdout = stdout } })
+        local response = responses.parse(stdout, stderr)
+        local dir = vim.fn.tempname()
 
-        curl:replace_body("@/tmp/response.png", #headers)
+        require("nurl.infra.body_store").save(response, curl, dir)
 
-        assert.are.equal(headers .. "@/tmp/response.png", curl.result.stdout)
+        assert.matches("^" .. vim.pesc(dir) .. "/.+/response%.png$", response.body_file)
+        assert.are.equal(body, table.concat(vim.fn.readfile(response.body_file, "b"), "\n"))
+        assert.are.equal("", response.body)
+        assert.are.equal(headers .. "@" .. response.body_file, curl.result.stdout)
+        vim.fn.delete(dir, "rf")
     end)
 end)

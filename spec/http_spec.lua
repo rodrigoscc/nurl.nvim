@@ -1,4 +1,4 @@
-local http = require("nurl.http")
+local http = require("nurl.ui.http_message")
 
 local function lines_to_string(lines)
     return table.concat(lines, "\n")

@@ -1,7 +1,7 @@
 local config = require("nurl.config")
 local history = require("nurl.data.history")
 local highlights = require("nurl.ui.highlights")
-local preview = require("nurl.preview")
+local http_message = require("nurl.ui.http_message")
 local ResponseView = require("nurl.ui.response_view")
 
 local M = {}
@@ -204,7 +204,7 @@ function Explorer:update_preview()
     self.preview_id = entry.id
     local ok, request = pcall(history.get_request, entry.id)
     if ok and request then
-        ok, request = pcall(preview.render, request)
+        ok, request = pcall(http_message.render, request)
     end
 
     if ok and request then
