@@ -35,8 +35,8 @@ https://github.com/user-attachments/assets/8fdfdc50-6086-411c-9fd0-482a5b913d4d
 
 ## Requirements
 
-- Neovim >= 0.10.0
-- `curl` in PATH
+- Neovim >= 0.11.0 (0.12 formats the JSON of `:Nurl lua_to_json`, which is on one line with unsorted keys on 0.11)
+- `curl` >= 7.87.0 in PATH
 - [snacks.nvim](https://github.com/folke/snacks.nvim) or [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) (for pickers)
 - Optional: `jq` for JSON formatting, `stylua` for environments file formatting
 
