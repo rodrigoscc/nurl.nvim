@@ -46,10 +46,6 @@ local QUERY_ENV_TABLE = [[
                 value: (table_constructor) @env_table))))
 ]]
 
-local QUERY_REQUESTS = [[
-(return_statement (expression_list (table_constructor (field) @request)))
-]]
-
 ---@type table<string, vim.treesitter.Query>
 local query_cache = {}
 
@@ -81,27 +77,8 @@ local function find_capture(query, root, source, capture_name)
     return nil, nil
 end
 
----@param query vim.treesitter.Query
----@param root TSNode
----@param source string
----@param capture_name string
----@return {node: TSNode, text: string}[]
-local function find_all_captures(query, root, source, capture_name)
-    local results = {}
-    for _, match in query:iter_matches(root, source, 0, -1) do
-        for id, nodes in pairs(match) do
-            if query.captures[id] == capture_name then
-                for _, node in ipairs(nodes) do
-                    local text = vim.treesitter.get_node_text(node, source)
-                    table.insert(results, { node = node, text = text })
-                end
-            end
-        end
-    end
-    return results
-end
-
----@class nurl.File
+---An environments file being edited, keeping its formatting and comments.
+---@class nurl.EnvFile
 ---@field contents string
 ---@field path string
 ---@field private _tree TSTree
@@ -111,7 +88,7 @@ File.__index = File
 ---@param path string
 ---@param contents string
 ---@param tree TSTree
----@return nurl.File
+---@return nurl.EnvFile
 function File:new(path, contents, tree)
     return setmetatable({
         path = path,
@@ -198,20 +175,6 @@ function File:find_environment_table_node(environment)
     return find_capture(query, self:_root(), self.contents, "env_table")
 end
 
----@return integer[][] ranges array of {start_row, start_col, end_row, end_col}
-function File:list_requests_ranges()
-    local query = get_query(QUERY_REQUESTS)
-    local captures =
-        find_all_captures(query, self:_root(), self.contents, "request")
-
-    local ranges = {}
-    for _, capture in ipairs(captures) do
-        local start_row, start_col, end_row, end_col = capture.node:range()
-        table.insert(ranges, { start_row, start_col, end_row, end_col })
-    end
-    return ranges
-end
-
 ---@param node TSNode
 ---@param new_text string
 function File:replace_node(node, new_text)
@@ -281,66 +244,52 @@ function File:unset_environment_variable(environment, variable)
     end
 end
 
----@param on_save? fun(success: boolean)
+---Write the file, formatted with the lua formatter if there is one.
+---@param on_save? fun(success: boolean) called on the main loop once written
 function File:save(on_save)
+    local function write()
+        local status, err = pcall(fs.write, self.path, self.contents)
+        if not status then
+            vim.notify(
+                string.format("Failed writing file %s: %s", self.path, err),
+                vim.log.levels.WARN
+            )
+        end
+
+        if on_save then
+            on_save(status)
+        end
+    end
+
     local found = formatter.find(config.formatters, "lua")
+    if not found then
+        vim.schedule(write)
+        return
+    end
 
-    if found then
-        formatter.run(
-            found,
-            self.contents,
-            function(out)
-                if out.code ~= 0 then
-                    vim.notify(
-                        string.format(
-                            "Failed formatting %s: %s",
-                            self.path,
-                            out.stderr
-                        ),
-                        vim.log.levels.WARN
-                    )
-                else
-                    self.contents = out.stdout
-                    self:_reparse()
-                end
-
-                local status, err = pcall(fs.write, self.path, self.contents)
-                if not status then
-                    vim.notify(
-                        string.format(
-                            "Failed writing file %s: %s",
-                            self.path,
-                            err
-                        ),
-                        vim.log.levels.WARN
-                    )
-                end
-
-                if on_save then
-                    on_save(status)
-                end
-            end
-        )
-    else
+    formatter.run(found, self.contents, function(out)
         vim.schedule(function()
-            local status, err = pcall(fs.write, self.path, self.contents)
-
-            if not status then
+            if out.code ~= 0 then
                 vim.notify(
-                    string.format("Failed writing file %s: %s", self.path, err),
+                    string.format(
+                        "Failed formatting %s: %s",
+                        self.path,
+                        out.stderr
+                    ),
                     vim.log.levels.WARN
                 )
+            else
+                self.contents = out.stdout
+                self:_reparse()
             end
 
-            if on_save then
-                on_save(status)
-            end
+            write()
         end)
-    end
+    end)
 end
 
 ---@param path string
----@return nurl.File | nil, string | nil
+---@return nurl.EnvFile | nil, string | nil
 function M.parse(path)
     local contents = fs.read(path)
     if not contents then

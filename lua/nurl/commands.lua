@@ -130,9 +130,8 @@ function M.pick_resend(overrides)
 end
 
 function M.pick_env()
-    local environments = require("nurl.environments")
     vim.ui.select(
-        vim.tbl_keys(environments.project_envs),
+        require("nurl.env.project").current():names(),
         { prompt = "Nurl: activate environment" },
         function(choice)
             if choice ~= nil then
@@ -229,8 +228,7 @@ function M.complete(_, cmdline)
 
     local subcommand = args[2]
     if subcommand == "env" then
-        local environments = require("nurl.environments")
-        return vim.tbl_keys(environments.project_envs)
+        return require("nurl.env.project").current():names()
     end
 
     return {}

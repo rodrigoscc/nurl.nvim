@@ -81,7 +81,7 @@ M.activate_env = commands.activate_env
 M.open_environments_file = commands.open_environments_file
 
 function M.get_active_env()
-    return environments.project_active_env
+    return require("nurl.env.project").current().active_name
 end
 
 M.pick_history = commands.pick_history

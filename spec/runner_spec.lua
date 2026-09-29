@@ -1,5 +1,5 @@
 local runner = require("nurl.app.runner")
-local environments = require("nurl.environments")
+local env_project = require("nurl.env.project")
 local process = require("nurl.infra.process")
 
 local uv = vim.uv or vim.loop
@@ -58,8 +58,7 @@ describe("runner", function()
     after_each(function()
         close()
         vim.notify = notify
-        environments.project_envs = {}
-        environments.project_active_env = nil
+        env_project.reload(env_project.current().path)
     end)
 
     it("sends the request and parses the response", function()
@@ -78,7 +77,8 @@ describe("runner", function()
             end
         end
 
-        environments.project_envs = {
+        local project = env_project.current()
+        project.envs = {
             test = {
                 pre_hook = function(next)
                     table.insert(calls, "env pre_hook")
@@ -87,7 +87,7 @@ describe("runner", function()
                 post_hook = record("env post_hook"),
             },
         }
-        environments.project_active_env = "test"
+        project.active_name = "test"
 
         runner
             .run({

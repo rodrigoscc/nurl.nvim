@@ -1,4 +1,4 @@
-local environments = require("nurl.environments")
+local env_project = require("nurl.env.project")
 local requests = require("nurl.core.request")
 local Curl = require("nurl.core.curl")
 local config = require("nurl.config")
@@ -125,7 +125,7 @@ function M.run(request, opts)
         }
 
         call_safely("Request post hook", expanded.post_hook, out)
-        call_safely("Environment post hook", environments.get_post_hook(), out)
+        call_safely("Environment post hook", env_project.current():post_hook(), out)
         call_safely("Callback", opts.callback, out)
 
         -- The request is done once everything above ran. The hooks and the
@@ -156,7 +156,7 @@ function M.run(request, opts)
     ---@type nurl.RequestInput
     local input = { request = expanded }
 
-    run_pre_hook(environments.get_pre_hook(), input, function()
+    run_pre_hook(env_project.current():pre_hook(), input, function()
         run_pre_hook(expanded.pre_hook, input, send)
     end)
 

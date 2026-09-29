@@ -1,7 +1,39 @@
 local config = require("nurl.config")
-local file_parsing = require("nurl.utils.file_parsing")
+local fs = require("nurl.infra.fs")
 
 local M = {}
+
+local QUERY_REQUESTS = [[
+(return_statement (expression_list (table_constructor (field) @request)))
+]]
+
+---@type vim.treesitter.Query?
+local requests_query
+
+---The ranges of the fields of the table a file returns, which are its
+---requests when it returns a literal table of them.
+---@param contents string
+---@return integer[][] ranges array of {start_row, start_col, end_row, end_col}
+local function request_ranges(contents)
+    requests_query = requests_query
+        or vim.treesitter.query.parse("lua", QUERY_REQUESTS)
+
+    local root = vim.treesitter.get_string_parser(contents, "lua"):parse()[1]:root()
+
+    local ranges = {}
+    for _, match in requests_query:iter_matches(root, contents, 0, -1) do
+        for id, nodes in pairs(match) do
+            if requests_query.captures[id] == "request" then
+                for _, node in ipairs(nodes) do
+                    local start_row, start_col, end_row, end_col = node:range()
+                    table.insert(ranges, { start_row, start_col, end_row, end_col })
+                end
+            end
+        end
+    end
+
+    return ranges
+end
 
 ---A request defined in a project file. The position is missing when the
 ---file does not return its requests as a literal table, since they cannot
@@ -13,9 +45,9 @@ local M = {}
 ---@param file_path string
 ---@return nurl.ProjectRequestItem[]
 function M.file_requests(file_path)
-    local file, err = file_parsing.parse(file_path)
-    if not file then
-        vim.notify("Skipping file: " .. err, vim.log.levels.WARN)
+    local read, contents = pcall(fs.read, file_path)
+    if not read then
+        vim.notify("Skipping file: " .. contents, vim.log.levels.WARN)
         return {}
     end
 
@@ -32,7 +64,7 @@ function M.file_requests(file_path)
     -- match when the file returns a literal table of them. A file building
     -- its requests in code, such as in a loop, returns requests that do not
     -- line up with the fields, so they get no position rather than wrong ones.
-    local ranges = file:list_requests_ranges()
+    local ranges = request_ranges(contents)
     local positioned = #ranges == #file_requests
 
     ---@type nurl.ProjectRequestItem[]

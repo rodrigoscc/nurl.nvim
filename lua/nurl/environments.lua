@@ -1,181 +1,20 @@
--- have a function that returns a function that evaluates a variable in the env
--- should use active env by default, but have a way to use static env in an argument
--- defaults should just be implemented with `or 'default'`
--- should env files also be lua files? could be useful
--- env hooks? confirm requests only on production! (if not GET ...)
-
-local config = require("nurl.config")
-local fs = require("nurl.infra.fs")
-local file_parsing = require("nurl.utils.file_parsing")
 local variables = require("nurl.core.variables")
-local uv = vim.uv or vim.loop
+local project = require("nurl.env.project")
 
+---Variables of the active environment of the current project, available as
+---Nurl.env. Each function takes an optional environment name to use instead
+---of the active one.
 ---@class nurl.env
 local M = {}
 
----@type string | nil
-M.project_active_env = nil
-
----@type table<string, table<string, any>>
-M.project_envs = {}
-
----@class nurl.EnvOperation
----@field op "set" | "unset"
----@field env string
----@field name string
----@field value? any
-
----@type nurl.EnvOperation[]
-local operations_queue = {}
-
-M.project_env_file = nil
-
-local function safe_coroutine_resume(my_coroutine)
-    if coroutine.status(my_coroutine) == "dead" then
-        vim.notify(
-            "Environment worker is dead, cannot process operations",
-            vim.log.levels.ERROR
-        )
-        -- clear queue since it won't be processed
-        operations_queue = {}
-        return
-    end
-
-    local ok, err = coroutine.resume(my_coroutine)
-    if not ok then
-        vim.notify(
-            ("Environment worker crashed: %s"):format(err),
-            vim.log.levels.ERROR
-        )
-        -- clear queue since it won't be processed
-        operations_queue = {}
-    end
-end
-
-local function create_coroutine()
-    return coroutine.create(function()
-        while true do
-            if M.project_env_file == nil then
-                error("Environment file wasn't loaded. Worker stopped.")
-            end
-
-            while #operations_queue == 0 do
-                coroutine.yield()
-            end
-
-            ---@type nurl.EnvOperation
-            local op = table.remove(operations_queue, 1)
-
-            if op.op == "set" then
-                local new_text
-                if type(op.value) == "string" then
-                    new_text = string.format([["%s"]], op.value)
-                elseif
-                    type(op.value) == "number"
-                    or type(op.value) == "boolean"
-                then
-                    new_text = tostring(op.value)
-                elseif op.value == nil then
-                    new_text = "nil"
-                else
-                    error("value type " .. type(op.value) .. " not supported")
-                end
-
-                M.project_env_file:set_environment_variable(
-                    op.env,
-                    op.name,
-                    new_text
-                )
-            elseif op.op == "unset" then
-                M.project_env_file:unset_environment_variable(op.env, op.name)
-            end
-
-            local saved = false
-
-            M.project_env_file:save(function()
-                saved = true
-                vim.schedule(function()
-                    -- running inside vim.schedule just in case
-                    safe_coroutine_resume(M.file_worker_coroutine)
-                end)
-            end)
-
-            while not saved do
-                coroutine.yield()
-            end
-        end
-    end)
-end
-
-M.file_worker_coroutine = create_coroutine()
-
-function M.activate(env_name)
-    for name in pairs(M.project_envs) do
-        if name == env_name then
-            M.project_active_env = name
-
-            local active_environments = {}
-            if fs.exists(config.active_environments_file) then
-                local content = fs.read(config.active_environments_file)
-                active_environments = vim.json.decode(content)
-            end
-
-            active_environments[uv.cwd()] = env_name
-
-            fs.write(
-                config.active_environments_file,
-                vim.json.encode(active_environments)
-            )
-            return
-        end
-    end
-
-    error(
-        string.format("Could not activate environment %s, not found", env_name)
-    )
-end
-
-function M.get_active()
-    if M.project_active_env == nil then
-        return nil
-    end
-
-    local env = M.project_envs[M.project_active_env]
-    if env == nil then
-        error(("Active env does not exist: %s"):format(M.project_active_env))
-    end
-
-    return env
-end
-
-function M.get_pre_hook()
-    local active_env = M.get_active()
-    if active_env == nil then
-        return nil
-    end
-
-    return active_env.pre_hook
-end
-
-function M.get_post_hook()
-    local active_env = M.get_active()
-    if active_env == nil then
-        return nil
-    end
-
-    return active_env.post_hook
-end
-
+---A function resolving a variable when the request is sent, to use in
+---request tables.
+---@param variable_name string
+---@param use_env? string
+---@return fun(): any
 function M.var(variable_name, use_env)
     return function()
-        local env
-
-        if use_env == nil then
-            env = M.get_active()
-        else
-            env = M.project_envs[use_env]
-        end
-
+        local env = project.current():env(use_env)
         if env == nil then
             return nil
         end
@@ -184,57 +23,12 @@ function M.var(variable_name, use_env)
     end
 end
 
-function M.set(variable_name, value, use_env)
-    local env_name = use_env or M.project_active_env
-    if env_name == nil then
-        error("No active env")
-    end
-
-    local env = M.project_envs[env_name]
-    if env == nil then
-        error(('Env "%s" not found'):format(env_name))
-    end
-
-    env[variable_name] = value
-
-    table.insert(
-        operations_queue,
-        { op = "set", env = env_name, name = variable_name, value = value }
-    )
-
-    safe_coroutine_resume(M.file_worker_coroutine)
-end
-
-function M.unset(variable_name, use_env)
-    local env_name = use_env or M.project_active_env
-    if env_name == nil then
-        error("No active env")
-    end
-
-    local env = M.project_envs[env_name]
-    if env == nil then
-        error(('Env "%s" not found'):format(env_name))
-    end
-
-    env[variable_name] = nil
-
-    table.insert(
-        operations_queue,
-        { op = "unset", env = env_name, name = variable_name }
-    )
-
-    safe_coroutine_resume(M.file_worker_coroutine)
-end
-
+---The value of a variable, for use inside functions.
+---@param variable_name string
+---@param use_env? string
+---@return any
 function M.get(variable_name, use_env)
-    local env
-
-    if use_env == nil then
-        env = M.get_active()
-    else
-        env = M.project_envs[use_env]
-    end
-
+    local env = project.current():env(use_env)
     if env == nil then
         return nil
     end
@@ -242,48 +36,25 @@ function M.get(variable_name, use_env)
     return variables.expand(env[variable_name])
 end
 
-function M.load()
-    local environments_path =
-        vim.fs.joinpath(config.dir, config.environments_file)
-
-    if fs.exists(environments_path) then
-        local environments = dofile(environments_path)
-        M.project_envs = environments
-
-        local file, err = file_parsing.parse(environments_path)
-        if not file then
-            vim.notify(
-                "Could not parse environments file: " .. err,
-                vim.log.levels.ERROR
-            )
-        else
-            M.project_env_file = file
-        end
-    end
-
-    if fs.exists(config.active_environments_file) then
-        local content = fs.read(config.active_environments_file)
-        local active_environments = vim.json.decode(content)
-        M.project_active_env = active_environments[uv.cwd()]
-    end
+---Set a variable, also saving it to the environments file.
+---@param variable_name string
+---@param value string | number | boolean | nil
+---@param use_env? string
+function M.set(variable_name, value, use_env)
+    project.current():set(use_env, variable_name, value)
 end
 
-local reload_group_id = vim.api.nvim_create_augroup(
-    "nurl.environment_reload_group",
-    { clear = true }
-)
+---Remove a variable, also from the environments file.
+---@param variable_name string
+---@param use_env? string
+function M.unset(variable_name, use_env)
+    project.current():unset(use_env, variable_name)
+end
 
-function M.setup_reload_autocmd()
-    local environments_path =
-        vim.fs.joinpath(config.dir, config.environments_file)
-
-    vim.api.nvim_create_autocmd("BufWritePost", {
-        group = reload_group_id,
-        pattern = vim.fs.abspath(environments_path),
-        callback = function()
-            M.load()
-        end,
-    })
+---Make an environment the active one of the current directory.
+---@param env_name string
+function M.activate(env_name)
+    project.current():activate(env_name)
 end
 
 return M
