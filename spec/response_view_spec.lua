@@ -165,6 +165,24 @@ describe("response view", function()
         )
     end)
 
+    it("shows the loading spinner without window options such as numbers", function()
+        vim.o.number = true
+        local view = ResponseView.open(RequestHandle:new({
+            method = "GET",
+            url = "https://example.org",
+            headers = {},
+        }))
+
+        local floats = vim.tbl_filter(function(win)
+            return vim.api.nvim_win_get_config(win).relative ~= ""
+        end, vim.api.nvim_list_wins())
+        vim.o.number = false
+
+        assert.are.equal(1, #floats)
+        assert.is_false(vim.wo[floats[1]].number)
+        close_window(view)
+    end)
+
     it("renders the winbar only in response windows", function()
         local view = ResponseView.open(completed_handle(404))
         vim.cmd.new()

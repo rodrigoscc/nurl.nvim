@@ -55,6 +55,8 @@ function E:start()
         col = pos.col,
         width = FLOAT_WIDTH,
         height = FLOAT_HEIGHT,
+        -- Without line numbers and other window options of the user.
+        style = "minimal",
     })
 
     self.timer = uv.new_timer()
