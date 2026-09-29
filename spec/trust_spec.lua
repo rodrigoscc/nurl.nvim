@@ -130,6 +130,27 @@ describe("trust", function()
         assert.are.equal(2, #prompts)
     end)
 
+    it("shows the active environment without running or asking", function()
+        require("nurl").setup({
+            trust_file = trust_file,
+            active_environments_file = vim.fs.joinpath(root, "envs.json"),
+        })
+        require("nurl.env.active").set(project, "dev")
+
+        -- Such as a statusline showing it as it redraws.
+        local line = vim.api.nvim_eval_statusline(
+            "%{v:lua.Nurl.get_active_env()}",
+            {}
+        ).str
+
+        assert.are.equal("dev", line)
+        assert.are.same({}, prompts)
+
+        -- The variables need the file, which asks first.
+        assert.is_nil(Nurl.env.get("token", "dev"))
+        assert.are.equal(1, #prompts)
+    end)
+
     it("trusts every directory when disabled", function()
         require("nurl").setup({ trust_file = trust_file, trust = false })
 

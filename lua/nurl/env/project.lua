@@ -22,6 +22,7 @@ local M = {}
 ---@field path string the environments file
 ---@field envs table<string, table<string, any>>
 ---@field active_name? string
+---@field private loaded boolean whether the environments file ran
 ---@field private file? nurl.EnvFile the file being edited by set and unset
 ---@field private queue nurl.EnvOperation[]
 ---@field private saving boolean
@@ -51,17 +52,30 @@ local function load(dir)
         vim.fs.joinpath(dir, config.dir, config.environments_file),
         ":p"
     )
-    local project = setmetatable({
+    return setmetatable({
         dir = dir,
         path = path,
         envs = {},
         active_name = active.get(dir),
+        loaded = false,
         queue = {},
         saving = false,
     }, Project)
+end
 
+---Run the environments file the first time the environments are needed,
+---asking whether to trust its directory. The active environment's name is
+---known without it, so that showing it, such as in a statusline redrawing,
+---never runs code or asks.
+function Project:_load()
+    if self.loaded then
+        return
+    end
+    self.loaded = true
+
+    local path = self.path
     if not fs.exists(path) or not trust.allows(vim.fs.dirname(path)) then
-        return project
+        return
     end
 
     local ok, envs = pcall(dofile, path)
@@ -73,21 +87,19 @@ local function load(dir)
             ),
             vim.log.levels.ERROR
         )
-        return project
+        return
     end
-    project.envs = envs
+    self.envs = envs
 
     local file, err = env_file.parse(path)
     if file then
-        project.file = file
+        self.file = file
     else
         vim.notify(
             "Could not parse environments file: " .. err,
             vim.log.levels.ERROR
         )
     end
-
-    return project
 end
 
 ---The project of the current directory.
@@ -128,6 +140,7 @@ end
 
 ---@return string[]
 function Project:names()
+    self:_load()
     local names = vim.tbl_keys(self.envs)
     table.sort(names)
     return names
@@ -137,6 +150,7 @@ end
 ---@param name? string
 ---@return table<string, any>?
 function Project:env(name)
+    self:_load()
     if name ~= nil then
         return self.envs[name]
     end
@@ -155,6 +169,7 @@ end
 
 ---@param name string
 function Project:activate(name)
+    self:_load()
     if self.envs[name] == nil then
         error(
             string.format("Could not activate environment %s, not found", name)
@@ -181,6 +196,7 @@ end
 ---@param name? string
 ---@return string name, table<string, any> env
 function Project:_target(name)
+    self:_load()
     name = name or self.active_name
     if name == nil then
         error("No active env")
