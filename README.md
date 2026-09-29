@@ -227,7 +227,7 @@ return {
         end, -- dynamic
 
         -- Query parameters (optional): table or function
-        -- Values are URI-encoded automatically. Use functions for dynamic values.
+        -- Names and values are URI-encoded automatically. Use functions for dynamic values.
         query = {
             page = 1,
             limit = 10,
@@ -285,7 +285,7 @@ return {
 
 The shorthand `[1]` field and `url` field handle query parameters differently:
 
-- **Shorthand `[1]`**: Supports inline query parameters (e.g., `"https://api.example.com?foo=bar"`). Query params are extracted and merged with the `query` field.
+- **Shorthand `[1]`**: Supports inline query parameters (e.g., `"https://api.example.com?foo=bar"`). They are sent as written, so write them encoded, as in a URL copied from elsewhere. Parameters in the `query` field are added after them.
 - **`url` as table**: Parts are joined with `/`, so query params should go in the `query` field instead.
 
 ### Dynamic Values

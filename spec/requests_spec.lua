@@ -144,69 +144,46 @@ describe("requests", function()
             assert.are.equal("computed", result.query.dynamic)
         end)
 
-        it("extracts query from shorthand url", function()
-            local request = { "https://example.com?foo=bar&baz=qux" }
-            local result = requests.expand(request)
+        it("keeps the query of a shorthand url as written", function()
+            local url = "https://example.com?q=a%20b&x=1+2&a=b=c&flag"
+            local result = requests.expand({ url })
 
-            assert.are.equal("https://example.com", result.url)
-            assert.are.same({ foo = "bar", baz = "qux" }, result.query)
+            assert.are.equal(url, result.url)
+            assert.is_nil(result.query)
         end)
 
-        it("merges shorthand url query with query field", function()
-            local request = {
+        it("keeps the query field apart from a shorthand url", function()
+            local result = requests.expand({
                 "https://example.com?existing=value",
                 query = { added = "param" },
-            }
-            local result = requests.expand(request)
+            })
 
-            assert.are.equal("https://example.com", result.url)
-            assert.are.equal("value", result.query.existing)
-            assert.are.equal("param", result.query.added)
-        end)
-
-        it("handles repeated query params from shorthand url", function()
-            local request = { "https://example.com?tag=a&tag=b" }
-            local result = requests.expand(request)
-
-            assert.are.same({ "a", "b" }, result.query.tag)
-        end)
-    end)
-
-    describe("extract_query", function()
-        it("returns url unchanged when no query string", function()
-            local url, query =
-                requests.extract_query("https://example.com/path")
-
-            assert.are.equal("https://example.com/path", url)
-            assert.is_nil(query)
-        end)
-
-        it("extracts single query parameter", function()
-            local url, query =
-                requests.extract_query("https://example.com?foo=bar")
-
-            assert.are.equal("https://example.com", url)
-            assert.are.same({ foo = "bar" }, query)
-        end)
-
-        it("extracts multiple query parameters", function()
-            local url, query =
-                requests.extract_query("https://example.com?a=1&b=2&c=3")
-
-            assert.are.equal("https://example.com", url)
-            assert.are.same({ a = "1", b = "2", c = "3" }, query)
-        end)
-
-        it("collects repeated query parameters into list", function()
-            local url, query =
-                requests.extract_query("https://example.com?id=1&id=2&id=3")
-
-            assert.are.equal("https://example.com", url)
-            assert.are.same({ id = { "1", "2", "3" } }, query)
+            assert.are.equal("https://example.com?existing=value", result.url)
+            assert.are.same({ added = "param" }, result.query)
         end)
     end)
 
     describe("build_curl", function()
+        it("sends the query of a shorthand url as written", function()
+            local url = "https://example.com?q=a%20b&x=1+2"
+            local curl = Curl.build(requests.expand({ url }))
+
+            assert.are.equal(url, curl.args[3])
+            assert.is_false(vim.tbl_contains(curl.args, "--url-query"))
+        end)
+
+        it("encodes query names, leaving values to curl", function()
+            local curl = Curl.build(requests.expand({
+                url = "https://example.com",
+                query = { ["my key"] = "a b" },
+            }))
+
+            local i = assert(vim.iter(ipairs(curl.args)):find(function(_, arg)
+                return arg == "--url-query"
+            end))
+            assert.are.equal("my%20key=a b", curl.args[i + 1])
+        end)
+
         it("builds basic curl command", function()
             local request = {
                 url = "https://example.com",

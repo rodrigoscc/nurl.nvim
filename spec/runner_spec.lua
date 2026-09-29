@@ -68,6 +68,39 @@ describe("runner", function()
         assert.are.equal("hello", out.response.body)
     end)
 
+    it("sends the query of a shorthand url as written", function()
+        local request_line
+        local server = assert(uv.new_tcp())
+        server:bind("127.0.0.1", 0)
+        server:listen(16, function()
+            local client = assert(uv.new_tcp())
+            server:accept(client)
+            client:read_start(function(_, data)
+                if data then
+                    client:read_stop()
+                    request_line = data:match("^[^\r\n]+")
+                    client:write(OK, function()
+                        client:close()
+                    end)
+                end
+            end)
+        end)
+        local base = ("http://127.0.0.1:%d/p"):format(server:getsockname().port)
+
+        runner
+            .run({
+                base .. "?q=a%20b&x=1+2&a=b=c&flag",
+                query = { ["my key"] = "c d" },
+            })
+            :wait(5000)
+        server:close()
+
+        assert.are.equal(
+            "GET /p?q=a%20b&x=1+2&a=b=c&flag&my%20key=c+d HTTP/1.1",
+            request_line
+        )
+    end)
+
     it("runs the hooks, the tests and the callbacks in order", function()
         local calls = {}
         local function record(name)

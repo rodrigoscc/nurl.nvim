@@ -39,16 +39,4 @@ function M.collect_value(tbl, key, new_value)
     return result
 end
 
-function M.shallow_extend(tbl1, tbl2)
-    local result = vim.deepcopy(tbl1)
-
-    if tbl2 then
-        for k, v in pairs(tbl2) do
-            result = M.collect_value(result, k, v)
-        end
-    end
-
-    return result
-end
-
 return M

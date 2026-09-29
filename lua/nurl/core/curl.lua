@@ -86,12 +86,15 @@ function Curl.build(request)
     if request.query then
         local query_items = {}
         for k, v in pairs(request.query) do
+            -- curl encodes the value after "=", but expects the name to be
+            -- encoded already.
+            local name = vim.uri_encode(tostring(k))
             if type(v) == "table" then
                 for _, value_item in ipairs(v) do
-                    table.insert(query_items, k .. "=" .. value_item)
+                    table.insert(query_items, name .. "=" .. value_item)
                 end
             else
-                table.insert(query_items, k .. "=" .. v)
+                table.insert(query_items, name .. "=" .. v)
             end
         end
 

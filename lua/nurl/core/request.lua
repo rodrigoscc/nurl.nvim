@@ -1,5 +1,4 @@
 local variables = require("nurl.core.variables")
-local tables = require("nurl.utils.tables")
 
 ---@class nurl.RequestInput
 ---@field request nurl.Request
@@ -71,28 +70,6 @@ function M.build_url(url)
     return table.concat(expanded_parts, "/")
 end
 
----@param url string
----@return string, table<string, any>?
-function M.extract_query(url)
-    local query_start = url:find("?")
-    if not query_start then
-        return url, nil
-    end
-
-    local url_only = url:sub(1, query_start - 1)
-    local query_str = url:sub(query_start + 1)
-
-    local query_items = vim.split(query_str, "&")
-
-    local query = {}
-    for _, item in ipairs(query_items) do
-        local k, v = unpack(vim.split(item, "="))
-        query = tables.collect_value(query, k, v)
-    end
-
-    return url_only, query
-end
-
 ---@param request nurl.SuperRequest | nurl.Request
 ---@param opts? nurl.ExpandOpts
 function M.expand(request, opts)
@@ -121,20 +98,10 @@ function M.expand(request, opts)
         "A table url must be a list, not a dict"
     )
 
-    local url, url_query
-    if request[1] then
-        url = request[1]
-        ---@cast url string
-        url, url_query = M.extract_query(url)
-    else
-        url = variables.expand(request.url, opts)
-    end
-
+    -- A query string in the shorthand URL is sent as written, since its
+    -- values are usually encoded already. Only the query field is encoded.
+    local url = request[1] or variables.expand(request.url, opts)
     local query = variables.expand(request.query, opts)
-
-    if url_query then
-        query = tables.shallow_extend(url_query, query)
-    end
 
     assert(url ~= nil, "Request must have a URL")
 
