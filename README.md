@@ -711,6 +711,10 @@ handle:cancel()
 Nurl.resend_last_request() -- resend last
 Nurl.resend_last_request(-2) -- resend second to last
 
+-- Request shown in a response buffer (nil elsewhere)
+Nurl.get_request() -- current buffer
+Nurl.get_request(bufnr)
+
 -- Environment
 Nurl.get_active_env() -- returns active env name or nil
 Nurl.activate_env("production")
@@ -1079,16 +1083,15 @@ Follow URLs directly from response bodies, especially useful for paginated APIs 
 ```lua
 local function super_gx()
     local cursor_url = vim.fn.expand("<cfile>")
-    if not vim.b.nurl_data then
+    local request = Nurl.get_request()
+    if not request then
         -- Default gx implementation if cursor isn't in a Nurl response buffer.
         vim.ui.open(cursor_url)
         return
     end
 
-    local nurl_data = vim.b.nurl_data
-
     -- Will send the same headers, since they may include authentication.
-    local orig_headers = nurl_data.request.headers
+    local orig_headers = request.headers
 
     if vim.v.count == 0 then
         -- Display response in the current window

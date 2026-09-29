@@ -30,54 +30,140 @@ local function parse_target(arg)
     end
 end
 
-local function default_command(arg, overrides)
-    local nurl = require("nurl")
-    local target = parse_target(arg)
+-- The rest of the plugin is only loaded once a command runs, not on setup.
 
-    if target == Target.project then
-        nurl.send_project_request(overrides)
-    elseif target == Target.cursor then
-        nurl.send_request_at_cursor(overrides)
-    elseif target == Target.file then
-        nurl.send_file_request(arg, overrides)
+---@return nurl.app.client
+local function client()
+    return require("nurl.app.client")
+end
+
+---@return nurl.app.targets
+local function targets()
+    return require("nurl.app.targets")
+end
+
+---@param action fun(item: nurl.RequestItem)
+---@param overrides? nurl.Override[]
+---@return fun(item: nurl.RequestItem)
+local function with_overrides(action, overrides)
+    return function(item)
+        local request = require("nurl.override")(item.request, overrides or {})
+        action(vim.tbl_extend("force", item, { request = request }))
     end
 end
 
-local function jump_subcommand(arg)
-    local nurl = require("nurl")
+---Run an action on the requests of a target: pick one of the project's, one
+---of a file's unless it has only one, or the one at the cursor.
+---@param arg? string the target: nothing for the project, "." for the cursor, or a file
+---@param title string
+---@param action? fun(item: nurl.RequestItem) Default: jump to the request
+local function run_on_target(arg, title, action)
     local target = parse_target(arg)
 
     if target == Target.project then
-        nurl.jump_to_project_request()
-    elseif target == Target.cursor then
-        vim.notify("Cannot jump at cursor", vim.log.levels.WARN)
+        require("nurl.pickers").pick(title, targets().project(), action)
     elseif target == Target.file then
-        nurl.jump_to_file_request(arg)
+        ---@cast arg string
+        targets().choose(title, targets().file(arg), action)
+    else
+        local item = targets().cursor()
+        if item == nil then
+            vim.notify("No request found at cursor", vim.log.levels.ERROR)
+        elseif action == nil then
+            vim.notify("Cannot jump at cursor", vim.log.levels.WARN)
+        else
+            action(item)
+        end
     end
 end
 
-local function yank_subcommand(arg, overrides)
-    local nurl = require("nurl")
-    local target = parse_target(arg)
+---@param item nurl.RequestItem
+local function send_item(item)
+    -- A request at the cursor in a response window is sent again there.
+    client().send(item.request, { display = item.win and { win = item.win } or true })
+end
 
-    if target == Target.project then
-        nurl.yank_project_request(overrides)
-    elseif target == Target.cursor then
-        nurl.yank_curl_at_cursor(overrides)
-    elseif target == Target.file then
-        nurl.yank_file_request(arg, overrides)
+---@param item nurl.RequestItem
+local function yank_item(item)
+    client().yank(item.request)
+end
+
+---Send a request of a target, showing its response.
+---@param arg? string
+---@param overrides? nurl.Override[]
+function M.send(arg, overrides)
+    run_on_target(arg, "Nurl: send", with_overrides(send_item, overrides))
+end
+
+---Copy the curl command of a request of a target.
+---@param arg? string
+---@param overrides? nurl.Override[]
+function M.yank(arg, overrides)
+    run_on_target(arg, "Nurl: yank", with_overrides(yank_item, overrides))
+end
+
+---Jump to where a request of a target is defined.
+---@param arg? string
+function M.jump(arg)
+    run_on_target(arg, "Nurl: jump")
+end
+
+---Pick a recent request and send it again.
+---@param overrides? nurl.Override[]
+function M.pick_resend(overrides)
+    local items = vim.tbl_map(function(recent)
+        return { request = recent.request }
+    end, client().recent.items)
+
+    if #items == 0 then
+        vim.notify("No recent requests to resend", vim.log.levels.WARN)
+        return
     end
+
+    require("nurl.pickers").pick(
+        "Nurl: resend",
+        items,
+        with_overrides(function(item)
+            client().send(item.request, { display = true })
+        end, overrides)
+    )
+end
+
+function M.pick_env()
+    local environments = require("nurl.environments")
+    vim.ui.select(
+        vim.tbl_keys(environments.project_envs),
+        { prompt = "Nurl: activate environment" },
+        function(choice)
+            if choice ~= nil then
+                M.activate_env(choice)
+            end
+        end
+    )
+end
+
+---@param env string to activate
+function M.activate_env(env)
+    require("nurl.environments").activate(env)
+    vim.cmd.redrawstatus() -- in case the user is showing the active env in statusline
+end
+
+function M.open_environments_file()
+    local config = require("nurl.config")
+    vim.cmd.edit(vim.fs.joinpath(config.dir, config.environments_file))
+end
+
+function M.pick_history()
+    require("nurl.ui.history_explorer").open(client())
 end
 
 local function resend_subcommand(arg, overrides)
-    local nurl = require("nurl")
-
     if arg == nil or arg == "" then
-        nurl.pick_resend(overrides)
+        M.pick_resend(overrides)
     else
         local index = tonumber(arg)
         if index then
-            nurl.resend_last_request(index, overrides)
+            client().resend(index, overrides)
         else
             vim.notify("Invalid resend index: " .. arg, vim.log.levels.ERROR)
         end
@@ -85,22 +171,11 @@ local function resend_subcommand(arg, overrides)
 end
 
 local function env_subcommand(arg)
-    local nurl = require("nurl")
-    local env_name = arg
-
-    if env_name == nil then
-        nurl.pick_env()
+    if arg == nil then
+        M.pick_env()
     else
-        nurl.activate_env(env_name)
+        M.activate_env(arg)
     end
-end
-
-local function end_file_subcommand()
-    require("nurl").open_environments_file()
-end
-
-local function history_subcommand()
-    require("nurl").pick_history()
 end
 
 ---@param name "json_to_lua" | "lua_to_json"
@@ -116,12 +191,12 @@ end
 
 ---@type table<string, fun(arg?: string, overrides: nurl.Override[], params: table)>
 M.subcommand_handlers = {
-    jump = jump_subcommand,
-    history = history_subcommand,
+    jump = M.jump,
+    history = M.pick_history,
     resend = resend_subcommand,
     env = env_subcommand,
-    env_file = end_file_subcommand,
-    yank = yank_subcommand,
+    env_file = M.open_environments_file,
+    yank = M.yank,
     json_to_lua = conversion_subcommand("json_to_lua"),
     lua_to_json = conversion_subcommand("lua_to_json"),
 }
@@ -136,7 +211,7 @@ function M.run(params)
         local handler = M.subcommand_handlers[command.subcommand]
         handler(command.arg, command.overrides, params)
     else
-        default_command(command.arg, command.overrides)
+        M.send(command.arg, command.overrides)
     end
 end
 

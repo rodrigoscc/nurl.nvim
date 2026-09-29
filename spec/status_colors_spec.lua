@@ -91,7 +91,7 @@ describe("status colors", function()
         local status_code, group = case[1], case[2]
 
         it(("uses %s for %d in every view"):format(group, status_code), function()
-            local win = require("nurl").open_history_item(history_item(status_code))
+            local win = require("nurl.app.client").open_history_item(history_item(status_code)).win
             local winbar = vim.api.nvim_eval_statusline(
                 vim.wo[win].winbar,
                 { winid = win, use_winbar = true, highlights = true }
@@ -112,7 +112,7 @@ describe("status colors", function()
                     },
                 }, false
             end
-            explorer.open()
+            explorer.open(require("nurl.app.client"))
             assert.is_true(buffer_groups(0)[group])
         end)
     end

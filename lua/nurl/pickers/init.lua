@@ -1,3 +1,5 @@
+local items = require("nurl.pickers.items")
+
 local M = {}
 
 local pickers_interfaces = {
@@ -16,20 +18,14 @@ local function find_picker_interface()
     error("No supported picker found")
 end
 
+---Pick a request. Without on_pick, the picker jumps to where the request is
+---defined, with its own ways to open it (split, tab, ...).
 ---@param title string
----@param super_requests nurl.SuperRequest[]
----@param on_pick? fun(request: nurl.SuperRequest)
-function M.pick_request(title, super_requests, on_pick)
+---@param request_items nurl.RequestItem[]
+---@param on_pick? fun(item: nurl.RequestItem)
+function M.pick(title, request_items, on_pick)
     local picker = find_picker_interface()
-    picker.pick_request(title, super_requests, on_pick)
-end
-
----@param title string
----@param project_request_items nurl.ProjectRequestItem[]
----@param on_pick? fun(item: nurl.ProjectRequestItem)
-function M.pick_project_request_item(title, project_request_items, on_pick)
-    local picker = find_picker_interface()
-    picker.pick_project_request_item(title, project_request_items, on_pick)
+    picker.pick(title, items.prepare(request_items), on_pick)
 end
 
 return M

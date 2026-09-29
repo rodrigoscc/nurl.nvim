@@ -548,12 +548,11 @@ function Explorer:open_entry(resend)
     end
 
     if resend then
-        require("nurl").send(item[2], { display = true })
+        self.client.send(item[2], { display = true })
         self.response_view = nil
     else
-        local _, view =
-            require("nurl").open_history_item(item, self:response_target())
-        self.response_view = view
+        self.response_view =
+            self.client.open_history_item(item, self:response_target())
     end
 end
 
@@ -605,9 +604,16 @@ function Explorer:action(action)
     end
 end
 
-function M.open()
+---What the explorer needs to send requests and show saved ones.
+---@class nurl.HistoryExplorerClient
+---@field send fun(request: nurl.Request, opts: nurl.SendOpts): nurl.RequestHandle
+---@field open_history_item fun(item: nurl.HistoryItem, win?: integer): nurl.ResponseView
+
+---@param client nurl.HistoryExplorerClient
+function M.open(client)
     local opts = config.history.explorer
     local self = setmetatable({
+        client = client,
         opts = opts,
         filters = {},
         entries = {},

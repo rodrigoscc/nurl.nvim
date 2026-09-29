@@ -43,7 +43,7 @@ describe("history explorer searches", function()
             table.insert(callbacks, callback)
         end
 
-        explorer.open()
+        explorer.open(require("nurl.app.client"))
         local list = vim.api.nvim_get_current_buf()
         local input = "old"
         vim.ui.select = function(fields, _, callback)
@@ -106,7 +106,7 @@ describe("history explorer searches", function()
             callback({}, false)
         end
 
-        explorer.open()
+        explorer.open(require("nurl.app.client"))
         local list = vim.api.nvim_get_current_buf()
         local field_index, input
         vim.ui.select = function(fields, _, callback)
@@ -152,7 +152,7 @@ describe("history explorer searches", function()
             callback({}, false)
         end
 
-        explorer.open()
+        explorer.open(require("nurl.app.client"))
         local list = vim.api.nvim_get_current_buf()
         local choice
         vim.ui.select = function(items, _, callback)
@@ -210,7 +210,7 @@ describe("history explorer searches", function()
         end
 
         local ok, err = pcall(function()
-            explorer.open()
+            explorer.open(require("nurl.app.client"))
             local list = vim.api.nvim_get_current_buf()
             vim.api.nvim_win_set_cursor(0, { 2, 0 })
 
@@ -296,7 +296,7 @@ INSERT INTO request_history (
             result:close()
         end
 
-        explorer.open()
+        explorer.open(require("nurl.app.client"))
         local list_win = vim.api.nvim_get_current_win()
         local list_buf = vim.api.nvim_get_current_buf()
         local preview_buf
@@ -351,7 +351,7 @@ INSERT INTO request_history (
             result:close()
         end
 
-        explorer.open()
+        explorer.open(require("nurl.app.client"))
         local list_win = vim.api.nvim_get_current_win()
         local list_buf = vim.api.nvim_get_current_buf()
         local preview_win
@@ -385,7 +385,7 @@ INSERT INTO request_history (
 
         local before = buffers()
         for _ = 1, 3 do
-            explorer.open()
+            explorer.open(require("nurl.app.client"))
             vim.cmd.tabclose()
         end
         assert.are.equal(before, buffers())
@@ -396,7 +396,7 @@ INSERT INTO request_history (
             return {}, false
         end
 
-        explorer.open()
+        explorer.open(require("nurl.app.client"))
         local list_buf = vim.api.nvim_get_current_buf()
         vim.cmd.tabonly()
 
@@ -435,7 +435,7 @@ INSERT INTO request_history (
         })
         result:close()
 
-        explorer.open()
+        explorer.open(require("nurl.app.client"))
         local list_win = vim.api.nvim_get_current_win()
         local list_buf = vim.api.nvim_get_current_buf()
         local tab = vim.api.nvim_get_current_tabpage()

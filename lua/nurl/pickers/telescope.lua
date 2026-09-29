@@ -22,145 +22,56 @@ local function make_request_previewer()
     })
 end
 
----@param title string
----@param super_requests nurl.SuperRequest[]
----@param on_pick? fun(request: nurl.SuperRequest)
-function M.pick_request(title, super_requests, on_pick)
-    local displayer = entry_display.create({
-        separator = " ",
-        items = {
-            { width = 1 },
-            { width = 7 },
-            { remaining = true },
-        },
-    })
+local displayer = entry_display.create({
+    separator = " ",
+    items = {
+        { width = 1 },
+        { width = 7 },
+        { remaining = true },
+        { remaining = true },
+    },
+})
 
-    local make_display = function(entry)
-        if entry.request.title then
-            return displayer({
-                { "", "TelescopeResultsIdentifier" },
-                { "", "TelescopeResultsFunction" },
-                { entry.request.title, "TelescopeResultsTitle" },
-            })
-        else
-            return displayer({
-                { "", "TelescopeResultsIdentifier" },
-                { entry.request.method, "TelescopeResultsFunction" },
-                { requests.full_url(entry.request), "TelescopeResultsTitle" },
-            })
-        end
+local function make_display(entry)
+    local file = { entry.file or "", "TelescopeResultsComment" }
+
+    if entry.request.title then
+        return displayer({
+            { "", "TelescopeResultsIdentifier" },
+            { "", "TelescopeResultsFunction" },
+            { entry.request.title, "TelescopeResultsTitle" },
+            file,
+        })
     end
 
-    pickers
-        .new({}, {
-            prompt_title = title,
-            finder = finders.new_table({
-                results = super_requests,
-                entry_maker = function(request)
-                    local status, expanded =
-                        pcall(requests.expand, request, { lazy = true })
-                    if not status then
-                        vim.notify(
-                            ("Skipped request after error: %s"):format(expanded),
-                            vim.log.levels.WARN
-                        )
-                        return nil -- filter out
-                    end
-
-                    local lazy = requests.stringify_lazy(expanded)
-                    return {
-                        value = expanded,
-                        display = make_display,
-                        ordinal = requests.text(lazy),
-                        request = lazy,
-                    }
-                end,
-            }),
-            sorter = conf.generic_sorter({}),
-            previewer = make_request_previewer(),
-            attach_mappings = function(prompt_bufnr)
-                actions.select_default:replace(function()
-                    actions.close(prompt_bufnr)
-                    local selection = action_state.get_selected_entry()
-                    if selection and on_pick then
-                        on_pick(selection.value)
-                    end
-                end)
-                return true
-            end,
-        })
-        :find()
+    return displayer({
+        { "", "TelescopeResultsIdentifier" },
+        { entry.request.method, "TelescopeResultsFunction" },
+        { requests.full_url(entry.request), "TelescopeResultsTitle" },
+        file,
+    })
 end
 
 ---@param title string
----@param project_request_items nurl.ProjectRequestItem[]
----@param on_pick? fun(item: nurl.ProjectRequestItem)
-function M.pick_project_request_item(title, project_request_items, on_pick)
-    local displayer = entry_display.create({
-        separator = " ",
-        items = {
-            { width = 1 },
-            { width = 7 },
-            { remaining = true },
-            { remaining = true },
-        },
-    })
-
-    local make_display = function(entry)
-        if entry.request.title then
-            return displayer({
-                { "", "TelescopeResultsIdentifier" },
-                { "", "TelescopeResultsFunction" },
-                { entry.request.title, "TelescopeResultsTitle" },
-                { entry.file, "TelescopeResultsComment" },
-            })
-        else
-            return displayer({
-                { "", "TelescopeResultsIdentifier" },
-                { entry.request.method, "TelescopeResultsFunction" },
-                { requests.full_url(entry.request), "TelescopeResultsTitle" },
-                { entry.file, "TelescopeResultsComment" },
-            })
-        end
-    end
-
+---@param items nurl.PickerItem[]
+---@param on_pick? fun(item: nurl.RequestItem)
+function M.pick(title, items, on_pick)
     pickers
         .new({}, {
             prompt_title = title,
             finder = finders.new_table({
-                results = project_request_items,
-                entry_maker = function(request_item)
-                    local status, expanded = pcall(
-                        requests.expand,
-                        request_item.request,
-                        { lazy = true }
-                    )
-                    if not status then
-                        vim.notify(
-                            ("Skipped request in %s:%s after error: %s"):format(
-                                request_item.file,
-                                request_item.start_row,
-                                expanded
-                            ),
-                            vim.log.levels.WARN
-                        )
-                        return nil -- fitler out
-                    end
-
-                    local lazy = requests.stringify_lazy(expanded)
-                    request_item.request = expanded
+                results = items,
+                ---@param item nurl.PickerItem
+                entry_maker = function(item)
                     return {
-                        value = request_item,
+                        value = item.item,
                         display = make_display,
-                        ordinal = requests.text(
-                            lazy,
-                            { suffix = request_item.file }
-                        ),
-                        request = lazy,
-                        file = request_item.file,
-                        filename = request_item.file,
-                        lnum = request_item.start_row,
-                        col = request_item.start_col,
+                        ordinal = item.text,
+                        request = item.preview,
+                        file = item.item.file,
+                        filename = item.item.file,
+                        lnum = item.item.start_row,
+                        col = item.item.start_col,
                     }
                 end,
             }),

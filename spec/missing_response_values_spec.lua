@@ -43,7 +43,7 @@ describe("responses without timing or size values", function()
     end)
 
     it("renders the winbar without a time", function()
-        local win = require("nurl").open_history_item({
+        local win = require("nurl.app.client").open_history_item({
             "2026-09-26T10:00:00",
             { method = "GET", url = "https://example.org", headers = {} },
             response(),
@@ -51,7 +51,7 @@ describe("responses without timing or size values", function()
                 args = {},
                 result = { code = 0, signal = 0, stdout = "", stderr = "" },
             }),
-        })
+        }).win
         local winbar = vim.api.nvim_eval_statusline(
             vim.wo[win].winbar,
             { winid = win, use_winbar = true }

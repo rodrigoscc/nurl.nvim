@@ -144,6 +144,27 @@ describe("response view", function()
         assert.are.equal(view.buffers.info, vim.api.nvim_win_get_buf(split))
     end)
 
+    it("sends the request again in its window with <C-r>", function()
+        local client = require("nurl.app.client")
+        local send = client.send
+        local sent
+        client.send = function(request, opts)
+            sent = { request = request, opts = opts }
+        end
+
+        local handle = completed_handle()
+        local view = ResponseView.open(handle, { enter = true })
+        view:switch(view.win, "headers")
+        vim.api.nvim_feedkeys(vim.keycode("<C-r>"), "x", false)
+        client.send = send
+
+        assert.are.equal(handle.request, sent.request)
+        assert.are.same(
+            { display = { win = view.win, focus_buffer = "headers" } },
+            sent.opts
+        )
+    end)
+
     it("renders the winbar only in response windows", function()
         local view = ResponseView.open(completed_handle(404))
         vim.cmd.new()

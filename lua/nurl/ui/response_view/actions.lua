@@ -21,15 +21,16 @@ M.builtin = {
     end,
     rerun = function(view)
         return function()
-            local focus_buffer =
-                view:type_of(vim.api.nvim_win_get_buf(view.win))
-
-            require("nurl").send(view.handle.request, {
+            -- Required here: the client requires the view, which requires
+            -- this module.
+            require("nurl.app.client").send(view.handle.request, {
                 display = {
                     win = view.win,
-                    -- Focus the active buffer after resending request.
-                    -- Useful to run tests again.
-                    focus_buffer = focus_buffer,
+                    -- Keep the same part in front, such as to run the tests
+                    -- again.
+                    focus_buffer = view:type_of(
+                        vim.api.nvim_win_get_buf(view.win)
+                    ),
                 },
             })
         end
