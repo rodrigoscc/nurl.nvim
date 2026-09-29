@@ -4,6 +4,7 @@ local strings = require("nurl.utils.strings")
 local requests = require("nurl.core.request")
 local numbers = require("nurl.utils.numbers")
 local TextBuilder = require("nurl.ui.text_builder")
+local tables = require("nurl.utils.tables")
 
 local M = {}
 
@@ -203,7 +204,7 @@ function M.render(bufnr, handle)
 
         local is_first = true
 
-        for k, v in pairs(request.query) do
+        for k, v in tables.sorted_pairs(request.query) do
             if type(v) == "table" then
                 for _, value_item in ipairs(v) do
                     if type(value_item) == "string" then

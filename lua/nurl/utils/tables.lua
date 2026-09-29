@@ -39,4 +39,25 @@ function M.collect_value(tbl, key, new_value)
     return result
 end
 
+---Like pairs, in the order of the keys, so that the same table always gives
+---the same order.
+---@generic K, V
+---@param tbl table<K, V>
+---@return fun(): K, V
+function M.sorted_pairs(tbl)
+    local keys = vim.tbl_keys(tbl)
+    table.sort(keys, function(a, b)
+        return tostring(a) < tostring(b)
+    end)
+
+    local i = 0
+    return function()
+        i = i + 1
+        local key = keys[i]
+        if key ~= nil then
+            return key, tbl[key]
+        end
+    end
+end
+
 return M

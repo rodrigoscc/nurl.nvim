@@ -1,4 +1,5 @@
 local request_model = require("nurl.core.request")
+local tables = require("nurl.utils.tables")
 
 ---Text to show a request by, in pickers, previews and the winbar.
 local M = {}
@@ -12,7 +13,7 @@ local function with_query(url, query)
     end
 
     local items = {}
-    for k, v in pairs(query) do
+    for k, v in tables.sorted_pairs(query) do
         for _, value in ipairs(type(v) == "table" and v or { v }) do
             table.insert(items, k .. "=" .. value)
         end

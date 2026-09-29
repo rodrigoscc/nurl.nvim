@@ -2,6 +2,7 @@ local request_format = require("nurl.core.request_format")
 local config = require("nurl.config")
 local responses = require("nurl.core.response")
 local formatter = require("nurl.infra.formatter")
+local tables = require("nurl.utils.tables")
 
 local M = {}
 
@@ -25,7 +26,7 @@ end
 local function format_form_body(form)
     local lines = {}
 
-    for k, v in pairs(form) do
+    for k, v in tables.sorted_pairs(form) do
         table.insert(lines, k .. "=" .. v)
     end
 
@@ -37,7 +38,7 @@ end
 local function format_urlencoded_body(data)
     local parts = {}
 
-    for k, v in pairs(data) do
+    for k, v in tables.sorted_pairs(data) do
         table.insert(parts, k .. "=" .. v)
     end
 
@@ -99,7 +100,7 @@ function M.request_to_http_message(request)
         body = format_urlencoded_body(request.data_urlencode)
     end
 
-    for name, value in pairs(headers) do
+    for name, value in tables.sorted_pairs(headers) do
         if type(value) == "table" then
             for _, item in ipairs(value) do
                 table.insert(lines, name .. ": " .. item)

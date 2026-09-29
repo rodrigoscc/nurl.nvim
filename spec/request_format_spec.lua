@@ -31,6 +31,23 @@ describe("request format", function()
             )
         end)
 
+        it("sorts the query by name", function()
+            local query, expected = {}, {}
+            for byte = string.byte("a"), string.byte("z") do
+                local letter = string.char(byte)
+                query[letter] = byte
+                table.insert(expected, letter .. "=" .. byte)
+            end
+
+            assert.are.equal(
+                "https://example.org?" .. table.concat(expected, "&"),
+                request_format.full_url({
+                    url = "https://example.org",
+                    query = query,
+                })
+            )
+        end)
+
         it("leaves a URL without query alone", function()
             assert.are.equal(
                 "https://example.org",

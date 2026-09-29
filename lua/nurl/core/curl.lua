@@ -1,4 +1,5 @@
 local request_model = require("nurl.core.request")
+local tables = require("nurl.utils.tables")
 
 ---@class nurl.Curl
 ---@field args string[]
@@ -85,7 +86,7 @@ function Curl.build(request)
 
     if request.query then
         local query_items = {}
-        for k, v in pairs(request.query) do
+        for k, v in tables.sorted_pairs(request.query) do
             -- curl encodes the value after "=", but expects the name to be
             -- encoded already.
             local name = vim.uri_encode(tostring(k))
@@ -123,7 +124,7 @@ function Curl.build(request)
     elseif request.form then
         local form_items = {}
 
-        for k, v in pairs(request.form) do
+        for k, v in tables.sorted_pairs(request.form) do
             table.insert(form_items, k .. "=" .. v)
         end
 
@@ -134,7 +135,7 @@ function Curl.build(request)
     elseif request.data_urlencode then
         local data_items = {}
 
-        for k, v in pairs(request.data_urlencode) do
+        for k, v in tables.sorted_pairs(request.data_urlencode) do
             table.insert(data_items, k .. "=" .. v)
         end
 
@@ -144,7 +145,7 @@ function Curl.build(request)
         end
     end
 
-    for k, v in pairs(request.headers) do
+    for k, v in tables.sorted_pairs(request.headers) do
         if type(v) == "table" then
             for _, item in ipairs(v) do
                 local header = k .. ": " .. item

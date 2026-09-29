@@ -164,6 +164,45 @@ describe("requests", function()
     end)
 
     describe("build_curl", function()
+        it("sends headers, query and form fields sorted by name", function()
+            local letters = {}
+            for byte = string.byte("z"), string.byte("a"), -1 do
+                table.insert(letters, string.char(byte))
+            end
+            local fields = {}
+            for _, letter in ipairs(letters) do
+                fields[letter] = letter
+            end
+
+            local curl = Curl.build(requests.expand({
+                url = "https://example.com",
+                headers = fields,
+                query = fields,
+                form = fields,
+            }))
+
+            local function values(flag)
+                local found = {}
+                for i, arg in ipairs(curl.args) do
+                    if arg == flag then
+                        table.insert(found, curl.args[i + 1])
+                    end
+                end
+                return found
+            end
+
+            local sorted = vim.fn.reverse(letters)
+            assert.are.same(vim.tbl_map(function(l)
+                return l .. ": " .. l
+            end, sorted), values("--header"))
+            assert.are.same(vim.tbl_map(function(l)
+                return l .. "=" .. l
+            end, sorted), values("--url-query"))
+            assert.are.same(vim.tbl_map(function(l)
+                return l .. "=" .. l
+            end, sorted), values("--form"))
+        end)
+
         it("sends the query of a shorthand url as written", function()
             local url = "https://example.com?q=a%20b&x=1+2"
             local curl = Curl.build(requests.expand({ url }))

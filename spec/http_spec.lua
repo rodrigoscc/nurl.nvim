@@ -23,6 +23,21 @@ end
 
 describe("http", function()
     describe("request_to_http_message", function()
+        it("lists headers sorted by name", function()
+            local result = http.request_to_http_message({
+                method = "GET",
+                url = "https://example.org",
+                headers = { Zeta = "1", Alpha = "2", Mid = "3" },
+            })
+
+            assert.are.same({
+                "GET https://example.org",
+                "Alpha: 2",
+                "Mid: 3",
+                "Zeta: 1",
+            }, result)
+        end)
+
         it("formats simple GET request", function()
             local request = {
                 method = "GET",
