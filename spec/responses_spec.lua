@@ -1,5 +1,6 @@
 local responses = require("nurl.core.response")
 local Curl = require("nurl.core.curl")
+local certificate = require("nurl.core.certificate")
 
 -- The --write-out values in the order requests.build_curl asks for them.
 local METRICS = {
@@ -16,6 +17,8 @@ local METRICS = {
     "size_upload",
     "speed_download",
     "speed_upload",
+    "ssl_verify_result",
+    "num_certs",
 }
 
 ---Build curl's stdout and stderr for a request run with --include: every
@@ -332,6 +335,34 @@ describe("responses", function()
                 assert.are.equal("OK", result.reason_phrase)
                 assert.is_nil(result.headers["Proxy-Agent"])
                 assert.are.equal("hello", result.body)
+            end)
+        end)
+
+        describe("with a TLS certificate chain", function()
+            it("parses the chain and the verify result", function()
+                local stdout, metrics = curl_output(
+                    { { "HTTP/2 200" } },
+                    "hello",
+                    { num_certs = 1, ssl_verify_result = 18 }
+                )
+                local stderr = certificate.START
+                    .. "\nSubject:CN = example.com\n"
+                    .. certificate.END
+                    .. "\n"
+                    .. metrics
+
+                local result = responses.parse(stdout, stderr)
+
+                assert.are.equal(18, result.tls.verify_result)
+                assert.are.equal("CN = example.com", result.tls.certs[1].subject)
+                assert.are.equal("hello", result.body)
+            end)
+
+            it("has no TLS without certificates", function()
+                local result =
+                    responses.parse(curl_output({ { "HTTP/1.1 200 OK" } }, ""))
+
+                assert.is_nil(result.tls)
             end)
         end)
     end)

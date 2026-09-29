@@ -60,6 +60,27 @@ describe("history schema", function()
         assert.are.equal("GET", rows[1]:get_string(2))
     end)
 
+    it("adds the certificates to a database at version 1", function()
+        db = Db:new(path)
+        for _, sql in ipairs(schema.migrations[1]) do
+            db:exec(sql):close()
+        end
+        db:exec("PRAGMA user_version = 1"):close()
+        db:exec(
+            "INSERT INTO request_history (time, request_method) VALUES ('2026-09-26T10:00:00', 'GET')"
+        ):close()
+        db:close()
+
+        db = history.open(path)
+
+        assert.are.equal(#schema.migrations, schema.version(db))
+        local rows =
+            query("SELECT request_method, response_tls FROM request_history")
+        assert.are.equal(1, #rows)
+        assert.are.equal("GET", rows[1]:get_string(1))
+        assert.is_nil(rows[1]:get_string(2))
+    end)
+
     it("does nothing when already up to date", function()
         db = history.open(path)
         db:exec(

@@ -1,3 +1,4 @@
+local certificate = require("nurl.core.certificate")
 local tables = require("nurl.utils.tables")
 
 local M = {}
@@ -32,6 +33,7 @@ local M = {}
 ---@field time nurl.ResponseTime
 ---@field size nurl.ResponseSize
 ---@field speed nurl.ResponseSpeed
+---@field tls? nurl.ResponseTls nil for connections without TLS
 
 ---@param lines string[]
 ---@return table<string, string | string[]> headers
@@ -268,7 +270,7 @@ function M.parse(stdout, stderr)
 
     local metrics_line = vim.trim(stderr_lines[#stderr_lines])
 
-    local time_appconnect, time_connect, time_namelookup, time_pretransfer, time_redirect, time_starttransfer, time_total, size_download, size_header, size_request, size_upload, speed_download, speed_upload =
+    local time_appconnect, time_connect, time_namelookup, time_pretransfer, time_redirect, time_starttransfer, time_total, size_download, size_header, size_request, size_upload, speed_download, speed_upload, ssl_verify_result, num_certs =
         unpack(vim.iter(vim.split(metrics_line, ","))
             :map(function(value)
                 return tonumber(value)
@@ -304,6 +306,8 @@ function M.parse(stdout, stderr)
     local body_file = nil -- should be populated later
     local body = stdout:sub(size_header + 1)
 
+    local tls = certificate.parse(stderr, ssl_verify_result, num_certs)
+
     return {
         protocol = protocol,
         status_code = status_code,
@@ -331,6 +335,7 @@ function M.parse(stdout, stderr)
             speed_download = speed_download,
             speed_upload = speed_upload,
         },
+        tls = tls,
     }
 end
 

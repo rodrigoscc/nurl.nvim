@@ -166,6 +166,78 @@ function InfoBufferBuilder:muted_right(text)
     return self
 end
 
+local expiry_warning_days = 30
+
+---How long until the certificate expires, and how to highlight it.
+---@param expires_at? integer seconds since the epoch
+---@return string? text, string hl_group
+local function expiry(expires_at)
+    if expires_at == nil then
+        return nil, config.highlight.groups.info_value
+    end
+
+    local seconds = expires_at - os.time()
+    local days = math.floor(math.abs(seconds) / 86400)
+    local days_text = days == 1 and "1 day" or ("%d days"):format(days)
+
+    if seconds < 0 then
+        return "expired " .. days_text .. " ago",
+            config.highlight.groups.info_error
+    elseif days < expiry_warning_days then
+        return "in " .. days_text, config.highlight.groups.info_warning
+    end
+
+    return "in " .. days_text, config.highlight.groups.info_value
+end
+
+---@param builder InfoBufferBuilder
+---@param tls nurl.ResponseTls
+local function render_certificate(builder, tls)
+    builder:section("Certificate")
+
+    if tls.verify_reason then
+        builder:field(
+            "verify",
+            "not verified: " .. tls.verify_reason,
+            config.highlight.groups.info_error
+        )
+    else
+        builder:field("verify", "ok", config.highlight.groups.info_ok)
+    end
+
+    local cert = tls.certs[1]
+    if cert == nil then
+        return
+    end
+
+    if cert.subject then
+        builder:field("subject", cert.subject)
+    end
+    if cert.san then
+        builder:field("names", (cert.san:gsub("DNS:", "")))
+    end
+    if cert.issuer then
+        builder:field("issuer", cert.issuer)
+    end
+    if cert.start_date then
+        builder:field("valid from", cert.start_date)
+    end
+    if cert.expire_date then
+        local text, hl_group = expiry(cert.expires_at)
+        builder:field("expires", cert.expire_date, hl_group)
+        if text then
+            builder:muted_right(text)
+        end
+    end
+
+    if #tls.certs > 1 then
+        for i, chain_cert in ipairs(tls.certs) do
+            -- Without a label, the rest line up under the first.
+            builder:field(i == 1 and "chain" or "", chain_cert.common_name or "?")
+        end
+    end
+end
+
 ---Timing, size and speed of the request, with its URL and query.
 ---@param bufnr integer
 ---@param handle nurl.RequestHandle
@@ -255,6 +327,10 @@ function M.render(bufnr, handle)
             response.body_file,
             config.highlight.groups.info_url
         )
+    end
+
+    if response.tls then
+        render_certificate(builder, response.tls)
     end
 
     local time = response.time

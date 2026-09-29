@@ -1,5 +1,6 @@
 local requests = require("nurl.core.request")
 local Curl = require("nurl.core.curl")
+local certificate = require("nurl.core.certificate")
 
 describe("requests", function()
     describe("expand", function()
@@ -365,6 +366,22 @@ describe("requests", function()
             assert.is_true(has_include)
             assert.is_true(has_no_progress)
             assert.is_true(has_write_out)
+        end)
+
+        it("asks for the certificate chain before the metrics", function()
+            local curl = Curl.build({
+                url = "https://example.com",
+                method = "GET",
+                headers = {},
+            })
+
+            local write_out = curl.args[vim.fn.index(curl.args, "--write-out") + 2]
+
+            assert.matches(
+                "^%%{stderr}" .. vim.pesc(certificate.write_out()) .. "%%{time_appconnect}",
+                write_out
+            )
+            assert.matches("%%{ssl_verify_result},%%{num_certs}$", write_out)
         end)
 
         it("includes query params with --url-query flag", function()

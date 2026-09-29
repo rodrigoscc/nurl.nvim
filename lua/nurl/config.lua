@@ -123,6 +123,9 @@ local defaults = {
             info_query_key = "NurlInfoQueryKey",
             info_query_value = "NurlInfoQueryValue",
             info_separator = "NurlInfoSeparator",
+            info_ok = "NurlInfoOk",
+            info_warning = "NurlInfoWarning",
+            info_error = "NurlInfoError",
 
             info_method = "NurlInfoMethod",
 

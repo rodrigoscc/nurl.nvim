@@ -1,4 +1,5 @@
 local Curl = require("nurl.core.curl")
+local certificate = require("nurl.core.certificate")
 local requests = require("nurl.core.request")
 local tables = require("nurl.utils.tables")
 
@@ -54,6 +55,7 @@ M.INSERT_COLUMNS = {
     "curl_result_signal",
     "curl_result_stdout",
     "curl_result_stderr",
+    "response_tls",
 }
 
 ---The columns decode reads, in its order. The raw URL is only for searching.
@@ -139,7 +141,10 @@ function M.encode(handle)
         curl.result.code,
         curl.result.signal,
         curl.result.stdout,
-        curl.result.stderr,
+        -- The certificate chain takes several KB for each request, and is
+        -- saved parsed in response_tls.
+        curl.result.stderr and certificate.replace_chain(curl.result.stderr),
+        json(response.tls),
     }
 end
 
@@ -217,6 +222,7 @@ function M.decode(row)
             speed_download = row:get_number(29),
             speed_upload = row:get_number(30),
         },
+        tls = decode(36),
     }
 
     ---@type nurl.Curl

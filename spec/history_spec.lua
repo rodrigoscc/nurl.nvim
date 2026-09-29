@@ -456,6 +456,42 @@ INSERT INTO request_history (
         assert.are.same({ "1", "3" }, response.headers.a)
     end)
 
+    it("keeps the certificates and replaces their chain in stderr", function()
+        local certificate = require("nurl.core.certificate")
+        local request = completed_request(1)
+        request.response.tls = {
+            verify_result = 18,
+            verify_reason = "self-signed certificate",
+            certs = {
+                {
+                    subject = "CN = example.com",
+                    common_name = "example.com",
+                    expire_date = "Dec 25 22:56:35 2026 GMT",
+                    expires_at = 1798239395,
+                },
+            },
+        }
+        request.curl.result.stderr = certificate.START
+            .. "\nSubject:CN = example.com\n"
+            .. certificate.END
+            .. "\n0.1,0.2"
+        history.insert_history_entry(request)
+
+        local item = history.get(history.page({})[1].id)
+        assert.are.same(request.response.tls, item[3].tls)
+        assert.are.equal(
+            "[nurl removed the certificate chain (1 certificate) when saving to history]\n0.1,0.2",
+            item[4].result.stderr
+        )
+    end)
+
+    it("loads a response without certificates", function()
+        history.insert_history_entry(completed_request(1))
+
+        local item = history.get(history.page({})[1].id)
+        assert.is_nil(item[3].tls)
+    end)
+
     it("loads response headers saved without their order", function()
         insert(
             "2026-09-24T12:00:00",

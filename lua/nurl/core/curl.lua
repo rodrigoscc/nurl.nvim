@@ -1,3 +1,4 @@
+local certificate = require("nurl.core.certificate")
 local request_model = require("nurl.core.request")
 local tables = require("nurl.utils.tables")
 
@@ -165,7 +166,9 @@ function Curl.build(request)
     table.insert(args, "--write-out")
     table.insert(
         args,
-        "%{stderr}%{time_appconnect},%{time_connect},%{time_namelookup},%{time_pretransfer},%{time_redirect},%{time_starttransfer},%{time_total},%{size_download},%{size_header},%{size_request},%{size_upload},%{speed_download},%{speed_upload}"
+        "%{stderr}"
+            .. certificate.write_out()
+            .. "%{time_appconnect},%{time_connect},%{time_namelookup},%{time_pretransfer},%{time_redirect},%{time_starttransfer},%{time_total},%{size_download},%{size_header},%{size_request},%{size_upload},%{speed_download},%{speed_upload},%{ssl_verify_result},%{num_certs}"
     )
 
     if request.curl_args ~= nil then

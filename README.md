@@ -36,7 +36,7 @@ https://github.com/user-attachments/assets/7a96353a-066c-4b14-aaa7-be6d37ffb558
 ## Requirements
 
 - Neovim >= 0.11.0 (0.12 formats the JSON of `:Nurl lua_to_json`, which is on one line with unsorted keys on 0.11)
-- `curl` >= 7.87.0 in PATH
+- `curl` >= 7.88.0 in PATH
 - SQLite for the request history: nurl loads `libsqlite3.so` (`libsqlite3.dylib` on macOS, `sqlite3.dll` on Windows). On Debian and Ubuntu, it comes with `libsqlite3-dev`. Not needed with `history = { enabled = false }`.
 - [snacks.nvim](https://github.com/folke/snacks.nvim) or [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) (for pickers)
 - Optional: `jq` for JSON formatting, `stylua` for environments file formatting
@@ -664,6 +664,27 @@ Parsed HTTP response:
 ---@field time nurl.ResponseTime Timing breakdown
 ---@field size nurl.ResponseSize Size breakdown
 ---@field speed nurl.ResponseSpeed Speed metrics
+---@field tls? nurl.ResponseTls TLS certificates (nil without TLS)
+```
+
+### nurl.ResponseTls
+
+The certificate chain, shown in the info tab. Curl fills it with the OpenSSL, GnuTLS, Schannel and Secure Transport backends.
+
+```lua
+---@class nurl.ResponseTls
+---@field verify_result integer 0 when verified, otherwise the TLS backend's error code (seen with --insecure)
+---@field verify_reason? string Why it was not verified, nil when it was
+---@field certs nurl.Certificate[] The chain, starting with the server's certificate
+
+---@class nurl.Certificate
+---@field subject? string
+---@field common_name? string The subject's CN, or the whole subject without one
+---@field issuer? string
+---@field san? string Subject alternative names
+---@field start_date? string As the TLS backend formats it
+---@field expire_date? string As the TLS backend formats it
+---@field expires_at? integer Seconds since the epoch, nil if expire_date is in an unknown format
 ```
 
 ### nurl.ResponseTime
@@ -928,6 +949,9 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 | `NurlInfoQueryValue` | Query parameter values |
 | `NurlInfoSeparator` | Separators (?, &, =) |
 | `NurlInfoMethod` | HTTP method |
+| `NurlInfoOk` | Verified certificate |
+| `NurlInfoWarning` | Certificate expiring within 30 days |
+| `NurlInfoError` | Unverified or expired certificate |
 | `NurlHistoryTime` | History timestamp |
 | `NurlHistoryMethod` | History request method |
 | `NurlHistoryDuration` | History request duration |

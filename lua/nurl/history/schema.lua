@@ -52,6 +52,10 @@ M.migrations = {
 )]],
         [[CREATE INDEX IF NOT EXISTS idx_request_history_time ON request_history(time)]],
     },
+    -- 2: the TLS certificates of the response, as JSON.
+    {
+        [[ALTER TABLE request_history ADD COLUMN response_tls TEXT]],
+    },
 }
 
 ---@param db nurl.Db

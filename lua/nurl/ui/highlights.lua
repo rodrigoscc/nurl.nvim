@@ -24,6 +24,9 @@ M.highlights = {
     NurlInfoUrl = "@markup.link.url",
     NurlInfoQueryKey = "@property",
     NurlInfoQueryValue = "@string",
+    NurlInfoOk = "DiagnosticOk",
+    NurlInfoWarning = "DiagnosticWarn",
+    NurlInfoError = "DiagnosticError",
 
     NurlInfoMethod = "Function",
 
