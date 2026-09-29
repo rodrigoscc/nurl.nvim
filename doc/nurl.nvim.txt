@@ -1,5 +1,5 @@
 *nurl.nvim.txt*
-                        For Neovim >= 0.10.0    Last change: 2026 September 26
+                        For Neovim >= 0.10.0    Last change: 2026 September 29
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable,
 extensible.
@@ -18,6 +18,7 @@ https://github.com/user-attachments/assets/8fdfdc50-6086-411c-9fd0-482a5b913d4d
 - |nurl.nvim-commands|
 - |nurl.nvim-request-format|
 - |nurl.nvim-environments|
+- |nurl.nvim-trust|
 - |nurl.nvim-tests|
 - |nurl.nvim-hooks-and-callbacks|
 - |nurl.nvim-type-reference|
@@ -43,8 +44,9 @@ https://github.com/user-attachments/assets/8fdfdc50-6086-411c-9fd0-482a5b913d4d
 ==============================================================================
 3. Requirements                                       *nurl.nvim-requirements*
 
-- Neovim >= 0.10.0
-- `curl` in PATH
+- Neovim >= 0.11.0 (0.12 formats the JSON of `:Nurl lua_to_json`, which is on one line with unsorted keys on 0.11)
+- `curl` >= 7.87.0 in PATH
+- SQLite for the request history: nurl loads `libsqlite3.so` (`libsqlite3.dylib` on macOS, `sqlite3.dll` on Windows). On Debian and Ubuntu, it comes with `libsqlite3-dev`. Not needed with `history = { enabled = false }`.
 - snacks.nvim <https://github.com/folke/snacks.nvim> or telescope.nvim <https://github.com/nvim-telescope/telescope.nvim> (for pickers)
 - Optional: `jq` for JSON formatting, `stylua` for environments file formatting
 
@@ -143,6 +145,12 @@ Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
                                 table
 
   :'<,'>Nurl lua_to_json        Replace the selected Lua table with JSON
+
+  :Nurl trust [dir]             Trust the Lua files in a directory
+                                (default: the project’s .nurl)
+
+  :Nurl untrust [dir]           Ask again before running the Lua files in
+                                a directory
   -----------------------------------------------------------------------
 When using `%` or `<filepath>`, if the file contains only one request, the
 action runs immediately without opening a picker.
@@ -283,7 +291,7 @@ A request file returns a list of request tables:
             end, -- dynamic
 
             -- Query parameters (optional): table or function
-            -- Values are URI-encoded automatically. Use functions for dynamic values.
+            -- Names and values are URI-encoded automatically. Use functions for dynamic values.
             query = {
                 page = 1,
                 limit = 10,
@@ -342,7 +350,7 @@ URL FIELD DIFFERENCES         *nurl.nvim-request-format-url-field-differences*
 
 The shorthand `[1]` field and `url` field handle query parameters differently:
 
-- **Shorthand [1]**: Supports inline query parameters (e.g., `"https://api.example.com?foo=bar"`). Query params are extracted and merged with the `query` field.
+- **Shorthand [1]**: Supports inline query parameters (e.g., `"https://api.example.com?foo=bar"`). They are sent as written, so write them encoded, as in a URL copied from elsewhere. Parameters in the `query` field are added after them.
 - **url as table**: Parts are joined with `/`, so query params should go in the `query` field instead.
 
 
@@ -436,7 +444,23 @@ Switch the active environment with `:Nurl env`.
 
 
 ==============================================================================
-9. Tests                                                     *nurl.nvim-tests*
+9. Trust                                                     *nurl.nvim-trust*
+
+Request files and environments are Lua code, which runs with the same access as
+any plugin. So that opening a project you just cloned does not run its code,
+nurl asks the first time it would run the Lua files in a directory:
+
+- **Trust** runs them, now and in later sessions.
+- **Later** skips them until the next session.
+- **Never** skips them without asking again.
+
+One answer covers every file in the directory, such as a project’s `.nurl`.
+Use `:Nurl trust` and `:Nurl untrust` to change it later. A trusted directory
+stays trusted when its files change. Set `trust = false` to never ask.
+
+
+==============================================================================
+10. Tests                                                    *nurl.nvim-tests*
 
 Define assertions to validate responses. Results are displayed in the Test
 buffer tab.
@@ -512,7 +536,7 @@ The test tab indicator in the winbar turns red when any test fails.
 
 
 ==============================================================================
-10. Hooks and Callbacks                        *nurl.nvim-hooks-and-callbacks*
+11. Hooks and Callbacks                        *nurl.nvim-hooks-and-callbacks*
 
 Hooks let you run code before/after requests. They can be defined per-request
 or per-environment.
@@ -567,12 +591,14 @@ EXECUTION ORDER                *nurl.nvim-hooks-and-callbacks-execution-order*
 
 PRE_HOOK                              *nurl.nvim-hooks-and-callbacks-pre_hook*
 
-Called before sending. Must call `next()` to proceed.
+Called before sending. Call `next()` to send the request, or `cancel()` to
+decline it. A cancelled request runs the callback, but not the post hooks.
 
 >lua
     ---@param next fun() Call to continue the request
     ---@param input nurl.RequestInput
-    pre_hook = function(next, input)
+    ---@param cancel fun() Call to decline the request
+    pre_hook = function(next, input, cancel)
         -- input.request contains the expanded request
         -- Modify input.request fields if needed
         input.request.headers["X-Custom"] = "value"
@@ -608,12 +634,14 @@ Apply to all requests when an environment is active:
     return {
         production = {
             base_url = "https://prod.example.com",
-            pre_hook = function(next, input)
+            pre_hook = function(next, input, cancel)
                 vim.ui.select({ "Yes", "No" }, {
                     prompt = "Send to production?",
                 }, function(choice)
                     if choice == "Yes" then
                         next()
+                    else
+                        cancel()
                     end
                 end)
             end,
@@ -670,7 +698,7 @@ Useful for updating a response in place, like when resending a request.
 
 
 ==============================================================================
-11. Type Reference                                  *nurl.nvim-type-reference*
+12. Type Reference                                  *nurl.nvim-type-reference*
 
 
 NURL.REQUEST                           *nurl.nvim-type-reference-nurl.request*
@@ -690,7 +718,7 @@ The expanded request object (all functions resolved):
     ---@field data_urlencode? table      URL-encoded data
     ---@field curl_args? string[]        Extra curl flags
     ---@field save_history? boolean      Save request to history
-    ---@field pre_hook? fun(next: fun(), input: nurl.RequestInput)
+    ---@field pre_hook? fun(next: fun(), input: nurl.RequestInput, cancel: fun())
     ---@field post_hook? fun(out: nurl.RequestOut)
     ---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
 <
@@ -712,9 +740,10 @@ Passed to `post_hook` and `callback`:
 
 >lua
     ---@class nurl.RequestOut
+    ---@field status string "completed", "failed" or "cancelled"
     ---@field request nurl.Request The request that was sent
-    ---@field response? nurl.Response Parsed response (nil if curl failed)
-    ---@field curl nurl.Curl Curl execution details
+    ---@field response? nurl.Response Parsed response (nil if curl failed or a pre hook cancelled it)
+    ---@field curl? nurl.Curl Curl execution details (nil if a pre hook cancelled it)
     ---@field win? integer Response window id
 <
 
@@ -807,7 +836,7 @@ Methods:
   ---------------------------------------------------------------------------
 
 ==============================================================================
-12. API                                                        *nurl.nvim-api*
+13. API                                                        *nurl.nvim-api*
 
 >lua
     local Nurl = require("nurl")
@@ -826,6 +855,10 @@ Methods:
     -- Resend from history
     Nurl.resend_last_request() -- resend last
     Nurl.resend_last_request(-2) -- resend second to last
+
+    -- Request shown in a response buffer (nil elsewhere)
+    Nurl.get_request() -- current buffer
+    Nurl.get_request(bufnr)
 
     -- Environment
     Nurl.get_active_env() -- returns active env name or nil
@@ -848,7 +881,7 @@ Methods:
 
 
 ==============================================================================
-13. Configuration                                    *nurl.nvim-configuration*
+14. Configuration                                    *nurl.nvim-configuration*
 
 >lua
     require("nurl").setup({
@@ -860,6 +893,10 @@ Methods:
 
         -- Active environments per working directory file name (in dir)
         active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
+
+        -- Ask before running the Lua files of a directory (see Trust)
+        trust = true,
+        trust_file = vim.fn.stdpath("data") .. "/nurl/trust.json",
 
         -- History settings
         history = {
@@ -979,7 +1016,7 @@ Methods:
 
 
 ==============================================================================
-14. Winbar                                                  *nurl.nvim-winbar*
+15. Winbar                                                  *nurl.nvim-winbar*
 
 The response window includes a winbar. Use it in your own winbar:
 
@@ -992,7 +1029,7 @@ The response window includes a winbar. Use it in your own winbar:
 
 
 ==============================================================================
-15. Highlight Groups                              *nurl.nvim-highlight-groups*
+16. Highlight Groups                              *nurl.nvim-highlight-groups*
 
   -----------------------------------------------------------------------
   Group                    Description
@@ -1073,7 +1110,7 @@ The response window includes a winbar. Use it in your own winbar:
   -----------------------------------------------------------------------
 
 ==============================================================================
-16. Recipes                                                *nurl.nvim-recipes*
+17. Recipes                                                *nurl.nvim-recipes*
 
 
 1PASSWORD CLI FOR SECRETS        *nurl.nvim-recipes-1password-cli-for-secrets*
@@ -1249,16 +1286,15 @@ under the cursor:
 >lua
     local function super_gx()
         local cursor_url = vim.fn.expand("<cfile>")
-        if not vim.b.nurl_data then
+        local request = Nurl.get_request()
+        if not request then
             -- Default gx implementation if cursor isn't in a Nurl response buffer.
             vim.ui.open(cursor_url)
             return
         end
 
-        local nurl_data = vim.b.nurl_data
-
         -- Will send the same headers, since they may include authentication.
-        local orig_headers = nurl_data.request.headers
+        local orig_headers = request.headers
 
         if vim.v.count == 0 then
             -- Display response in the current window
