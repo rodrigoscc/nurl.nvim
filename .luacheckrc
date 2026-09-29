@@ -6,6 +6,7 @@ read_globals = {
 	"it",
 	"assert",
 	"Snacks",
+	"Nurl",
 }
 globals = {
 	"vim",

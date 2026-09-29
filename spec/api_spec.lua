@@ -1,4 +1,3 @@
-local RequestHandle = require("nurl.app.handle")
 local Curl = require("nurl.core.curl")
 
 describe("public API", function()
