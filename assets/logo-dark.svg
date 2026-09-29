@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>nurl.nvim</title>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M42 20 C28 20 30 32 30 44 V54 C30 60 26 64 18 64 C26 64 30 68 30 74 V84 C30 96 28 108 42 108" stroke="#8D9BFF" stroke-width="9"/>
+    <path d="M86 20 C100 20 98 32 98 44 V54 C98 60 102 64 110 64 C102 64 98 68 98 74 V84 C98 96 100 108 86 108" stroke="#8D9BFF" stroke-width="9"/>
+    <path d="M52 86 V58 A12 12 0 0 1 76 58 V86" stroke="#FFB938" stroke-width="11"/>
+  </g>
+</svg>
