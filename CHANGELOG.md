@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/rodrigoscc/nurl.nvim/compare/v1.0.0...v1.1.0) (2026-09-29)
+
+
+### Features
+
+* show the TLS certificate in the info tab ([e367274](https://github.com/rodrigoscc/nurl.nvim/commit/e3672748485aa4522c793b94494c6cd844ba9dec))
+* support bearer auth ([a4e9792](https://github.com/rodrigoscc/nurl.nvim/commit/a4e9792020d8b27eef3b20ed232170f0cb10c105))
+
+
+### Bug Fixes
+
+* show a curl command with newlines in the raw tab ([75774c0](https://github.com/rodrigoscc/nurl.nvim/commit/75774c02363ab830c480ce04f208dd5c7e741e35))
+
 ## [1.0.0](https://github.com/rodrigoscc/nurl.nvim/compare/v0.10.0...v1.0.0) (2026-09-29)
 
 
