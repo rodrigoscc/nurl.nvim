@@ -252,12 +252,13 @@ return {
             ["Accept"] = { "application/json", "text/plain" },
         },
 
-        -- Auth (optional)
+        -- Auth (optional): basic or bearer
         auth = {
             type = "basic",
             username = "user",
             password = "pass",
         },
+        auth = { type = "bearer", token = "token" },
 
         -- Body (optional, use only one)
         data = { key = "value" }, -- table: JSON encoded
@@ -607,7 +608,7 @@ The expanded request object (all functions resolved):
 ---@field query? table<string,any>   Query parameters (URI-encoded)
 ---@field title? string              Display name
 ---@field headers table<string,string|string[]>  Headers
----@field auth? nurl.BasicAuth       Auth configuration
+---@field auth? nurl.Auth            Auth configuration
 ---@field data? string|table         Request body
 ---@field form? table<string,string> Form data
 ---@field data_urlencode? table      URL-encoded data
@@ -640,13 +641,19 @@ Passed to `post_hook` and `callback`:
 ---@field win? integer Response window id
 ```
 
-### nurl.BasicAuth
+### nurl.Auth
 
 ```lua
+---@alias nurl.Auth nurl.BasicAuth | nurl.BearerAuth
+
 ---@class nurl.BasicAuth
 ---@field type "basic"
 ---@field username string
 ---@field password string
+
+---@class nurl.BearerAuth
+---@field type "bearer"
+---@field token string
 ```
 
 ### nurl.Response

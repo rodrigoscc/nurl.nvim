@@ -80,8 +80,11 @@ function Curl.build(request)
                     request.auth.password or ""
                 )
             )
+        elseif request.auth.type == "bearer" then
+            table.insert(args, "--oauth2-bearer")
+            table.insert(args, request.auth.token or "")
         else
-            error("Only basic auth is supported.")
+            error("Only basic and bearer auth are supported.")
         end
     end
 

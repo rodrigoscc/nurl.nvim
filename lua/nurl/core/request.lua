@@ -16,13 +16,19 @@ local variables = require("nurl.core.variables")
 ---@field username string
 ---@field password string
 
+---@class nurl.BearerAuth
+---@field type "bearer"
+---@field token string
+
+---@alias nurl.Auth nurl.BasicAuth | nurl.BearerAuth
+
 ---@class nurl.Request
 ---@field method string
 ---@field url string | (string | number)[]
 ---@field query? table<string, any>
 ---@field title? string
 ---@field headers table<string, string | string[]>
----@field auth? nurl.BasicAuth
+---@field auth? nurl.Auth
 ---@field data? string | table<string, any>
 ---@field form? table<string, string>
 ---@field data_urlencode? table<string, string>
@@ -39,7 +45,7 @@ local variables = require("nurl.core.variables")
 ---@field title? string | fun(): string
 ---@field method? string
 ---@field headers? table<string, string | string[]> | fun(): table<string, string | string[]>
----@field auth? nurl.BasicAuth | fun(): nurl.BasicAuth
+---@field auth? nurl.Auth | fun(): nurl.Auth
 ---@field data? string | table<string, any> | fun(): string | table<string, any>
 ---@field form? table<string, any> | fun(): table<string, any>
 ---@field data_urlencode? table<string, any> | fun(): table<string, any>

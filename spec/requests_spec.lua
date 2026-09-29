@@ -224,6 +224,18 @@ describe("requests", function()
             assert.are.equal("my%20key=a b", curl.args[i + 1])
         end)
 
+        it("sends a bearer token", function()
+            local curl = Curl.build(requests.expand({
+                url = "https://example.com",
+                auth = { type = "bearer", token = "abc" },
+            }))
+
+            local i = assert(vim.iter(ipairs(curl.args)):find(function(_, arg)
+                return arg == "--oauth2-bearer"
+            end))
+            assert.are.equal("abc", curl.args[i + 1])
+        end)
+
         it("builds basic curl command", function()
             local request = {
                 url = "https://example.com",
