@@ -1,5 +1,4 @@
 local requests = require("nurl.requests")
-local responses = require("nurl.responses")
 local config = require("nurl.config")
 local winbar = require("nurl.ui.winbar")
 local projects = require("nurl.projects")
@@ -11,9 +10,8 @@ local pickers = require("nurl.pickers")
 local variables = require("nurl.variables")
 local override = require("nurl.override")
 local helpers = require("nurl.helpers")
-local TestReport = require("nurl.test.report")
-local ctx = require("nurl.test.ctx")
-local RequestHandle = require("nurl.request_handle")
+local RequestHandle = require("nurl.app.handle")
+local runner = require("nurl.app.runner")
 local registry = require("nurl.registry")
 local convert = require("nurl.convert")
 
@@ -62,25 +60,6 @@ M.last_requests = Stack:new(5, {
 ---@param callback? fun(out: nurl.RequestOut)
 ---@return nurl.RequestHandle
 function M.send(request, opts_or_callback, callback)
-    local function run_pre_hook(hook, input, next)
-        if hook then
-            hook(next, input)
-        else
-            next()
-        end
-    end
-
-    local function run_post_hook(name, hook, out)
-        if not hook then
-            return
-        end
-
-        local ok, err = pcall(hook, out)
-        if not ok then
-            vim.notify(name .. " failed: " .. err, vim.log.levels.ERROR)
-        end
-    end
-
     local opts = {}
 
     if type(opts_or_callback) == "function" then
@@ -89,147 +68,60 @@ function M.send(request, opts_or_callback, callback)
         opts = opts_or_callback
     end
 
-    local response_window
-
     if opts.display ~= nil and opts.display == true then
         opts.display = {}
     end
 
-    local win = nil
+    local response_window
 
-    local expanded_request = requests.expand(request)
+    return runner.run(request, {
+        callback = callback,
+        on_start = function(handle)
+            registry:push({ handle = handle })
 
-    -- Request is already fully expanded here.
-    ---@cast expanded_request nurl.Request
+            if not opts.display then
+                return nil
+            end
 
-    ---@type nurl.RequestInput
-    local input = { request = expanded_request }
-
-    local handle = RequestHandle:new(expanded_request)
-
-    ---@type nurl.RegistryEntry
-    local entry = { handle = handle }
-
-    local function run_post_hooks(out)
-        run_post_hook("Request post hook", expanded_request.post_hook, out)
-        run_post_hook(
-            "Environment post hook",
-            environments.get_post_hook(),
-            out
-        )
-
-        if callback then
-            callback(out)
-        end
-    end
-
-    local function send_request()
-        registry:push(entry)
-
-        if opts.display then
             response_window = ResponseWindow:new({
                 win = opts.display.win,
                 handle_id = handle.id,
             })
-            win = response_window:open({
+            local win = response_window:open({
                 focus_buffer = opts.display.focus_buffer,
             })
-        end
 
-        -- Last request feature is targetted only to resend displayed requests
-        if opts.display then
-            M.last_requests:push({ request = expanded_request, win = win })
-        end
+            -- Last request feature is targetted only to resend displayed requests
+            M.last_requests:push({ request = handle.request, win = win })
 
-        local curl = requests.build_curl(expanded_request)
-
-        local curl_handle = curl:run(function(system_completed)
-            local response = nil
-
-            local curl_success = system_completed.code == 0
-                and system_completed.signal == 0
-            local curl_interrupted = system_completed.signal ~= 0
-
-            if curl_success then
-                response = responses.parse(
-                    system_completed.stdout,
-                    system_completed.stderr
-                )
-
-                if not responses.is_displayable(response) then
-                    response, curl = responses.move_body_to_file(response, curl)
-                end
+            return win
+        end,
+        on_complete = function(handle)
+            if response_window then
+                response_window:update()
+                response_window:on_buffers_unloaded(function()
+                    registry:remove(handle.id)
+                end)
+            else
+                registry:remove(handle.id)
             end
 
-            vim.schedule(function()
-                ---@type nurl.RequestOut
-                local out = {
-                    request = expanded_request,
-                    response = response,
-                    curl = curl,
-                    win = win,
-                    test_report = nil,
-                }
-
-                if expanded_request.test and curl_success then
-                    out.test_report = TestReport:new()
-                    local test_ctx = ctx.build_ctx(out.test_report)
-                    local ok, err =
-                        pcall(expanded_request.test, test_ctx, response)
-                    if not ok then
-                        out.test_report:error(err)
-                    end
+            if
+                handle.status == "completed"
+                and config.history.enabled
+                and handle.request.save_history ~= false
+            then
+                local status, error =
+                    pcall(history.insert_history_entry, handle)
+                if not status then
+                    vim.notify(
+                        ("Failed to save request in history: %s"):format(error),
+                        vim.log.levels.ERROR
+                    )
                 end
-
-                run_post_hooks(out)
-
-                if curl_interrupted then
-                    handle:_cancelled(out.response, out.curl, out.test_report)
-                elseif curl_success then
-                    handle:_resolve(out.response, out.curl, out.test_report)
-                else
-                    handle:_failed(out.response, out.curl, out.test_report)
-                end
-
-                if opts.display then
-                    response_window:update()
-                    response_window:on_buffers_unloaded(function()
-                        registry:remove(handle.id)
-                    end)
-                else
-                    registry:remove(handle.id)
-                end
-
-                local request_was_sent = curl_success
-                if
-                    request_was_sent
-                    and config.history.enabled
-                    and expanded_request.save_history ~= false
-                then
-                    local status, error =
-                        pcall(history.insert_history_entry, handle)
-                    if not status then
-                        vim.notify(
-                            ("Failed to save request in history: %s"):format(
-                                error
-                            ),
-                            vim.log.levels.ERROR
-                        )
-                    end
-                end
-            end)
-        end)
-
-        handle:_started(curl_handle.pid, win)
-    end
-
-    local function run_request_pre_hook()
-        run_pre_hook(expanded_request.pre_hook, input, send_request)
-    end
-
-    run_pre_hook(environments.get_pre_hook(), input, run_request_pre_hook)
-
-    return handle
+            end
+        end,
+    })
 end
 
 function M.resend_last_request(index, overrides)

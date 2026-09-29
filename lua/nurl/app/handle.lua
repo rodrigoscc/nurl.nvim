@@ -1,4 +1,4 @@
-local kill = require("nurl.kill")
+local process = require("nurl.infra.process")
 
 local _id = 0
 
@@ -133,7 +133,7 @@ end
 
 ---@param signame? string the signal to send to the curl pid. Default: "sigterm"
 function RequestHandle:cancel(signame)
-    kill(self.pid, signame)
+    process.kill(self.pid, signame)
 end
 
 return RequestHandle

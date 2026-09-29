@@ -10,19 +10,9 @@ function Curl:new(o)
     return o
 end
 
----@param on_exit fun(out: vim.SystemCompleted)
----@return vim.SystemObj
-function Curl:run(on_exit)
-    local cmd = { "curl" }
-
-    for _, k in ipairs(self.args) do
-        table.insert(cmd, k)
-    end
-
-    return vim.system(cmd, {}, function(out)
-        self.result = out
-        on_exit(out)
-    end)
+---@return string[]
+function Curl:cmd()
+    return vim.list_extend({ "curl" }, self.args)
 end
 
 function Curl:string()
