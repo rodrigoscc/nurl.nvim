@@ -1,8 +1,8 @@
-local buffers = require("nurl.ui.buffers")
+local buffers = require("nurl.ui.response_view.tabs")
 local actions = require("nurl.ui.response_view.actions")
 local winbar = require("nurl.ui.response_view.winbar")
 local SecondaryWindow = require("nurl.ui.response_view.secondary")
-local ElapsedTimeFloating = require("nurl.ui.elapsed_time")
+local ElapsedTimeFloating = require("nurl.ui.response_view.elapsed_time")
 local config = require("nurl.config")
 
 local M = {}

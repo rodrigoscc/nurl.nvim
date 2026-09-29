@@ -3,6 +3,7 @@ local highlights = require("nurl.ui.highlights")
 local strings = require("nurl.utils.strings")
 local requests = require("nurl.requests")
 local numbers = require("nurl.utils.numbers")
+local TextBuilder = require("nurl.ui.text_builder")
 
 local M = {}
 
@@ -36,58 +37,10 @@ local function round(value)
     return math.floor(value + 0.5)
 end
 
----@class InfoLine
----@field text string
----@field highlights {col_start: number, col_end: number, hl_group: string}[]
-
----@class InfoBufferBuilder
----@field lines InfoLine[]
----@field current_line number
-local InfoBufferBuilder = {}
-
-function InfoBufferBuilder:new()
-    local o = {
-        lines = {},
-        current_line = 0,
-    }
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
-
----@param text string
----@param hl_group? string
-function InfoBufferBuilder:append(text, hl_group)
-    if not self.lines[self.current_line + 1] then
-        self.lines[self.current_line + 1] = { text = "", highlights = {} }
-    end
-
-    local line = self.lines[self.current_line + 1]
-    local col_start = #line.text
-
-    line.text = line.text .. text
-
-    if hl_group then
-        table.insert(line.highlights, {
-            col_start = col_start,
-            col_end = col_start + #text,
-            hl_group = hl_group,
-        })
-    end
-
-    return self
-end
-
-function InfoBufferBuilder:newline()
-    self.current_line = self.current_line + 1
-    return self
-end
-
-function InfoBufferBuilder:blankline()
-    self:newline()
-    self.lines[self.current_line + 1] = { text = "", highlights = {} }
-    return self
-end
+---Builder with the helpers of the info layout.
+---@class InfoBufferBuilder: nurl.TextBuilder
+local InfoBufferBuilder = setmetatable({}, { __index = TextBuilder })
+InfoBufferBuilder.__index = InfoBufferBuilder
 
 function InfoBufferBuilder:indent()
     self:append("  ", nil)
@@ -212,33 +165,17 @@ function InfoBufferBuilder:muted_right(text)
     return self
 end
 
----@return string[], {line: number, col_start: number, col_end: number, hl_group: string}[]
-function InfoBufferBuilder:build()
-    local text_lines = {}
-    local all_highlights = {}
-
-    for i, line in ipairs(self.lines) do
-        table.insert(text_lines, line.text)
-
-        for _, hl in ipairs(line.highlights) do
-            table.insert(all_highlights, {
-                line = i - 1,
-                col_start = hl.col_start,
-                col_end = hl.col_end,
-                hl_group = hl.hl_group,
-            })
-        end
-    end
-
-    return text_lines, all_highlights
-end
-
+---Timing, size and speed of the request, with its URL and query.
 ---@param bufnr integer
----@param exec_datetime string
----@param request nurl.Request
----@param response nurl.Response
-function M.render(bufnr, exec_datetime, request, response)
-    local builder = InfoBufferBuilder:new()
+---@param handle nurl.RequestHandle
+function M.render(bufnr, handle)
+    local request, response = handle.request, handle.response
+    if response == nil then
+        return
+    end
+    local exec_datetime = handle.exec_datetime
+
+    local builder = InfoBufferBuilder:new() --[[@as InfoBufferBuilder]]
 
     local base_url = requests.build_url(request.url)
     base_url = strings.escape_percentage(base_url)
@@ -411,24 +348,8 @@ function M.render(bufnr, exec_datetime, request, response)
     builder:field("download", numbers.format_speed(speed.speed_download))
     builder:field("upload", numbers.format_speed(speed.speed_upload))
 
-    local lines, line_highlights = builder:build()
-
-    vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
-
-    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-    for _, hl in ipairs(line_highlights) do
-        vim.api.nvim_buf_set_extmark(
-            bufnr,
-            ns,
-            hl.line,
-            hl.col_start,
-            { end_col = hl.col_end, hl_group = hl.hl_group }
-        )
-    end
-
+    builder:render(bufnr, ns)
     vim.api.nvim_set_option_value("filetype", "", { buf = bufnr })
-    vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
 end
 
 return M

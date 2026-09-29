@@ -1,5 +1,6 @@
 local Curl = require("nurl.curl")
-local info_buffer = require("nurl.ui.info_buffer")
+local RequestHandle = require("nurl.app.handle")
+local info_tab = require("nurl.ui.response_view.tabs.info")
 
 describe("responses without timing or size values", function()
     before_each(function()
@@ -27,11 +28,13 @@ describe("responses without timing or size values", function()
 
     it("renders the info buffer", function()
         local bufnr = vim.api.nvim_create_buf(false, true)
-        info_buffer.render(
+        info_tab.render(
             bufnr,
-            "2026-09-26T10:00:00",
-            { method = "GET", url = "https://example.org", headers = {} },
-            response()
+            RequestHandle:rebuild(
+                "2026-09-26T10:00:00",
+                { method = "GET", url = "https://example.org", headers = {} },
+                response()
+            )
         )
 
         local text = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")

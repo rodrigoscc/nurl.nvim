@@ -1,78 +1,10 @@
 local config = require("nurl.config")
 local suites = require("nurl.test.suites")
+local TextBuilder = require("nurl.ui.text_builder")
 
 local M = {}
 
 local ns = vim.api.nvim_create_namespace("nurl.test")
-
----@class TestBufferBuilder
----@field lines {text: string, highlights: {col_start: number, col_end: number, hl_group: string}[]}[]
----@field current_line number
-local TestBufferBuilder = {}
-
-function TestBufferBuilder:new()
-    local o = {
-        lines = {},
-        current_line = 0,
-    }
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
-
----@param text string
----@param hl_group? string
-function TestBufferBuilder:append(text, hl_group)
-    if not self.lines[self.current_line + 1] then
-        self.lines[self.current_line + 1] = { text = "", highlights = {} }
-    end
-
-    local line = self.lines[self.current_line + 1]
-    local col_start = #line.text
-
-    line.text = line.text .. text
-
-    if hl_group then
-        table.insert(line.highlights, {
-            col_start = col_start,
-            col_end = col_start + #text,
-            hl_group = hl_group,
-        })
-    end
-
-    return self
-end
-
-function TestBufferBuilder:newline()
-    if not self.lines[self.current_line + 1] then
-        self.lines[self.current_line + 1] = { text = "", highlights = {} }
-    end
-
-    self.current_line = self.current_line + 1
-
-    return self
-end
-
----@return string[], {line: number, col_start: number, col_end: number, hl_group: string}[]
-function TestBufferBuilder:build()
-    local text_lines = {}
-    local all_highlights = {}
-
-    for i, line in ipairs(self.lines) do
-        table.insert(text_lines, line.text)
-
-        for _, hl in ipairs(line.highlights) do
-            table.insert(all_highlights, {
-                line = i - 1,
-                col_start = hl.col_start,
-                col_end = hl.col_end,
-                hl_group = hl.hl_group,
-            })
-        end
-    end
-
-    return text_lines, all_highlights
-end
 
 ---@param results (nurl.TestResult|nurl.TestSuite)[]
 ---@return number passed
@@ -155,7 +87,7 @@ local function flatten_results(results, breadcrumb, failures, errors)
     end
 end
 
----@param builder TestBufferBuilder
+---@param builder nurl.TextBuilder
 ---@param flattened nurl.FlattenedResult
 local function render_failure(builder, flattened)
     local result = flattened.result
@@ -208,7 +140,7 @@ local function render_failure(builder, flattened)
     end
 end
 
----@param builder TestBufferBuilder
+---@param builder nurl.TextBuilder
 ---@param flattened nurl.FlattenedResult
 local function render_error(builder, flattened)
     local result = flattened.result
@@ -227,29 +159,21 @@ local function render_error(builder, flattened)
     builder:append(result.error, config.highlight.groups.test_value)
 end
 
+---The results of the request's tests.
 ---@param bufnr integer
----@param test_report? nurl.TestReport
-function M.render(bufnr, test_report)
-    local builder = TestBufferBuilder:new()
+---@param handle nurl.RequestHandle
+function M.render(bufnr, handle)
+    if handle.response == nil then
+        return
+    end
+    local test_report = handle.test_report
+
+    local builder = TextBuilder:new()
 
     if test_report == nil then
         builder:append("No tests", "Comment")
 
-        local lines, highlights = builder:build()
-
-        vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
-        vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
-        vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-
-        for _, hl in ipairs(highlights) do
-            vim.api.nvim_buf_set_extmark(bufnr, ns, hl.line, hl.col_start, {
-                end_col = hl.col_end,
-                hl_group = hl.hl_group,
-            })
-        end
-
-        vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
-
+        builder:render(bufnr, ns)
         return
     end
 
@@ -258,21 +182,7 @@ function M.render(bufnr, test_report)
     if #results == 0 then
         builder:append("No tests", "Comment")
 
-        local lines, highlights = builder:build()
-
-        vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
-        vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
-        vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-
-        for _, hl in ipairs(highlights) do
-            vim.api.nvim_buf_set_extmark(bufnr, ns, hl.line, hl.col_start, {
-                end_col = hl.col_end,
-                hl_group = hl.hl_group,
-            })
-        end
-
-        vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
-
+        builder:render(bufnr, ns)
         return
     end
 
@@ -300,21 +210,7 @@ function M.render(bufnr, test_report)
         render_error(builder, flattened)
     end
 
-    local lines, highlights = builder:build()
-
-    vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
-
-    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-
-    for _, hl in ipairs(highlights) do
-        vim.api.nvim_buf_set_extmark(bufnr, ns, hl.line, hl.col_start, {
-            end_col = hl.col_end,
-            hl_group = hl.hl_group,
-        })
-    end
-
-    vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
+    builder:render(bufnr, ns)
 end
 
 return M
