@@ -9,8 +9,8 @@ function M.render(bufnr, handle)
         return
     end
 
-    local raw_lines = {}
-    table.insert(raw_lines, curl:string())
+    -- Arguments can span lines, such as a body with newlines.
+    local raw_lines = vim.split(curl:string(), "\n")
 
     if curl.result then
         if curl.result.stdout then
