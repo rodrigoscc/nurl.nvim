@@ -15,14 +15,29 @@ local function set_body_buffer(bufnr, content, file_type)
     vim.api.nvim_set_option_value("filetype", file_type, { buf = bufnr })
 end
 
+---@param bufnr integer
+---@param file string
 local function open_file_in_buffer(bufnr, file)
     if not vim.api.nvim_buf_is_valid(bufnr) then
         return
     end
-    local existing_buffer = vim.fn.bufnr(file)
-    if existing_buffer ~= -1 then
-        -- Specially important for when the user opens a request in history which buffers are still open.
-        vim.api.nvim_buf_delete(existing_buffer, { force = true })
+
+    if vim.api.nvim_buf_get_name(bufnr) ~= "" then
+        -- Tabs may be rendered again, and this buffer already shows the file:
+        -- it is created without a name and only named here.
+        return
+    end
+
+    if vim.fn.bufexists(file) == 1 then
+        -- Buffer names are unique, so this buffer cannot be named after the
+        -- file while another one is: another window showing the same response
+        -- from history, or the file opened by the user. Taking the name would
+        -- mean deleting that buffer, which closes the windows showing it, so
+        -- show where the body is instead.
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, {
+            "[Body saved to file: " .. file .. "]",
+        })
+        return
     end
 
     vim.api.nvim_buf_set_name(bufnr, file)

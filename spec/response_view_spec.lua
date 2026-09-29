@@ -160,3 +160,104 @@ describe("response view", function()
         assert.are.equal("", eval(plain))
     end)
 end)
+
+describe("response view with a body saved to a file", function()
+    local file
+
+    ---A completed request whose body was saved to the file.
+    ---@return nurl.RequestHandle
+    local function file_handle()
+        return RequestHandle:rebuild(
+            "2026-09-26T10:00:00",
+            { method = "GET", url = "https://example.org", headers = {} },
+            {
+                status_code = 200,
+                reason_phrase = "OK",
+                protocol = "HTTP/1.1",
+                headers = { ["Content-Type"] = "image/png" },
+                body = "",
+                body_file = file,
+                time = {},
+                size = {},
+                speed = {},
+            },
+            Curl:new({
+                args = {},
+                result = { code = 0, signal = 0, stdout = "", stderr = "" },
+            })
+        )
+    end
+
+    ---Open a view and wait for its body, which is rendered on the next loop.
+    ---@param opts? nurl.ResponseViewOpts
+    ---@return nurl.ResponseView
+    local function open(opts)
+        local view = ResponseView.open(file_handle(), opts)
+        vim.wait(50)
+        return view
+    end
+
+    ---@param bufnr integer
+    ---@return string[]
+    local function lines(bufnr)
+        return vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    end
+
+    before_each(function()
+        require("nurl").setup({ formatters = {} })
+        file = vim.fn.tempname() .. ".png"
+        vim.fn.writefile({ "png" }, file)
+    end)
+
+    after_each(function()
+        vim.cmd("silent! only")
+        vim.cmd.enew()
+        vim.cmd("silent! %bwipeout!")
+        vim.fn.delete(file)
+    end)
+
+    it("names the body buffer after the file", function()
+        local view = open()
+
+        -- Image previews such as Snacks.image find the file by this name.
+        assert.are.equal(file, vim.api.nvim_buf_get_name(view.buffers.body))
+    end)
+
+    it("keeps the body buffer when rendering it again", function()
+        local view = open()
+
+        view:update()
+        vim.wait(50)
+
+        assert.is_true(vim.api.nvim_buf_is_valid(view.buffers.body))
+        assert.is_true(vim.api.nvim_win_is_valid(view.win))
+        assert.are.equal(file, vim.api.nvim_buf_get_name(view.buffers.body))
+    end)
+
+    it("shows the path when another view already shows the file", function()
+        local first = open()
+        local second = open()
+
+        assert.is_true(vim.api.nvim_win_is_valid(first.win))
+        assert.are.equal(first.buffers.body, vim.api.nvim_win_get_buf(first.win))
+        assert.are.equal(file, vim.api.nvim_buf_get_name(first.buffers.body))
+        assert.are.same(
+            { "[Body saved to file: " .. file .. "]" },
+            lines(second.buffers.body)
+        )
+    end)
+
+    it("leaves a buffer the user opened on the file alone", function()
+        vim.cmd.edit(file)
+        local user_buf = vim.api.nvim_get_current_buf()
+
+        local view = open()
+
+        assert.is_true(vim.api.nvim_buf_is_valid(user_buf))
+        assert.are.equal(file, vim.api.nvim_buf_get_name(user_buf))
+        assert.are.same(
+            { "[Body saved to file: " .. file .. "]" },
+            lines(view.buffers.body)
+        )
+    end)
+end)
