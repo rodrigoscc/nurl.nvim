@@ -9,7 +9,51 @@
 
 HTTP client for Neovim. Requests in pure Lua. Programmable, composable, extensible.
 
+<!-- panvimdoc-ignore-start -->
+
 https://github.com/user-attachments/assets/7a96353a-066c-4b14-aaa7-be6d37ffb558
+
+<!-- panvimdoc-ignore-end -->
+
+nurl keeps your requests in Lua files inside your project, next to the code
+they call. A request is a Lua table, so any value can be computed when it is
+sent, secrets can come from your password manager, and requests can share
+helpers. The files live in your repository, so they are versioned and reviewed
+like the rest of your code.
+
+This request uses the active environment, asks for a name when it is sent, and
+checks the response:
+
+```lua
+-- .nurl/users.lua
+return {
+    {
+        title = "Create user",
+        url = { Nurl.env.var("base_url"), "users" },
+        method = "POST",
+        auth = { type = "bearer", token = Nurl.env.var("token") },
+        data = {
+            name = Nurl.lazy(function()
+                return vim.fn.input("Name: ")
+            end),
+            role = "admin",
+        },
+        test = function(ctx, response)
+            ctx.are.equal(201, response.status_code)
+            ctx.is_not_nil(vim.json.decode(response.body).id)
+        end,
+    },
+}
+```
+
+Send it with `:Nurl .` with the cursor on it. To change a field for one send,
+add an override:
+
+```vim
+:Nurl . data.role=viewer
+```
+
+<!-- panvimdoc-ignore-start -->
 
 ## Table of Contents
 
@@ -23,30 +67,56 @@ https://github.com/user-attachments/assets/7a96353a-066c-4b14-aaa7-be6d37ffb558
 - [Trust](#trust)
 - [Tests](#tests)
 - [Hooks and Callbacks](#hooks-and-callbacks)
-- [Type Reference](#type-reference)
+- [Recipes](#recipes)
 - [API](#api)
+- [Type Reference](#type-reference)
 - [Configuration](#configuration)
 - [Winbar](#winbar)
 - [Highlight Groups](#highlight-groups)
-- [Recipes](#recipes)
+
+<!-- panvimdoc-ignore-end -->
 
 ## Features
 
-- **Lua-based requests** - Define HTTP requests as Lua tables with full language support
-- **Environments** - Manage variables per environment (dev, staging, prod)
-- **Request history** - SQLite-backed history with full request/response data
-- **History explorer** - Paginated timeline with body filters and direct access to saved responses
-- **Response viewer** - Split window with body, request, headers, info, and raw curl output tabs
-- **Hooks** - Pre/post hooks per request, or per environment (applies to all requests when env is active)
-- **Picker integration** - Browse project requests with [snacks.nvim](https://github.com/folke/snacks.nvim) or [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+- Requests in Lua: each request is a Lua table, so values can be functions,
+  secrets can come from any command, and requests can share code.
+- Environments: variables per environment (dev, staging, prod), switched with
+  `:Nurl env`.
+- Tests: assertions on the response, with the results in a tab of the response
+  window.
+- Hooks: code that runs before and after a request, for one request or for
+  every request of an environment. Use them to refresh tokens, sign requests or
+  confirm before sending to production.
+- Overrides: change any field for one send, as in `:Nurl . data.id=42`.
+- Response viewer: the body, request, headers, info (timings and TLS
+  certificate), raw curl output and test results, in tabs.
+- History: every request and response saved in SQLite, with an explorer to
+  filter, open and resend them.
+- curl export: copy any request to the clipboard as a curl command with
+  `:Nurl yank`.
+- JSON conversion: turn pasted JSON into a Lua table and back with
+  `:Nurl json_to_lua` and `:Nurl lua_to_json`.
+- Trust: nurl asks before running the Lua files of a project you just cloned.
+- Scripting: send requests from Lua with `Nurl.send()`, then wait for or cancel
+  them.
+- Pickers: browse your requests with
+  [snacks.nvim](https://github.com/folke/snacks.nvim) or
+  [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim).
 
 ## Requirements
 
-- Neovim >= 0.11.0 (0.12 formats the JSON of `:Nurl lua_to_json`, which is on one line with unsorted keys on 0.11)
+- Neovim >= 0.11.0. On 0.11, `:Nurl lua_to_json` writes the JSON on one line
+  with unsorted keys; 0.12 indents and sorts it.
 - `curl` >= 7.88.0 in PATH
-- SQLite for the request history: nurl loads `libsqlite3.so` (`libsqlite3.dylib` on macOS, `sqlite3.dll` on Windows). On Debian and Ubuntu, it comes with `libsqlite3-dev`. Not needed with `history = { enabled = false }`.
-- [snacks.nvim](https://github.com/folke/snacks.nvim) or [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) (for pickers)
-- Optional: `jq` for JSON formatting, `stylua` for environments file formatting
+- SQLite for the request history: nurl loads `libsqlite3.so`
+  (`libsqlite3.dylib` on macOS, `sqlite3.dll` on Windows). On Debian and
+  Ubuntu, it comes with `libsqlite3-dev`. Not needed with
+  `history = { enabled = false }`.
+- [snacks.nvim](https://github.com/folke/snacks.nvim) or
+  [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) for the
+  pickers
+- Optional: `jq` to format JSON responses, `stylua` to format the environments
+  file
 
 ## Installation
 
@@ -90,6 +160,21 @@ return {
 ### 2. Run a request
 
 Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
+
+### 3. Read the response
+
+The response opens in a window on the right, with tabs for the body, the
+request, the headers, info (timings and TLS certificate) and the raw curl
+output, plus the test results when the request has a test. Press `<Tab>` and
+`<S-Tab>` to switch tabs, `<C-r>` to send the request again, `<C-x>` to cancel
+it and `q` to close the window. In the body tab, `gi` shows the info tab beside
+it.
+
+### 4. Go further
+
+Add [environments](#environments) for base URLs and tokens, and
+[tests](#tests) to check responses. The [recipes](#recipes) show how to read
+secrets from 1Password, refresh OAuth2 tokens and sign requests.
 
 ## Commands
 
@@ -297,8 +382,12 @@ return {
 
 The shorthand `[1]` field and `url` field handle query parameters differently:
 
-- **Shorthand `[1]`**: Supports inline query parameters (e.g., `"https://api.example.com?foo=bar"`). They are sent as written, so write them encoded, as in a URL copied from elsewhere. Parameters in the `query` field are added after them.
-- **`url` as table**: Parts are joined with `/`, so query params should go in the `query` field instead.
+- Shorthand `[1]`: supports inline query parameters (e.g.,
+  `"https://api.example.com?foo=bar"`). They are sent as written, so write them
+  encoded, as in a URL copied from elsewhere. Parameters in the `query` field
+  are added after them.
+- `url` as table: parts are joined with `/`, so query params should go in the
+  `query` field instead.
 
 ### Dynamic Values
 
@@ -383,9 +472,9 @@ Request files and environments are Lua code, which runs with the same access as
 any plugin. So that opening a project you just cloned does not run its code,
 nurl asks the first time it would run the Lua files in a directory:
 
-- **Trust** runs them, now and in later sessions.
-- **Later** skips them until the next session.
-- **Never** skips them without asking again.
+- Trust runs them, now and in later sessions.
+- Later skips them until the next session.
+- Never skips them without asking again.
 
 One answer covers every file in the directory, such as a project's `.nurl`.
 Use `:Nurl trust` and `:Nurl untrust` to change it later. A trusted directory
@@ -445,9 +534,9 @@ Passed in: "Los Angeles"
 Expected: "New York"
 ```
 
-- **Successes**: Passing assertions (not shown individually)
-- **Failures**: Assertion mismatches with expected vs actual values
-- **Errors**: Exceptions thrown during test execution
+- Successes: passing assertions (not shown individually)
+- Failures: assertion mismatches with expected vs actual values
+- Errors: exceptions thrown during test execution
 
 The test tab indicator in the winbar turns red when any test fails.
 
@@ -601,384 +690,6 @@ Nurl.send(request, {
 ```
 
 Useful for updating a response in place, like when resending a request.
-
-## Type Reference
-
-### nurl.Request
-
-The expanded request object (all functions resolved):
-
-```lua
----@class nurl.Request
----@field method string              HTTP method (GET, POST, etc.)
----@field url string                 Full URL
----@field query? table<string,any>   Query parameters (URI-encoded)
----@field title? string              Display name
----@field headers table<string,string|string[]>  Headers
----@field auth? nurl.Auth            Auth configuration
----@field data? string|table         Request body
----@field form? table<string,string> Form data
----@field data_urlencode? table      URL-encoded data
----@field curl_args? string[]        Extra curl flags
----@field save_history? boolean      Save request to history
----@field pre_hook? fun(next: fun(), input: nurl.RequestInput, cancel: fun())
----@field post_hook? fun(out: nurl.RequestOut)
----@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
-```
-
-### nurl.RequestInput
-
-Passed to `pre_hook`:
-
-```lua
----@class nurl.RequestInput
----@field request nurl.Request   The request about to be sent
-```
-
-### nurl.RequestOut
-
-Passed to `post_hook` and `callback`:
-
-```lua
----@class nurl.RequestOut
----@field status string "completed", "failed" or "cancelled" ("pending" or "started" from a wait that timed out)
----@field request nurl.Request The request that was sent
----@field response? nurl.Response Parsed response (nil if curl failed or a pre hook cancelled it)
----@field curl? nurl.Curl Curl execution details (nil if a pre hook cancelled it)
----@field win? integer Response window id
-```
-
-### nurl.Auth
-
-```lua
----@alias nurl.Auth nurl.BasicAuth | nurl.BearerAuth
-
----@class nurl.BasicAuth
----@field type "basic"
----@field username string
----@field password string
-
----@class nurl.BearerAuth
----@field type "bearer"
----@field token string
-```
-
-### nurl.Response
-
-Parsed HTTP response:
-
-```lua
----@class nurl.Response
----@field status_code integer HTTP status code
----@field reason_phrase string Status text (e.g., "OK")
----@field protocol string Protocol (e.g., "HTTP/2")
----@field headers table<string,string|string[]> Response headers
----@field body string Response body
----@field body_file? string Path if body saved to file
----@field time nurl.ResponseTime Timing breakdown
----@field size nurl.ResponseSize Size breakdown
----@field speed nurl.ResponseSpeed Speed metrics
----@field tls? nurl.ResponseTls TLS certificates (nil without TLS)
-```
-
-### nurl.ResponseTls
-
-The certificate chain, shown in the info tab. Curl fills it with the OpenSSL, GnuTLS, Schannel and Secure Transport backends.
-
-```lua
----@class nurl.ResponseTls
----@field verify_result integer 0 when verified, otherwise the TLS backend's error code (seen with --insecure)
----@field verify_reason? string Why it was not verified, nil when it was
----@field certs nurl.Certificate[] The chain, starting with the server's certificate
-
----@class nurl.Certificate
----@field subject? string
----@field common_name? string The subject's CN, or the whole subject without one
----@field issuer? string
----@field san? string Subject alternative names
----@field start_date? string As the TLS backend formats it
----@field expire_date? string As the TLS backend formats it
----@field expires_at? integer Seconds since the epoch, nil if expire_date is in an unknown format
-```
-
-### nurl.ResponseTime
-
-```lua
----@class nurl.ResponseTime
----@field time_total number Total time in seconds
----@field time_namelookup number DNS lookup time
----@field time_connect number TCP connect time
----@field time_appconnect number TLS handshake time
----@field time_pretransfer number Pre-transfer time
----@field time_starttransfer number Time to first byte
----@field time_redirect number Redirect time
-```
-
-### nurl.Curl
-
-Curl execution details:
-
-```lua
----@class nurl.Curl
----@field args string[] Curl arguments
----@field result? vim.SystemCompleted Execution result
----@field exec_datetime string Execution timestamp
----@field pid? integer Process ID
-```
-
-### nurl.RequestHandle
-
-Returned by `Nurl.send()` to control a running request:
-
-```lua
----@class nurl.RequestHandle
----@field id integer                Unique handle identifier
----@field request nurl.Request      The request being sent
----@field response? nurl.Response   Response (available after completion)
----@field curl? nurl.Curl           Curl details (available after completion)
----@field status string             "pending"|"started"|"completed"|"cancelled"|"failed"
-```
-
-Methods:
-
-| Method | Description |
-|--------|-------------|
-| `handle:wait(time?, interval?)` | Block until complete. Returns `nurl.RequestOut`. Optional timeout in ms. |
-| `handle:cancel(signame?)` | Cancel the request. Optional signal name (default: `"sigterm"`). |
-| `handle:is_done()` | Returns `true` if completed, cancelled, or failed. |
-| `handle:is_cancelled()` | Returns `true` if cancelled. |
-| `handle:is_failed()` | Returns `true` if failed. |
-
-## API
-
-```lua
-local Nurl = require("nurl")
-
--- Send a request programmatically (returns a handle)
-local handle = Nurl.send(request, opts?, callback?)
-local handle = Nurl.send(request, callback?) -- opts can be omitted
-
--- Wait for request to complete (blocks)
-local out = handle:wait()
-local out = handle:wait(5000) -- with timeout in ms
-
--- Cancel a running request
-handle:cancel()
-
--- Resend from history
-Nurl.resend_last_request() -- resend last
-Nurl.resend_last_request(-2) -- resend second to last
-
--- Request shown in a response buffer (nil elsewhere)
-Nurl.get_request() -- current buffer
-Nurl.get_request(bufnr)
-
--- Environment
-Nurl.get_active_env() -- returns active env name or nil
-Nurl.activate_env("production")
-Nurl.env.get("variable") -- get variable value
-Nurl.env.set("variable", val) -- set variable value
-Nurl.env.var("variable") -- get resolver function
-
--- Convert between JSON text and Lua table source
-Nurl.json_to_lua('{"id": 1}') -- "{\n    id = 1,\n}"
-Nurl.lua_to_json("{ id = 1 }") -- '{\n    "id": 1\n}'
-Nurl.json_to_lua(json, { indent = "  " }) -- custom indentation
-
--- Winbar components
-Nurl.winbar.status_code()
-Nurl.winbar.time()
-Nurl.winbar.tabs()
-Nurl.winbar.request_title()
-```
-
-## Configuration
-
-```lua
-require("nurl").setup({
-    -- Project directory for request files
-    dir = ".nurl",
-
-    -- Environments file name (in dir)
-    environments_file = "environments.lua",
-
-    -- Active environments per working directory file name (in dir)
-    active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
-
-    -- Ask before running the Lua files of a directory (see Trust)
-    trust = true,
-    trust_file = vim.fn.stdpath("data") .. "/nurl/trust.json",
-
-    -- History settings
-    history = {
-        enabled = true,
-        db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
-        -- Older entries and their saved response files are deleted
-        max_history_items = 1000000,
-    },
-
-    -- Directory for non-displayable response bodies (images, etc.)
-    responses_files_dir = vim.fn.stdpath("data") .. "/nurl/responses",
-
-    -- Response window config (see :help nvim_open_win)
-    win_config = { split = "right" },
-
-    -- Response formatters by filetype
-    formatters = {
-        json = {
-            cmd = { "jq", "--sort-keys", "--indent", "2" },
-            available = function()
-                return vim.fn.executable("jq") == 1
-            end,
-        },
-        lua = {
-            cmd = { "stylua", "-" },
-            available = function()
-                return vim.fn.executable("stylua") == 1
-            end,
-        },
-    },
-
-    -- Buffer keymaps
-    buffers = {
-        {
-            "body",
-            keys = {
-                ["<Tab>"] = "next_buffer",
-                ["<S-Tab>"] = "previous_buffer",
-                ["<C-r>"] = "rerun",
-                ["<C-x>"] = "cancel",
-                gi = { "toggle_secondary", opts = { buffer = "info" } },
-                q = "close",
-            },
-        },
-        {
-            "request",
-            keys = {
-                ["<Tab>"] = "next_buffer",
-                ["<S-Tab>"] = "previous_buffer",
-                ["<C-r>"] = "rerun",
-                ["<C-x>"] = "cancel",
-                q = "close",
-            },
-        },
-        {
-            "headers",
-            keys = {
-                ["<Tab>"] = "next_buffer",
-                ["<S-Tab>"] = "previous_buffer",
-                ["<C-r>"] = "rerun",
-                ["<C-x>"] = "cancel",
-                q = "close",
-            },
-        },
-        {
-            "info",
-            keys = {
-                ["<Tab>"] = "next_buffer",
-                ["<S-Tab>"] = "previous_buffer",
-                ["<C-r>"] = "rerun",
-                ["<C-x>"] = "cancel",
-                q = "close",
-            },
-        },
-        {
-            "raw",
-            keys = {
-                ["<Tab>"] = "next_buffer",
-                ["<S-Tab>"] = "previous_buffer",
-                ["<C-r>"] = "rerun",
-                ["<C-x>"] = "cancel",
-                q = "close",
-            },
-        },
-        {
-            "test",
-            keys = {
-                ["<Tab>"] = "next_buffer",
-                ["<S-Tab>"] = "previous_buffer",
-                ["<C-r>"] = "rerun",
-                ["<C-x>"] = "cancel",
-                q = "close",
-            },
-        },
-    },
-
-    highlight = {
-        groups = {
-            spinner = "NurlSpinner",
-            elapsed_time = "NurlElapsedTime",
-            winbar_title = "NurlWinbarTitle",
-            winbar_tab_active = "NurlWinbarTabActive",
-            winbar_tab_inactive = "NurlWinbarTabInactive",
-            winbar_loading = "NurlWinbarLoading",
-            winbar_time = "NurlWinbarTime",
-            winbar_warning = "NurlWinbarWarning",
-            winbar_error = "NurlWinbarError",
-            status = "NurlStatus",
-            status_success = "NurlStatusSuccess",
-            status_redirect = "NurlStatusRedirect",
-            status_client_error = "NurlStatusClientError",
-            status_server_error = "NurlStatusServerError",
-        },
-    },
-})
-```
-
-## Winbar
-
-The response window includes a winbar. Use it in your own winbar:
-
-```lua
-vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
-    .. "%<%{%v:lua.Nurl.winbar.request_title()%}"
-    .. "%{%v:lua.Nurl.winbar.time()%}"
-    .. " %=%{%v:lua.Nurl.winbar.tabs()%}"
-```
-
-## Highlight Groups
-
-| Group | Description |
-|-------|-------------|
-| `NurlStatus` | 1xx status codes, everywhere status codes are shown |
-| `NurlStatusSuccess` | 2xx status codes |
-| `NurlStatusRedirect` | 3xx status codes |
-| `NurlStatusClientError` | 4xx status codes |
-| `NurlStatusServerError` | 5xx status codes |
-| `NurlSpinner` | Loading spinner |
-| `NurlElapsedTime` | Elapsed time display |
-| `NurlWinbarTitle` | Request title in winbar |
-| `NurlWinbarTabActive` | Active tab |
-| `NurlWinbarTabInactive` | Inactive tab |
-| `NurlWinbarLoading` | Loading state |
-| `NurlWinbarTime` | Response time |
-| `NurlWinbarWarning` | Warning messages |
-| `NurlWinbarError` | Error messages |
-| `NurlInfoIcon` | Section icons in info buffer |
-| `NurlInfoLabel` | Field labels in info buffer |
-| `NurlInfoValue` | Field values in info buffer |
-| `NurlInfoHighlight` | Highlighted values (e.g., total time) |
-| `NurlInfoUrl` | URL values |
-| `NurlInfoQueryKey` | Query parameter keys |
-| `NurlInfoQueryValue` | Query parameter values |
-| `NurlInfoSeparator` | Separators (?, &, =) |
-| `NurlInfoMethod` | HTTP method |
-| `NurlInfoOk` | Verified certificate |
-| `NurlInfoWarning` | Certificate expiring within 30 days |
-| `NurlInfoError` | Unverified or expired certificate |
-| `NurlHistoryTime` | History timestamp |
-| `NurlHistoryMethod` | History request method |
-| `NurlHistoryDuration` | History request duration |
-| `NurlHistoryTitle` | History request title |
-| `NurlHistoryUrl` | History request URL |
-| `NurlHistoryMatch` | URL/title filter matches in history |
-| `NurlTestPass` | Passing test count |
-| `NurlTestFail` | Failing test count, "Failure" header, and the Test tab when tests fail |
-| `NurlTestError` | Error count and "Error" header |
-| `NurlTestLabel` | "Passed in:" and "Expected:" labels |
-| `NurlTestValueActual` | Actual values (diff delete style) |
-| `NurlTestValueExpected` | Expected values (diff add style) |
-| `NurlTestSuiteName` | Test suite breadcrumb |
 
 ## Recipes
 
@@ -1176,3 +887,381 @@ vim.opt.isfname:append("&")
 
 vim.keymap.set("n", "gx", super_gx, { desc = "Super gx" })
 ```
+
+## API
+
+```lua
+local Nurl = require("nurl")
+
+-- Send a request programmatically (returns a handle)
+local handle = Nurl.send(request, opts?, callback?)
+local handle = Nurl.send(request, callback?) -- opts can be omitted
+
+-- Wait for request to complete (blocks)
+local out = handle:wait()
+local out = handle:wait(5000) -- with timeout in ms
+
+-- Cancel a running request
+handle:cancel()
+
+-- Resend from history
+Nurl.resend_last_request() -- resend last
+Nurl.resend_last_request(-2) -- resend second to last
+
+-- Request shown in a response buffer (nil elsewhere)
+Nurl.get_request() -- current buffer
+Nurl.get_request(bufnr)
+
+-- Environment
+Nurl.get_active_env() -- returns active env name or nil
+Nurl.activate_env("production")
+Nurl.env.get("variable") -- get variable value
+Nurl.env.set("variable", val) -- set variable value
+Nurl.env.var("variable") -- get resolver function
+
+-- Convert between JSON text and Lua table source
+Nurl.json_to_lua('{"id": 1}') -- "{\n    id = 1,\n}"
+Nurl.lua_to_json("{ id = 1 }") -- '{\n    "id": 1\n}'
+Nurl.json_to_lua(json, { indent = "  " }) -- custom indentation
+
+-- Winbar components
+Nurl.winbar.status_code()
+Nurl.winbar.time()
+Nurl.winbar.tabs()
+Nurl.winbar.request_title()
+```
+
+## Type Reference
+
+### nurl.Request
+
+The expanded request object (all functions resolved):
+
+```lua
+---@class nurl.Request
+---@field method string              HTTP method (GET, POST, etc.)
+---@field url string                 Full URL
+---@field query? table<string,any>   Query parameters (URI-encoded)
+---@field title? string              Display name
+---@field headers table<string,string|string[]>  Headers
+---@field auth? nurl.Auth            Auth configuration
+---@field data? string|table         Request body
+---@field form? table<string,string> Form data
+---@field data_urlencode? table      URL-encoded data
+---@field curl_args? string[]        Extra curl flags
+---@field save_history? boolean      Save request to history
+---@field pre_hook? fun(next: fun(), input: nurl.RequestInput, cancel: fun())
+---@field post_hook? fun(out: nurl.RequestOut)
+---@field test? fun(ctx: nurl.TestContext, response: nurl.Response)
+```
+
+### nurl.RequestInput
+
+Passed to `pre_hook`:
+
+```lua
+---@class nurl.RequestInput
+---@field request nurl.Request   The request about to be sent
+```
+
+### nurl.RequestOut
+
+Passed to `post_hook` and `callback`:
+
+```lua
+---@class nurl.RequestOut
+---@field status string "completed", "failed" or "cancelled" ("pending" or "started" from a wait that timed out)
+---@field request nurl.Request The request that was sent
+---@field response? nurl.Response Parsed response (nil if curl failed or a pre hook cancelled it)
+---@field curl? nurl.Curl Curl execution details (nil if a pre hook cancelled it)
+---@field win? integer Response window id
+```
+
+### nurl.Auth
+
+```lua
+---@alias nurl.Auth nurl.BasicAuth | nurl.BearerAuth
+
+---@class nurl.BasicAuth
+---@field type "basic"
+---@field username string
+---@field password string
+
+---@class nurl.BearerAuth
+---@field type "bearer"
+---@field token string
+```
+
+### nurl.Response
+
+Parsed HTTP response:
+
+```lua
+---@class nurl.Response
+---@field status_code integer HTTP status code
+---@field reason_phrase string Status text (e.g., "OK")
+---@field protocol string Protocol (e.g., "HTTP/2")
+---@field headers table<string,string|string[]> Response headers
+---@field body string Response body
+---@field body_file? string Path if body saved to file
+---@field time nurl.ResponseTime Timing breakdown
+---@field size nurl.ResponseSize Size breakdown
+---@field speed nurl.ResponseSpeed Speed metrics
+---@field tls? nurl.ResponseTls TLS certificates (nil without TLS)
+```
+
+### nurl.ResponseTls
+
+The certificate chain, shown in the info tab. Curl fills it with the OpenSSL, GnuTLS, Schannel and Secure Transport backends.
+
+```lua
+---@class nurl.ResponseTls
+---@field verify_result integer 0 when verified, otherwise the TLS backend's error code (seen with --insecure)
+---@field verify_reason? string Why it was not verified, nil when it was
+---@field certs nurl.Certificate[] The chain, starting with the server's certificate
+
+---@class nurl.Certificate
+---@field subject? string
+---@field common_name? string The subject's CN, or the whole subject without one
+---@field issuer? string
+---@field san? string Subject alternative names
+---@field start_date? string As the TLS backend formats it
+---@field expire_date? string As the TLS backend formats it
+---@field expires_at? integer Seconds since the epoch, nil if expire_date is in an unknown format
+```
+
+### nurl.ResponseTime
+
+```lua
+---@class nurl.ResponseTime
+---@field time_total number Total time in seconds
+---@field time_namelookup number DNS lookup time
+---@field time_connect number TCP connect time
+---@field time_appconnect number TLS handshake time
+---@field time_pretransfer number Pre-transfer time
+---@field time_starttransfer number Time to first byte
+---@field time_redirect number Redirect time
+```
+
+### nurl.Curl
+
+Curl execution details:
+
+```lua
+---@class nurl.Curl
+---@field args string[] Curl arguments
+---@field result? vim.SystemCompleted Execution result
+---@field exec_datetime string Execution timestamp
+---@field pid? integer Process ID
+```
+
+### nurl.RequestHandle
+
+Returned by `Nurl.send()` to control a running request:
+
+```lua
+---@class nurl.RequestHandle
+---@field id integer                Unique handle identifier
+---@field request nurl.Request      The request being sent
+---@field response? nurl.Response   Response (available after completion)
+---@field curl? nurl.Curl           Curl details (available after completion)
+---@field status string             "pending"|"started"|"completed"|"cancelled"|"failed"
+```
+
+Methods:
+
+| Method | Description |
+|--------|-------------|
+| `handle:wait(time?, interval?)` | Block until complete. Returns `nurl.RequestOut`. Optional timeout in ms. |
+| `handle:cancel(signame?)` | Cancel the request. Optional signal name (default: `"sigterm"`). |
+| `handle:is_done()` | Returns `true` if completed, cancelled, or failed. |
+| `handle:is_cancelled()` | Returns `true` if cancelled. |
+| `handle:is_failed()` | Returns `true` if failed. |
+
+## Configuration
+
+```lua
+require("nurl").setup({
+    -- Project directory for request files
+    dir = ".nurl",
+
+    -- Environments file name (in dir)
+    environments_file = "environments.lua",
+
+    -- Active environments per working directory file name (in dir)
+    active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
+
+    -- Ask before running the Lua files of a directory (see Trust)
+    trust = true,
+    trust_file = vim.fn.stdpath("data") .. "/nurl/trust.json",
+
+    -- History settings
+    history = {
+        enabled = true,
+        db_file = vim.fn.stdpath("data") .. "/nurl/history.sqlite3",
+        -- Older entries and their saved response files are deleted
+        max_history_items = 1000000,
+    },
+
+    -- Directory for non-displayable response bodies (images, etc.)
+    responses_files_dir = vim.fn.stdpath("data") .. "/nurl/responses",
+
+    -- Response window config (see :help nvim_open_win)
+    win_config = { split = "right" },
+
+    -- Response formatters by filetype
+    formatters = {
+        json = {
+            cmd = { "jq", "--sort-keys", "--indent", "2" },
+            available = function()
+                return vim.fn.executable("jq") == 1
+            end,
+        },
+        lua = {
+            cmd = { "stylua", "-" },
+            available = function()
+                return vim.fn.executable("stylua") == 1
+            end,
+        },
+    },
+
+    -- Buffer keymaps
+    buffers = {
+        {
+            "body",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                gi = { "toggle_secondary", opts = { buffer = "info" } },
+                q = "close",
+            },
+        },
+        {
+            "request",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
+            },
+        },
+        {
+            "headers",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
+            },
+        },
+        {
+            "info",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
+            },
+        },
+        {
+            "raw",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
+            },
+        },
+        {
+            "test",
+            keys = {
+                ["<Tab>"] = "next_buffer",
+                ["<S-Tab>"] = "previous_buffer",
+                ["<C-r>"] = "rerun",
+                ["<C-x>"] = "cancel",
+                q = "close",
+            },
+        },
+    },
+
+    highlight = {
+        groups = {
+            spinner = "NurlSpinner",
+            elapsed_time = "NurlElapsedTime",
+            winbar_title = "NurlWinbarTitle",
+            winbar_tab_active = "NurlWinbarTabActive",
+            winbar_tab_inactive = "NurlWinbarTabInactive",
+            winbar_loading = "NurlWinbarLoading",
+            winbar_time = "NurlWinbarTime",
+            winbar_warning = "NurlWinbarWarning",
+            winbar_error = "NurlWinbarError",
+            status = "NurlStatus",
+            status_success = "NurlStatusSuccess",
+            status_redirect = "NurlStatusRedirect",
+            status_client_error = "NurlStatusClientError",
+            status_server_error = "NurlStatusServerError",
+        },
+    },
+})
+```
+
+## Winbar
+
+The response window includes a winbar. Use it in your own winbar:
+
+```lua
+vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
+    .. "%<%{%v:lua.Nurl.winbar.request_title()%}"
+    .. "%{%v:lua.Nurl.winbar.time()%}"
+    .. " %=%{%v:lua.Nurl.winbar.tabs()%}"
+```
+
+## Highlight Groups
+
+| Group | Description |
+|-------|-------------|
+| `NurlStatus` | 1xx status codes, everywhere status codes are shown |
+| `NurlStatusSuccess` | 2xx status codes |
+| `NurlStatusRedirect` | 3xx status codes |
+| `NurlStatusClientError` | 4xx status codes |
+| `NurlStatusServerError` | 5xx status codes |
+| `NurlSpinner` | Loading spinner |
+| `NurlElapsedTime` | Elapsed time display |
+| `NurlWinbarTitle` | Request title in winbar |
+| `NurlWinbarTabActive` | Active tab |
+| `NurlWinbarTabInactive` | Inactive tab |
+| `NurlWinbarLoading` | Loading state |
+| `NurlWinbarTime` | Response time |
+| `NurlWinbarWarning` | Warning messages |
+| `NurlWinbarError` | Error messages |
+| `NurlInfoIcon` | Section icons in info buffer |
+| `NurlInfoLabel` | Field labels in info buffer |
+| `NurlInfoValue` | Field values in info buffer |
+| `NurlInfoHighlight` | Highlighted values (e.g., total time) |
+| `NurlInfoUrl` | URL values |
+| `NurlInfoQueryKey` | Query parameter keys |
+| `NurlInfoQueryValue` | Query parameter values |
+| `NurlInfoSeparator` | Separators (?, &, =) |
+| `NurlInfoMethod` | HTTP method |
+| `NurlInfoOk` | Verified certificate |
+| `NurlInfoWarning` | Certificate expiring within 30 days |
+| `NurlInfoError` | Unverified or expired certificate |
+| `NurlHistoryTime` | History timestamp |
+| `NurlHistoryMethod` | History request method |
+| `NurlHistoryDuration` | History request duration |
+| `NurlHistoryTitle` | History request title |
+| `NurlHistoryUrl` | History request URL |
+| `NurlHistoryMatch` | URL/title filter matches in history |
+| `NurlTestPass` | Passing test count |
+| `NurlTestFail` | Failing test count, "Failure" header, and the Test tab when tests fail |
+| `NurlTestError` | Error count and "Error" header |
+| `NurlTestLabel` | "Passed in:" and "Expected:" labels |
+| `NurlTestValueActual` | Actual values (diff delete style) |
+| `NurlTestValueExpected` | Expected values (diff add style) |
+| `NurlTestSuiteName` | Test suite breadcrumb |
