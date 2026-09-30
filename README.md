@@ -100,8 +100,9 @@ add an override:
 - Scripting: send requests from Lua with `Nurl.send()`, then wait for or cancel
   them.
 - Pickers: browse your requests with
-  [snacks.nvim](https://github.com/folke/snacks.nvim) or
-  [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim).
+  [snacks.nvim](https://github.com/folke/snacks.nvim),
+  [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) or
+  [mini.pick](https://github.com/nvim-mini/mini.pick).
 
 ## Requirements
 
@@ -112,9 +113,9 @@ add an override:
   (`libsqlite3.dylib` on macOS, `sqlite3.dll` on Windows). On Debian and
   Ubuntu, it comes with `libsqlite3-dev`. Not needed with
   `history = { enabled = false }`.
-- [snacks.nvim](https://github.com/folke/snacks.nvim) or
-  [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) for the
-  pickers
+- [snacks.nvim](https://github.com/folke/snacks.nvim),
+  [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) or
+  [mini.pick](https://github.com/nvim-mini/mini.pick) for the pickers
 - Optional: `jq` to format JSON responses, `stylua` to format the environments
   file
 
@@ -126,7 +127,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 {
     "rodrigoscc/nurl.nvim",
     version = "*",
-    dependencies = { "folke/snacks.nvim" }, -- or telescope.nvim
+    dependencies = { "folke/snacks.nvim" }, -- or telescope.nvim, mini.pick
     opts = {},
 }
 ```

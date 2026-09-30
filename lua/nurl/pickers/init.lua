@@ -5,6 +5,7 @@ local M = {}
 local pickers_interfaces = {
     { module = "snacks", interface = "nurl.pickers.snacks" },
     { module = "telescope", interface = "nurl.pickers.telescope" },
+    { module = "mini.pick", interface = "nurl.pickers.mini" },
 }
 
 local function find_picker_interface()
