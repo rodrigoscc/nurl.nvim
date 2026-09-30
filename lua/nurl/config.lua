@@ -11,6 +11,10 @@ local defaults = {
     ---@type boolean
     trust = true,
     trust_file = vim.fn.stdpath("data") .. "/nurl/trust.json",
+    ---The picker to use. Without one, the first installed picker is used, in
+    ---this order.
+    ---@type "snacks" | "telescope" | "mini" | nil
+    picker = nil,
     responses_files_dir = vim.fn.stdpath("data") .. "/nurl/responses_files",
     history = {
         ---@type boolean

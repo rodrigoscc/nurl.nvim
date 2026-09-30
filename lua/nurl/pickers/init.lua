@@ -1,19 +1,35 @@
+local config = require("nurl.config")
 local items = require("nurl.pickers.items")
 
 local M = {}
 
 local pickers_interfaces = {
-    { module = "snacks", interface = "nurl.pickers.snacks" },
-    { module = "telescope", interface = "nurl.pickers.telescope" },
-    { module = "mini.pick", interface = "nurl.pickers.mini" },
+    { name = "snacks", module = "snacks", interface = "nurl.pickers.snacks" },
+    {
+        name = "telescope",
+        module = "telescope",
+        interface = "nurl.pickers.telescope",
+    },
+    { name = "mini", module = "mini.pick", interface = "nurl.pickers.mini" },
 }
 
 local function find_picker_interface()
     for _, opts in ipairs(pickers_interfaces) do
-        local status = pcall(require, opts.module)
-        if status then
-            return require(opts.interface)
+        if config.picker == nil or config.picker == opts.name then
+            local status = pcall(require, opts.module)
+
+            if status then
+                return require(opts.interface)
+            end
         end
+    end
+
+    if config.picker ~= nil then
+        error(
+            ("Picker %s is not supported or not installed"):format(
+                config.picker
+            )
+        )
     end
 
     error("No supported picker found")
