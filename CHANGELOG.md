@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/rodrigoscc/nurl.nvim/compare/v1.1.0...v1.2.0) (2026-09-30)
+
+
+### Features
+
+* add a picker option to choose the picker ([8b3aa65](https://github.com/rodrigoscc/nurl.nvim/commit/8b3aa65782d74a9e67f5927cf9f3269b94017527))
+* add mini.pick picker ([ac74b96](https://github.com/rodrigoscc/nurl.nvim/commit/ac74b9669e357aab63ca013041dd823722678e87))
+
 ## [1.1.0](https://github.com/rodrigoscc/nurl.nvim/compare/v1.0.0...v1.1.0) (2026-09-29)
 
 
