@@ -143,7 +143,8 @@ add an override:
     `history = { enabled = false }`.
 - snacks.nvim <https://github.com/folke/snacks.nvim>,
     telescope.nvim <https://github.com/nvim-telescope/telescope.nvim> or
-    mini.pick <https://github.com/nvim-mini/mini.pick> for the pickers
+    mini.pick <https://github.com/nvim-mini/mini.pick> for the pickers. nurl
+    uses the first one installed, unless the `picker` option names one.
 - Optional: `jq` to format JSON responses, `stylua` to format the environments
     file
 
@@ -1252,6 +1253,10 @@ Methods:
         -- Ask before running the Lua files of a directory (see Trust)
         trust = true,
         trust_file = vim.fn.stdpath("data") .. "/nurl/trust.json",
+
+        -- Picker: "snacks", "telescope" or "mini". Without one, the first
+        -- installed picker is used, in this order.
+        picker = nil,
 
         -- History settings
         history = {
