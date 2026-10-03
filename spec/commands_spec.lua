@@ -30,7 +30,11 @@ describe(":Nurl", function()
     before_each(function()
         dir = vim.fn.tempname()
         vim.fn.mkdir(dir, "p")
-        require("nurl").setup({ dir = dir, formatters = {}, trust = false })
+        require("nurl").setup({
+            dir = dir,
+            formatters = {},
+            trust = { enabled = false },
+        })
 
         file = vim.fs.joinpath(dir, "requests.lua")
         vim.fn.writefile(vim.split(REQUESTS, "\n"), file)

@@ -41,5 +41,5 @@ require("snacks").setup({
     notifier = { enabled = true },
 })
 
-require("nurl").setup({ trust = false })
+require("nurl").setup({ trust = { enabled = false } })
 Nurl.activate_env("development")

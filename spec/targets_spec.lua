@@ -30,7 +30,11 @@ describe("targets", function()
     before_each(function()
         dir = vim.fn.tempname()
         vim.fn.mkdir(dir, "p")
-        require("nurl").setup({ dir = dir, formatters = {}, trust = false })
+        require("nurl").setup({
+            dir = dir,
+            formatters = {},
+            trust = { enabled = false },
+        })
         file = write(dir, "requests.lua", REQUESTS)
     end)
 

@@ -33,7 +33,10 @@ describe("trust", function()
         )
 
         trust_file = vim.fs.joinpath(root, "trust.json")
-        require("nurl").setup({ trust_file = trust_file, formatters = {} })
+        require("nurl").setup({
+            trust = { file = trust_file },
+            formatters = {},
+        })
         vim.cmd.cd(project)
         vim.g.nurl_trust_ran = nil
 
@@ -132,7 +135,7 @@ describe("trust", function()
 
     it("shows the active environment without running or asking", function()
         require("nurl").setup({
-            trust_file = trust_file,
+            trust = { file = trust_file },
             active_environments_file = vim.fs.joinpath(root, "envs.json"),
         })
         require("nurl.env.active").set(project, "dev")
@@ -153,7 +156,7 @@ describe("trust", function()
 
     it("refuses to use the active environment of a directory not trusted", function()
         require("nurl").setup({
-            trust_file = trust_file,
+            trust = { file = trust_file },
             active_environments_file = vim.fs.joinpath(root, "envs.json"),
         })
         require("nurl.env.active").set(project, "dev")
@@ -171,7 +174,9 @@ describe("trust", function()
     end)
 
     it("trusts every directory when disabled", function()
-        require("nurl").setup({ trust_file = trust_file, trust = false })
+        require("nurl").setup({
+            trust = { enabled = false, file = trust_file },
+        })
 
         assert.are.equal(2, #targets.project())
 

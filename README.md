@@ -480,7 +480,8 @@ nurl asks the first time it would run the Lua files in a directory:
 
 One answer covers every file in the directory, such as a project's `.nurl`.
 Use `:Nurl trust` and `:Nurl untrust` to change it later. A trusted directory
-stays trusted when its files change. Set `trust = false` to never ask.
+stays trusted when its files change. Set `trust = { enabled = false }` to never
+ask.
 
 ## Tests
 
@@ -1093,9 +1094,12 @@ require("nurl").setup({
     -- Active environments per working directory file name (in dir)
     active_environments_file = vim.fn.stdpath("data") .. "/nurl/envs.json",
 
-    -- Ask before running the Lua files of a directory (see Trust)
-    trust = true,
-    trust_file = vim.fn.stdpath("data") .. "/nurl/trust.json",
+    -- Trust settings (see Trust)
+    trust = {
+        -- Ask before running the Lua files of a directory
+        enabled = true,
+        file = vim.fn.stdpath("data") .. "/nurl/trust.json",
+    },
 
     -- Picker: "snacks", "telescope" or "mini". Without one, the first
     -- installed picker is used, in this order.

@@ -24,11 +24,11 @@ end
 
 ---@return table<string, nurl.TrustState>
 local function read()
-    if not fs.exists(config.trust_file) then
+    if not fs.exists(config.trust.file) then
         return {}
     end
 
-    return vim.json.decode(fs.read(config.trust_file))
+    return vim.json.decode(fs.read(config.trust.file))
 end
 
 ---@param dir string
@@ -36,7 +36,7 @@ end
 local function write(dir, state)
     local states = read()
     states[normalize(dir)] = state
-    fs.write(config.trust_file, vim.json.encode(states))
+    fs.write(config.trust.file, vim.json.encode(states))
 end
 
 ---@param dir string
@@ -82,7 +82,7 @@ end
 ---@param dir string
 ---@return boolean
 function M.allows(dir)
-    if not config.trust then
+    if not config.trust.enabled then
         return true
     end
 
