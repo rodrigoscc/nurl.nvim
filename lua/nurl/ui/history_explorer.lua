@@ -33,6 +33,22 @@ local function buffer(name)
     return bufnr
 end
 
+---Hide line numbers, sign and fold columns, and other window decorations of
+---the user. Set locally, so a buffer opened later in the window gets the
+---user's options back.
+local function minimal_window(win)
+    local wo = vim.wo[win][0]
+    wo.number = false
+    wo.relativenumber = false
+    wo.signcolumn = "no"
+    wo.foldcolumn = "0"
+    wo.statuscolumn = ""
+    wo.cursorcolumn = false
+    wo.colorcolumn = ""
+    wo.list = false
+    wo.spell = false
+end
+
 local function set_lines(bufnr, lines, append)
     if not vim.api.nvim_buf_is_valid(bufnr) then
         return
@@ -81,17 +97,12 @@ function M.format_time(time, now)
     -- Compare calendar days at noon so daylight saving changes do not matter.
     local today = os.date("*t", now or os.time())
     local date = os.time({ year = year, month = month, day = day, hour = 12 })
-    local days = math.floor(
-        (
-            os.time({
-                year = today.year,
-                month = today.month,
-                day = today.day,
-                hour = 12,
-            }) - date
-        ) / 86400
-            + 0.5
-    )
+    local days = math.floor((os.time({
+        year = today.year,
+        month = today.month,
+        day = today.day,
+        hour = 12,
+    }) - date) / 86400 + 0.5)
     local clock = hour .. ":" .. min
 
     if days == 0 then
@@ -286,8 +297,7 @@ end
 
 ---Render rows after the listed entries, or replace the whole list.
 function Explorer:render_rows(rows, append)
-    local start_row = append and vim.api.nvim_buf_line_count(self.list_buf)
-        or 0
+    local start_row = append and vim.api.nvim_buf_line_count(self.list_buf) or 0
     local lines = {}
     local line_spans = {}
 
@@ -627,6 +637,7 @@ function M.open(client)
     vim.cmd("tab sbuffer " .. self.list_buf)
     self.tab = vim.api.nvim_get_current_tabpage()
     self.list_win = vim.api.nvim_get_current_win()
+    minimal_window(self.list_win)
     vim.wo[self.list_win].wrap = false
     vim.wo[self.list_win].cursorline = true
 
@@ -637,6 +648,8 @@ function M.open(client)
         win = self.list_win,
         height = math.max(4, math.min(12, math.floor(vim.o.lines / 3))),
     })
+    minimal_window(self.preview_win)
+    vim.wo[self.preview_win][0].cursorline = false
     vim.wo[self.preview_win].wrap = true
     vim.wo[self.preview_win].winbar = "Nurl: request preview"
     self.preview_generation = 0
@@ -672,7 +685,10 @@ function M.open(client)
         "TabEnter",
     }, {
         callback = function()
-            if self:alive() and vim.api.nvim_get_current_tabpage() == self.tab then
+            if
+                self:alive()
+                and vim.api.nvim_get_current_tabpage() == self.tab
+            then
                 self:fill_window()
             end
         end,
