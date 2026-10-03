@@ -1395,89 +1395,93 @@ The response window includes a winbar. Use it in your own winbar:
 ==============================================================================
 16. Highlight Groups                              *nurl.nvim-highlight-groups*
 
-  -----------------------------------------------------------------------
-  Group                    Description
-  ------------------------ ----------------------------------------------
-  NurlStatus               1xx status codes, everywhere status codes are
-                           shown
+  ------------------------------------------------------------------------
+  Group                     Description
+  ------------------------- ----------------------------------------------
+  NurlStatus                1xx status codes, everywhere status codes are
+                            shown
 
-  NurlStatusSuccess        2xx status codes
+  NurlStatusSuccess         2xx status codes
 
-  NurlStatusRedirect       3xx status codes
+  NurlStatusRedirect        3xx status codes
 
-  NurlStatusClientError    4xx status codes
+  NurlStatusClientError     4xx status codes
 
-  NurlStatusServerError    5xx status codes
+  NurlStatusServerError     5xx status codes
 
-  NurlSpinner              Loading spinner
+  NurlSpinner               Loading spinner
 
-  NurlElapsedTime          Elapsed time display
+  NurlElapsedTime           Elapsed time display
 
-  NurlWinbarTitle          Request title in winbar
+  NurlWinbarTitle           Request title in winbar
 
-  NurlWinbarTabActive      Active tab
+  NurlWinbarTabActive       Active tab
 
-  NurlWinbarTabInactive    Inactive tab
+  NurlWinbarTabInactive     Inactive tab
 
-  NurlWinbarLoading        Loading state
+  NurlWinbarLoading         Loading state
 
-  NurlWinbarTime           Response time
+  NurlWinbarTime            Response time
 
-  NurlWinbarWarning        Warning messages
+  NurlWinbarWarning         Warning messages
 
-  NurlWinbarError          Error messages
+  NurlWinbarError           Error messages
 
-  NurlInfoIcon             Section icons in info buffer
+  NurlInfoIcon              Section icons in info buffer
 
-  NurlInfoLabel            Field labels in info buffer
+  NurlInfoLabel             Field labels in info buffer
 
-  NurlInfoValue            Field values in info buffer
+  NurlInfoValue             Field values in info buffer
 
-  NurlInfoHighlight        Highlighted values (e.g., total time)
+  NurlInfoHighlight         Highlighted values (e.g., total time)
 
-  NurlInfoUrl              URL values
+  NurlInfoUrl               URL values
 
-  NurlInfoQueryKey         Query parameter keys
+  NurlInfoQueryKey          Query parameter keys
 
-  NurlInfoQueryValue       Query parameter values
+  NurlInfoQueryValue        Query parameter values
 
-  NurlInfoSeparator        Separators (?, &, =)
+  NurlInfoSeparator         Separators (?, &, =)
 
-  NurlInfoMethod           HTTP method
+  NurlInfoMethod            HTTP method
 
-  NurlInfoOk               Verified certificate
+  NurlInfoOk                Verified certificate
 
-  NurlInfoWarning          Certificate expiring within 30 days
+  NurlInfoWarning           Certificate expiring within 30 days
 
-  NurlInfoError            Unverified or expired certificate
+  NurlInfoError             Unverified or expired certificate
 
-  NurlHistoryTime          History timestamp
+  NurlHistoryTime           History timestamp
 
-  NurlHistoryMethod        History request method
+  NurlHistoryMethod         History request method
 
-  NurlHistoryDuration      History request duration
+  NurlHistoryDuration       History request duration
 
-  NurlHistoryTitle         History request title
+  NurlHistoryDurationSlow   History request duration of a second or more
 
-  NurlHistoryUrl           History request URL
+  NurlHistoryTitle          History request title
 
-  NurlHistoryMatch         URL/title filter matches in history
+  NurlHistoryUrl            History request URL
 
-  NurlTestPass             Passing test count
+  NurlHistoryUrlDim         History request URL shown after a title
 
-  NurlTestFail             Failing test count, “Failure” header, and the
-                           Test tab when tests fail
+  NurlHistoryMatch          URL/title filter matches in history
 
-  NurlTestError            Error count and “Error” header
+  NurlTestPass              Passing test count
 
-  NurlTestLabel            “Passed in:” and “Expected:” labels
+  NurlTestFail              Failing test count, “Failure” header, and the
+                            Test tab when tests fail
 
-  NurlTestValueActual      Actual values (diff delete style)
+  NurlTestError             Error count and “Error” header
 
-  NurlTestValueExpected    Expected values (diff add style)
+  NurlTestLabel             “Passed in:” and “Expected:” labels
 
-  NurlTestSuiteName        Test suite breadcrumb
-  -----------------------------------------------------------------------
+  NurlTestValueActual       Actual values (diff delete style)
+
+  NurlTestValueExpected     Expected values (diff add style)
+
+  NurlTestSuiteName         Test suite breadcrumb
+  ------------------------------------------------------------------------
 
 Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
 
