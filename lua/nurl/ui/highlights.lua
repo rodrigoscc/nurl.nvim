@@ -40,8 +40,10 @@ M.highlights = {
     NurlHistoryTime = "Comment",
     NurlHistoryMethod = "Function",
     NurlHistoryDuration = "Comment",
+    NurlHistoryDurationSlow = "DiagnosticWarn",
     NurlHistoryTitle = "Title",
     NurlHistoryUrl = "Normal",
+    NurlHistoryUrlDim = "Comment",
     NurlHistoryMatch = "Search",
 
     NurlTestPass = "DiagnosticOk",
@@ -69,6 +71,16 @@ function M.status_group(status_code)
         return groups.status_server_error
     end
     return groups.status
+end
+
+-- Status icons by class: 1xx, 2xx, 3xx, 4xx and 5xx.
+local status_icons = { "󰋽", "󰄬", "󰁔", "󰅚", "󰅚" }
+
+---Icon for a status code, used wherever one is shown.
+---@param status_code integer
+---@return string
+function M.status_icon(status_code)
+    return status_icons[math.floor(status_code / 100)] or status_icons[1]
 end
 
 function M.setup_highlights()

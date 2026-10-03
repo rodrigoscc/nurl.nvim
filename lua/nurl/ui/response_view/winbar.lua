@@ -14,9 +14,6 @@ local function current_view()
     )
 end
 
--- Status icons by class: 1xx, 2xx, 3xx, 4xx and 5xx.
-local status_icons = { "󰋽", "󰄬", "󰁔", "󰅚", "󰅚" }
-
 function M.request_title()
     local view = current_view()
     if not view then
@@ -52,7 +49,7 @@ function M.status_code()
         return string.format(
             "%%#%s#%s %s%%*",
             highlights.status_group(status_code),
-            status_icons[math.floor(status_code / 100)] or status_icons[1],
+            highlights.status_icon(status_code),
             status_code
         )
     end

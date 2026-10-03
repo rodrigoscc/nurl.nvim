@@ -1265,8 +1265,10 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 | `NurlHistoryTime` | History timestamp |
 | `NurlHistoryMethod` | History request method |
 | `NurlHistoryDuration` | History request duration |
+| `NurlHistoryDurationSlow` | History request duration of a second or more |
 | `NurlHistoryTitle` | History request title |
 | `NurlHistoryUrl` | History request URL |
+| `NurlHistoryUrlDim` | History request URL shown after a title |
 | `NurlHistoryMatch` | URL/title filter matches in history |
 | `NurlTestPass` | Passing test count |
 | `NurlTestFail` | Failing test count, "Failure" header, and the Test tab when tests fail |

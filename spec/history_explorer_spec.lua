@@ -227,6 +227,66 @@ describe("history explorer searches", function()
         assert(ok, err)
     end)
 
+    it(
+        "shows status icons, readable durations and URLs without scheme",
+        function()
+            history.page = function()
+                return {
+                    {
+                        id = 2,
+                        time = "2026-09-24T12:00:01",
+                        method = "POST",
+                        status = 404,
+                        duration = 1.4,
+                        title = "Create order",
+                        url = "https://example.org/orders",
+                    },
+                    {
+                        id = 1,
+                        time = "2026-09-24T12:00:00",
+                        method = "GET",
+                        status = 200,
+                        duration = 0.045,
+                        url = "http://example.org/users",
+                    },
+                },
+                    false
+            end
+
+            explorer.open(require("nurl.app.client"))
+            local list = vim.api.nvim_get_current_buf()
+            local lines = vim.api.nvim_buf_get_lines(list, 0, -1, false)
+
+            assert.is_truthy(
+                lines[1]:find(
+                    "󰅚 404    1.40s  Create order  example.org/orders",
+                    1,
+                    true
+                )
+            )
+            assert.is_truthy(
+                lines[2]:find("󰄬 200     45ms  example.org/users", 1, true)
+            )
+            assert.is_nil(lines[1]:find("://", 1, true))
+
+            local function group_at(row, text)
+                local col = lines[row + 1]:find(text, 1, true) - 1
+                local marks = vim.api.nvim_buf_get_extmarks(
+                    list,
+                    -1,
+                    { row, col },
+                    { row, col },
+                    { details = true, overlap = true }
+                )
+                return marks[#marks][4].hl_group
+            end
+            assert.are.equal("NurlHistoryDurationSlow", group_at(0, "1.40s"))
+            assert.are.equal("NurlHistoryUrlDim", group_at(0, "example.org"))
+            assert.are.equal("NurlHistoryDuration", group_at(1, "45ms"))
+            assert.are.equal("NurlHistoryUrl", group_at(1, "example.org"))
+        end
+    )
+
     it("shows dates relative to today", function()
         local now = os.time({ year = 2026, month = 9, day = 26, hour = 10 })
         local function format(time)

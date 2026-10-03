@@ -2,11 +2,14 @@ local config = require("nurl.config")
 local history = require("nurl.history")
 local highlights = require("nurl.ui.highlights")
 local http_message = require("nurl.ui.http_message")
+local numbers = require("nurl.utils.numbers")
 local ResponseView = require("nurl.ui.response_view")
 
 local M = {}
 local list_namespace = vim.api.nvim_create_namespace("nurl.history_explorer")
 local page_prefetch = 5
+-- Requests that took at least this many seconds stand out in the list.
+local slow_duration = 1
 
 local filter_fields = {
     { label = "URL / title", key = "search" },
@@ -139,21 +142,30 @@ local function format_row(row, search)
     add("  ")
     add(string.format("%-7s", row.method), "NurlHistoryMethod")
     add("  ")
-    add(string.format("%-3d", row.status), highlights.status_group(row.status))
-    add("  ")
     add(
-        string.format("%7.0f ms", (row.duration or 0) * 1000),
-        "NurlHistoryDuration"
+        string.format("%s %-3d", highlights.status_icon(row.status), row.status),
+        highlights.status_group(row.status)
+    )
+    add("  ")
+    -- "123.45s" is the widest duration worth aligning.
+    add(
+        ("%7s"):format(numbers.format_duration(row.duration)),
+        (row.duration or 0) >= slow_duration and "NurlHistoryDurationSlow"
+            or "NurlHistoryDuration"
     )
     add("  ")
     local label_start = length
+    local has_title = row.title and row.title ~= ""
 
-    if row.title and row.title ~= "" then
+    if has_title then
         add(row.title:gsub("%c", " "), "NurlHistoryTitle")
         add("  ")
     end
 
-    add(row.url:gsub("%c", " "), "NurlHistoryUrl")
+    add(
+        row.url:gsub("^%w+://", ""):gsub("%c", " "),
+        has_title and "NurlHistoryUrlDim" or "NurlHistoryUrl"
+    )
 
     local line = table.concat(parts)
 
