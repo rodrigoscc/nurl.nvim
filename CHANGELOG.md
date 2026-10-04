@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.3.0](https://github.com/rodrigoscc/nurl.nvim/compare/v1.2.0...v1.3.0) (2026-10-04)
+
+
+### Features
+
+* group the history explorer by day and rework its winbars ([b4ba1cf](https://github.com/rodrigoscc/nurl.nvim/commit/b4ba1cf6a919a8992565193c559fd2f88743a971))
+* hide window decorations in the history explorer ([e9b07b7](https://github.com/rodrigoscc/nurl.nvim/commit/e9b07b7d42f0cbe8afb9f917dd86d191dd33db57))
+* move trust config to its own table ([b1b2135](https://github.com/rodrigoscc/nurl.nvim/commit/b1b2135d265f5d7ed49f8a29a550317f7518eb21))
+* open the history of a request with :Nurl history . ([9e7844e](https://github.com/rodrigoscc/nurl.nvim/commit/9e7844e275f888cd35f482cd77c6cb0d3ca5f376))
+* show status icons and readable durations in the history explorer ([5d37b6a](https://github.com/rodrigoscc/nurl.nvim/commit/5d37b6a4516aaeca88607f88f1c46bfd5d69fbd7))
+
 ## [1.2.0](https://github.com/rodrigoscc/nurl.nvim/compare/v1.1.0...v1.2.0) (2026-09-30)
 
 
