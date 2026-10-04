@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/rodrigoscc/nurl.nvim/compare/v1.3.0...v1.4.0) (2026-10-04)
+
+
+### Features
+
+* send the request at the cursor from the buffer, saved or not ([d3b35af](https://github.com/rodrigoscc/nurl.nvim/commit/d3b35afb50b1d7c73693569539c6f87f23df0d12))
+
 ## [1.3.0](https://github.com/rodrigoscc/nurl.nvim/compare/v1.2.0...v1.3.0) (2026-10-04)
 
 
