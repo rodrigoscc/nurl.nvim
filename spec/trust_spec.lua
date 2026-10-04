@@ -110,6 +110,32 @@ describe("trust", function()
         assert.are.equal(1, #prompts)
     end)
 
+    it("runs nothing at the cursor in a directory not trusted", function()
+        answer = 3
+        vim.cmd.edit(vim.fs.joinpath(nurl_dir, "two.lua"))
+        vim.api.nvim_buf_set_lines(0, 0, 0, false, { "vim.g.nurl_trust_ran = true" })
+        vim.api.nvim_win_set_cursor(0, { 2, 10 })
+
+        assert.is_nil(targets.cursor())
+
+        assert.is_nil(vim.g.nurl_trust_ran)
+        assert.are.equal(1, #prompts)
+        vim.cmd("bwipeout!")
+    end)
+
+    it("does not ask for a buffer without a file", function()
+        vim.cmd.enew()
+        vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+            'return { { "https://example.org/three" } }',
+        })
+        vim.api.nvim_win_set_cursor(0, { 1, 10 })
+
+        assert.are.equal("https://example.org/three", targets.cursor().request[1])
+
+        assert.are.equal(0, #prompts)
+        vim.cmd("bwipeout!")
+    end)
+
     it("trusts the project with :Nurl trust", function()
         answer = 3
         assert.is_nil(Nurl.env.get("token", "dev"))

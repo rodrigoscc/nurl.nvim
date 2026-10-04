@@ -162,6 +162,8 @@ return {
 ### 2. Run a request
 
 Position cursor on a request and run `:Nurl .`, or use the picker with `:Nurl`.
+`:Nurl .` sends what the buffer holds, so changes need not be saved first, and
+it works in a buffer without a file too.
 
 ### 3. Read the response
 

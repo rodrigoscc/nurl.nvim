@@ -99,6 +99,26 @@ describe("targets", function()
                 assert.is_nil(targets.cursor())
             end)
         end
+
+        it("finds a request not written to the file yet", function()
+            vim.api.nvim_buf_set_lines(0, 6, 6, false, {
+                '    { "https://example.org/three" },',
+            })
+            vim.api.nvim_win_set_cursor(0, { 7, 4 })
+
+            local item = targets.cursor()
+
+            assert.are.equal("https://example.org/three", item.request[1])
+            assert.are.equal(file, item.file)
+        end)
+    end)
+
+    it("finds a request in a buffer without a file", function()
+        vim.cmd.enew()
+        vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(REQUESTS, "\n"))
+        vim.api.nvim_win_set_cursor(0, { 4, 8 })
+
+        assert.are.equal("https://example.org/two", targets.cursor().request[1])
     end)
 
     it("finds the request shown in a response window", function()

@@ -31,16 +31,17 @@ local function contains(item, row, col)
 end
 
 ---The request under the cursor: the one shown in a response window, or the
----one defined at the cursor in a request file.
+---one defined at the cursor in the buffer, written or not.
 ---@return nurl.RequestItem?
 function M.cursor()
-    local view = ResponseView.for_buf(vim.api.nvim_get_current_buf())
+    local buf = vim.api.nvim_get_current_buf()
+    local view = ResponseView.for_buf(buf)
     if view then
         return { request = view.handle.request, win = view.win }
     end
 
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-    for _, item in ipairs(M.file(vim.fn.expand("%"))) do
+    for _, item in ipairs(projects.buffer_requests(buf)) do
         if contains(item, row, col) then
             return item
         end

@@ -43,20 +43,14 @@ end
 ---@field request nurl.SuperRequest
 ---@field file string
 
+---Run the contents of a request file and position the requests it returns.
+---@param contents string
 ---@param file_path string
 ---@return nurl.ProjectRequestItem[]
-function M.file_requests(file_path)
-    local read, contents = pcall(fs.read, file_path)
-    if not read then
-        vim.notify("Skipping file: " .. contents, vim.log.levels.WARN)
-        return {}
-    end
-
-    if not trust.allows(vim.fs.dirname(vim.fn.fnamemodify(file_path, ":p"))) then
-        return {}
-    end
-
-    local status, file_requests = pcall(dofile, file_path)
+local function requests_of(contents, file_path)
+    local status, file_requests = pcall(function()
+        return assert(load(contents, "@" .. file_path))()
+    end)
     if not status then
         vim.notify(
             ("Skipping file %s: %s"):format(file_path, file_requests),
@@ -90,6 +84,38 @@ function M.file_requests(file_path)
     end
 
     return items
+end
+
+---@param file_path string
+---@return nurl.ProjectRequestItem[]
+function M.file_requests(file_path)
+    local read, contents = pcall(fs.read, file_path)
+    if not read then
+        vim.notify("Skipping file: " .. contents, vim.log.levels.WARN)
+        return {}
+    end
+
+    if not trust.allows(vim.fs.dirname(vim.fn.fnamemodify(file_path, ":p"))) then
+        return {}
+    end
+
+    return requests_of(contents, file_path)
+end
+
+---The requests of a buffer, from its lines rather than its file, so that
+---changes not written yet are included. A buffer without a file holds what
+---was typed in it, so it is not asked to be trusted.
+---@param buf integer
+---@return nurl.ProjectRequestItem[]
+function M.buffer_requests(buf)
+    local file_path = vim.api.nvim_buf_get_name(buf)
+
+    if file_path ~= "" and not trust.allows(vim.fs.dirname(file_path)) then
+        return {}
+    end
+
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    return requests_of(table.concat(lines, "\n"), file_path)
 end
 
 ---@return nurl.ProjectRequestItem[]
