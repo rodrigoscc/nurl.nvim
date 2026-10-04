@@ -157,6 +157,26 @@ INSERT INTO request_history (
         assert.is_false(next_page.more)
     end)
 
+    it("filters by the exact title or URL", function()
+        insert("2026-09-24T12:00:00", "https://example.org/users", "GET", 200)
+        insert("2026-09-24T13:00:00", "https://example.org/users/1", "GET", 200)
+        insert("2026-09-24T14:00:00", "https://example.org/users/1", "GET", 200)
+        local result = history.db:exec(
+            "UPDATE request_history SET request_title = ? WHERE time = ?",
+            { "Get user", "2026-09-24T14:00:00" }
+        )
+        result:close()
+
+        local rows = history.page({ url = "https://example.org/users" })
+        assert.are.equal(1, #rows)
+        assert.are.equal("https://example.org/users", rows[1].url)
+
+        rows = history.page({ title = "Get user" })
+        assert.are.equal(1, #rows)
+        assert.are.equal("2026-09-24T14:00:00", rows[1].time)
+        assert.are.equal(0, #history.page({ title = "Get" }))
+    end)
+
     it("searches form and urlencoded request bodies too", function()
         for _, column in ipairs({ "request_form", "request_data_urlencode" }) do
             local query = string.format(
@@ -247,6 +267,48 @@ INSERT INTO request_history (
             return row:get_string(1)
         end, rows)
     end
+
+    it("finds the runs of a request by its filters", function()
+        local requests = require("nurl.core.request")
+        local untitled = {
+            url = {
+                "https://example.org/",
+                function()
+                    return "users"
+                end,
+                1,
+            },
+            method = "post",
+        }
+        local titled = {
+            "https://example.org/users/2",
+            title = function()
+                return "Get user"
+            end,
+        }
+        local function run(index, request)
+            local handle = completed_request(index)
+            handle.request = requests.expand(request)
+            history.insert_history_entry(handle)
+        end
+        local function times(request)
+            return vim.tbl_map(function(row)
+                return row.time
+            end, (history.page(history.filters_for(request))))
+        end
+
+        run(1, untitled)
+        run(2, titled)
+        run(3, { "https://example.org/users/1" }) -- another method
+
+        assert.are.same({ "2026-09-24T12:00:01" }, times(untitled))
+        assert.are.same({ "2026-09-24T12:00:02" }, times(titled))
+        -- The sent request of a response window finds the same runs.
+        assert.are.same(
+            history.filters_for(untitled),
+            history.filters_for(requests.expand(untitled))
+        )
+    end)
 
     it("keeps only the newest max_history_items entries", function()
         config.setup({ history = { max_history_items = 3 } })

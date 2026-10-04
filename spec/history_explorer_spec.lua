@@ -12,6 +12,16 @@ local function plain(winbar)
     return text
 end
 
+---The filter field with a key, among those the filter picker offers.
+local function field(fields, key)
+    for _, candidate in ipairs(fields) do
+        if candidate.key == key then
+            return candidate
+        end
+    end
+    error("Missing filter field " .. key)
+end
+
 describe("history explorer searches", function()
     local original_page, original_page_async
     local original_input, original_select
@@ -56,7 +66,7 @@ describe("history explorer searches", function()
         local list = vim.api.nvim_get_current_buf()
         local input = "old"
         vim.ui.select = function(fields, _, callback)
-            callback(fields[7]) -- response body
+            callback(field(fields, "response_body"))
         end
         vim.ui.input = function(_, callback)
             callback(input)
@@ -115,15 +125,15 @@ describe("history explorer searches", function()
 
         explorer.open(require("nurl.app.client"))
         local list = vim.api.nvim_get_current_buf()
-        local field_index, input
+        local field_key, input
         vim.ui.select = function(fields, _, callback)
-            callback(fields[field_index])
+            callback(field(fields, field_key))
         end
         vim.ui.input = function(_, callback)
             callback(input)
         end
-        local function filter(index, value)
-            field_index, input = index, value
+        local function filter(key, value)
+            field_key, input = key, value
             for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(list, "n")) do
                 if mapping.lhs == "F" then
                     mapping.callback()
@@ -131,10 +141,10 @@ describe("history explorer searches", function()
             end
         end
 
-        filter(4, "2026-09-01") -- from: uses the time index
-        filter(1, "example") -- URL / title
-        filter(2, "POST") -- method
-        filter(3, "5xx") -- status
+        filter("from", "2026-09-01") -- uses the time index
+        filter("search", "example")
+        filter("method", "POST")
+        filter("status", "5xx")
 
         assert.are.same({ {}, { from = "2026-09-01" } }, sync_filters)
         assert.are.same({
@@ -164,7 +174,7 @@ describe("history explorer searches", function()
         local choice
         vim.ui.select = function(items, _, callback)
             if type(items[1]) == "table" then
-                callback(items[#items]) -- the response file filter
+                callback(field(items, "response_file"))
             else
                 assert.are.same({ "yes", "no", "any" }, items)
                 callback(choice)
@@ -296,6 +306,34 @@ describe("history explorer searches", function()
             assert.are.equal("NurlHistoryUrl", group_at(1, "example.org"))
         end
     )
+
+    it("starts with the filters it is given", function()
+        local filters = { method = "GET", title = "Get user" }
+        local searched
+        history.page_async = function(page_filters, _, _, callback)
+            searched = vim.deepcopy(page_filters)
+            callback({}, false)
+        end
+
+        explorer.open(require("nurl.app.client"), filters)
+        local win = vim.api.nvim_get_current_win()
+
+        assert.are.same(filters, searched)
+        assert.is_truthy(
+            plain(vim.wo[win].winbar):find(
+                " method=GET    title=Get user   0 matches",
+                1,
+                true
+            )
+        )
+
+        -- Clearing the filters leaves the given table alone.
+        history.page = function()
+            return {}, false
+        end
+        vim.api.nvim_feedkeys("C", "x", false)
+        assert.are.same({ method = "GET", title = "Get user" }, filters)
+    end)
 
     it("shows the entry count, filters, search state and keys in the winbar", function()
         local callbacks = {}

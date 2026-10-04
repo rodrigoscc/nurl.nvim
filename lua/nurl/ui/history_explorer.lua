@@ -21,6 +21,8 @@ local hint_actions = { "open", "search", "filter", "help" }
 local filter_fields = {
     { label = "URL / title", key = "search" },
     { label = "Method (e.g. POST)", key = "method" },
+    { label = "Title (exact)", key = "title" },
+    { label = "URL (exact)", key = "url" },
     { label = "Status (e.g. 404 or 4xx)", key = "status" },
     { label = "From (YYYY-MM-DD or ISO datetime)", key = "from" },
     { label = "To (YYYY-MM-DD or ISO datetime)", key = "to" },
@@ -805,12 +807,13 @@ end
 ---@field open_history_item fun(item: nurl.HistoryItem, win?: integer): nurl.ResponseView
 
 ---@param client nurl.HistoryExplorerClient
-function M.open(client)
+---@param filters? nurl.HistoryFilters to start with
+function M.open(client, filters)
     local opts = config.history.explorer
     local self = setmetatable({
         client = client,
         opts = opts,
-        filters = {},
+        filters = filters and vim.deepcopy(filters) or {},
         entries = {},
         has_more = true,
         search_generation = 0,

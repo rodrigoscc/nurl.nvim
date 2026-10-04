@@ -158,6 +158,31 @@ function M.pick_history()
     require("nurl.ui.history_explorer").open(client())
 end
 
+---@param item nurl.RequestItem
+local function open_item_history(item)
+    local ok, filters =
+        pcall(require("nurl.history").filters_for, item.request)
+    if not ok then
+        vim.notify(
+            "Failed to read the request: " .. filters,
+            vim.log.levels.ERROR
+        )
+        return
+    end
+
+    require("nurl.ui.history_explorer").open(client(), filters)
+end
+
+---Browse the history, or only the runs of a request of a target.
+---@param arg? string
+function M.history(arg)
+    if arg == nil or arg == "" then
+        M.pick_history()
+    else
+        run_on_target(arg, "Nurl: history", open_item_history)
+    end
+end
+
 ---The directory a trust command is about: the one given, or the project's.
 ---@param arg? string
 ---@return string dir, string path its full path
@@ -229,7 +254,7 @@ end
 ---@type table<string, fun(arg?: string, overrides: nurl.Override[], params: table)>
 M.subcommand_handlers = {
     jump = M.jump,
-    history = M.pick_history,
+    history = M.history,
     resend = resend_subcommand,
     env = env_subcommand,
     env_file = M.open_environments_file,

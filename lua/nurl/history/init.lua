@@ -1,6 +1,8 @@
+local codec = require("nurl.history.codec")
 local config = require("nurl.config")
 local fs = require("nurl.infra.fs")
 local repository = require("nurl.history.repository")
+local requests = require("nurl.core.request")
 
 ---The requests sent, saved with their responses in a SQLite database.
 local M = {}
@@ -90,6 +92,25 @@ function M.page_async(filters, cursor, limit, callback)
         limit,
         callback
     )
+end
+
+---The filters matching the runs of a request: its method and title, which
+---stays the same across environments, or its URL when it has no title. Only
+---those fields are expanded, so that functions of the other fields, such as
+---one fetching a token, do not run.
+---@param request nurl.SuperRequest | nurl.Request
+---@return nurl.HistoryFilters
+function M.filters_for(request)
+    local title = requests.expand_title(request)
+    local filters = { method = requests.method(request) }
+
+    if title ~= nil and title ~= "" then
+        filters.title = title
+    else
+        filters.url = codec.search_url(requests.expand_url(request))
+    end
+
+    return filters
 end
 
 ---Delete entries by id, along with their saved response files.

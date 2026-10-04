@@ -77,6 +77,36 @@ function M.build_url(url)
     return table.concat(expanded_parts, "/")
 end
 
+---The method of a request, GET by default.
+---@param request nurl.SuperRequest | nurl.Request
+---@return string
+function M.method(request)
+    return request.method ~= nil and request.method:upper() or "GET"
+end
+
+---The URL of a request, with its functions called.
+---@param request nurl.SuperRequest | nurl.Request
+---@param opts? nurl.ExpandOpts
+---@return string | (string | number)[]
+function M.expand_url(request, opts)
+    return request[1] or variables.expand(request.url, opts)
+end
+
+---The title of a request, with its functions called.
+---@param request nurl.SuperRequest | nurl.Request
+---@param opts? nurl.ExpandOpts
+---@return string?
+function M.expand_title(request, opts)
+    local title = variables.expand(request.title, opts)
+
+    assert(
+        title == nil or type(title) == "string",
+        "Request title must be a string"
+    )
+
+    return title
+end
+
 ---@param request nurl.SuperRequest | nurl.Request
 ---@param opts? nurl.ExpandOpts
 function M.expand(request, opts)
@@ -107,7 +137,7 @@ function M.expand(request, opts)
 
     -- A query string in the shorthand URL is sent as written, since its
     -- values are usually encoded already. Only the query field is encoded.
-    local url = request[1] or variables.expand(request.url, opts)
+    local url = M.expand_url(request, opts)
     local query = variables.expand(request.query, opts)
 
     assert(url ~= nil, "Request must have a URL")
@@ -119,20 +149,12 @@ function M.expand(request, opts)
     local form = variables.expand(request.form, opts)
     local data_urlencode = variables.expand(request.data_urlencode, opts)
 
-    local title = variables.expand(request.title, opts)
+    local title = M.expand_title(request, opts)
 
     local curl_args = variables.expand(request.curl_args, opts)
     local save_history = variables.expand(request.save_history, opts)
 
-    assert(
-        title == nil or type(title) == "string",
-        "Request title must be a string"
-    )
-
-    local method = "GET"
-    if request.method ~= nil then
-        method = request.method:upper()
-    end
+    local method = M.method(request)
 
     ---@type nurl.Request|nurl.SuperRequest
     local req = {
@@ -196,10 +218,7 @@ function M.stringify_lazy(request)
             { [variables.LAZY_PLACEHOLDER] = variables.LAZY_PLACEHOLDER }
     end
 
-    local method = "GET"
-    if request.method ~= nil then
-        method = request.method:upper()
-    end
+    local method = M.method(request)
 
     ---@type nurl.Request
     local req = {

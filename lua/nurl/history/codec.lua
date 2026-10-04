@@ -85,6 +85,13 @@ M.REQUEST_COLUMNS = {
     "request_data_urlencode",
 }
 
+---The URL a request is searched by, saved without its query field.
+---@param url string | (string | number)[]
+---@return string
+function M.search_url(url)
+    return requests.build_url(url)
+end
+
 ---@param value any
 ---@return string | userdata JSON, or vim.NIL for nil
 local function json(value)
@@ -105,7 +112,7 @@ function M.encode(handle)
     return {
         handle.exec_datetime,
         vim.json.encode(request.url),
-        requests.build_url(request.url),
+        M.search_url(request.url),
         json(request.query),
         request.title or vim.NIL,
         request.method,

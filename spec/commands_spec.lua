@@ -1,5 +1,6 @@
 local pickers = require("nurl.pickers")
 local client = require("nurl.app.client")
+local explorer = require("nurl.ui.history_explorer")
 local Curl = require("nurl.core.curl")
 
 local REQUESTS = [[
@@ -46,6 +47,7 @@ describe(":Nurl", function()
         stub(client, "yank")
         stub(client, "resend")
         stub(pickers, "pick")
+        stub(explorer, "open")
         table.insert(stubbed, { vim, "notify", vim.notify })
         vim.notify = function(msg, level)
             table.insert(notifications, { msg, level })
@@ -93,6 +95,18 @@ describe(":Nurl", function()
             assert.are.equal("https://example.org/two", calls[1][2][1])
         end)
 
+        it("opens the history of the request", function()
+            vim.cmd("Nurl history .")
+
+            local name, history_client, filters = unpack(calls[1])
+            assert.are.equal("open", name)
+            assert.are.equal(client, history_client)
+            assert.are.same(
+                { method = "POST", url = "https://example.org/two" },
+                filters
+            )
+        end)
+
         it("cannot jump", function()
             vim.cmd("Nurl jump .")
 
@@ -138,6 +152,85 @@ describe(":Nurl", function()
         local _, sent, opts = unpack(calls[1])
         assert.are.same(request, sent)
         assert.are.same({ display = { win = view.win } }, opts)
+    end)
+
+    it("opens the history of the request of a response window", function()
+        client.open_history_item({
+            "2026-09-26T10:00:00",
+            {
+                method = "GET",
+                url = { "https://example.org", "users", 1 },
+                title = "Get user",
+                headers = {},
+            },
+            {
+                status_code = 200,
+                reason_phrase = "OK",
+                protocol = "HTTP/1.1",
+                headers = {},
+                body = "",
+                time = {},
+                size = {},
+                speed = {},
+            },
+            Curl:new({
+                args = {},
+                result = { code = 0, signal = 0, stdout = "", stderr = "" },
+            }),
+        })
+
+        vim.cmd("Nurl history .")
+
+        assert.are.same({ method = "GET", title = "Get user" }, calls[1][3])
+    end)
+
+    it("opens the whole history without a target", function()
+        vim.cmd("Nurl history")
+
+        assert.are.equal("open", calls[1][1])
+        assert.is_nil(calls[1][3])
+    end)
+
+    it("expands only the title and URL of a request to find its history", function()
+        vim.fn.writefile({
+            "return { {",
+            '    url = { "https://example.org/", function() return "users" end, 1 },',
+            '    headers = function() error("should not run") end,',
+            "} }",
+        }, single)
+
+        vim.cmd("Nurl history " .. single)
+
+        assert.are.same(
+            { method = "GET", url = "https://example.org/users/1" },
+            calls[1][3]
+        )
+
+        vim.fn.writefile({
+            "return { {",
+            '    "https://example.org/users/1",',
+            '    title = function() return "Get user" end,',
+            "} }",
+        }, single)
+
+        vim.cmd("Nurl history " .. single)
+
+        assert.are.same({ method = "GET", title = "Get user" }, calls[2][3])
+    end)
+
+    it("reports a request whose title fails to expand", function()
+        vim.fn.writefile({
+            "return { {",
+            '    "https://example.org",',
+            '    title = function() error("no token") end,',
+            "} }",
+        }, single)
+
+        vim.cmd("Nurl history " .. single)
+
+        assert.are.same({}, calls)
+        assert.are.equal(vim.log.levels.ERROR, notifications[1][2])
+        assert.is_truthy(notifications[1][1]:find("no token", 1, true))
     end)
 
     it("sends the only request of a file without a picker", function()

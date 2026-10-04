@@ -8,6 +8,8 @@ local M = {}
 ---@class nurl.HistoryFilters
 ---@field search? string
 ---@field method? string
+---@field title? string the exact title
+---@field url? string the exact URL, without the query field
 ---@field status? string
 ---@field from? string
 ---@field to? string
@@ -165,6 +167,14 @@ function M.page_query(filters, cursor, limit)
 
     if filters.method and filters.method ~= "" then
         condition("request_method = ?", filters.method:upper())
+    end
+
+    if filters.title and filters.title ~= "" then
+        condition("request_title = ?", filters.title)
+    end
+
+    if filters.url and filters.url ~= "" then
+        condition("request_url_raw = ?", filters.url)
     end
 
     if filters.status and filters.status ~= "" then

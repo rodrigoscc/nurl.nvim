@@ -190,6 +190,9 @@ secrets from 1Password, refresh OAuth2 tokens and sign requests.
 | `:Nurl jump %` | Current buffer picker -> jump |
 | `:Nurl jump <filepath>` | File picker -> jump |
 | `:Nurl history` | Browse and filter history in a full-width list |
+| `:Nurl history .` | History of the request at cursor |
+| `:Nurl history %` | Current buffer picker -> history of the request |
+| `:Nurl history <filepath>` | File picker -> history of the request |
 | `:Nurl resend` | Recent requests picker -> resend |
 | `:Nurl resend <-n>` | Resend nth last request (-1 = last) |
 | `:Nurl env` | Environment picker -> activate |
@@ -223,7 +226,7 @@ a response creates a response window beside the list. Close that window with
 |-----|--------|
 | `<CR>` | Open the selected response |
 | `/` | Filter by URL or title |
-| `F` | Filter by method, status, time, request body, text response body, or whether the response body was saved to a file |
+| `F` | Filter by method, status, time, request body, text response body, exact title or URL, or whether the response body was saved to a file |
 | `C` | Clear filters |
 | `<C-r>` | Resend the selected request |
 | `dd` | Delete the selected entry (`3dd` deletes three) and its saved response file |
@@ -239,6 +242,13 @@ filters discards older results. Configure the explorer through `history.explorer
 (`page_size` and buffer-local `keys`; set a mapping to `false` to disable it).
 `page_size` is a minimum: larger windows load enough entries to fill the list,
 including after a resize.
+
+`:Nurl history .` opens the explorer on the runs of the request at the cursor,
+in a request file or a response window. It filters by the request's method
+and exact title, or by its exact URL when it has no title. Only the title and
+URL are evaluated, with the active environment, so an untitled request whose
+URL uses environment variables only matches runs in that environment. Clear
+the filters with `C` to see the whole history.
 
 ### History retention
 
