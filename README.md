@@ -210,6 +210,10 @@ When using `%` or `<filepath>`, if the file contains only one request, the actio
 
 `:Nurl history` opens a paged history list in a new tab. Navigate with normal
 motions (`j`, `k`, `gg`, `G`); scrolling near the end loads more entries.
+Entries are grouped by day under headers such as `Today` or `Tuesday`, and the
+winbar shows the day of the top row.
+The list has the `nurl-history` filetype, for `FileType` autocmds and
+statusline plugins.
 A lower pane previews the selected request, including its full body. The
 preview loads only the selected request, not the saved response body. Opening
 a response creates a response window beside the list. Close that window with
@@ -1262,7 +1266,8 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 | `NurlInfoOk` | Verified certificate |
 | `NurlInfoWarning` | Certificate expiring within 30 days |
 | `NurlInfoError` | Unverified or expired certificate |
-| `NurlHistoryTime` | History timestamp |
+| `NurlHistoryTime` | History time of day |
+| `NurlHistoryDay` | History day headers and the day of the top row in the winbar |
 | `NurlHistoryMethod` | History request method |
 | `NurlHistoryDuration` | History request duration |
 | `NurlHistoryDurationSlow` | History request duration of a second or more |
@@ -1270,6 +1275,10 @@ vim.o.winbar = "%{%v:lua.Nurl.winbar.status_code()%}"
 | `NurlHistoryUrl` | History request URL |
 | `NurlHistoryUrlDim` | History request URL shown after a title |
 | `NurlHistoryMatch` | URL/title filter matches in history |
+| `NurlHistoryCount` | Entry count and search state in the history winbar |
+| `NurlHistoryFilter` | Active filters in the history winbar |
+| `NurlHistoryKey` | Keys in the history winbar |
+| `NurlHistoryKeyDesc` | Key descriptions in the history winbar |
 | `NurlTestPass` | Passing test count |
 | `NurlTestFail` | Failing test count, "Failure" header, and the Test tab when tests fail |
 | `NurlTestError` | Error count and "Error" header |

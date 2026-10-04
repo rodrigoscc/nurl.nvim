@@ -38,6 +38,7 @@ M.highlights = {
     NurlStatusServerError = "DiagnosticError",
 
     NurlHistoryTime = "Comment",
+    NurlHistoryDay = "@markup.heading",
     NurlHistoryMethod = "Function",
     NurlHistoryDuration = "Comment",
     NurlHistoryDurationSlow = "DiagnosticWarn",
@@ -45,6 +46,10 @@ M.highlights = {
     NurlHistoryUrl = "Normal",
     NurlHistoryUrlDim = "Comment",
     NurlHistoryMatch = "Search",
+    NurlHistoryCount = "Comment",
+    NurlHistoryFilter = "Visual",
+    NurlHistoryKey = "Special",
+    NurlHistoryKeyDesc = "Comment",
 
     NurlTestPass = "DiagnosticOk",
     NurlTestFail = "DiagnosticError",

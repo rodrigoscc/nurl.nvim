@@ -2,6 +2,16 @@ local config = require("nurl.config")
 local history = require("nurl.history")
 local explorer = require("nurl.ui.history_explorer")
 
+---The text of a winbar, whatever the width of its window.
+local function plain(winbar)
+    local text = winbar
+        :gsub("%%#[^#]*#", "")
+        :gsub("%%%*", "")
+        :gsub("%%[=<]", "")
+        :gsub("%%%%", "%%")
+    return text
+end
+
 describe("history explorer searches", function()
     local original_page, original_page_async
     local original_input, original_select
@@ -287,21 +297,274 @@ describe("history explorer searches", function()
         end
     )
 
-    it("shows dates relative to today", function()
-        local now = os.time({ year = 2026, month = 9, day = 26, hour = 10 })
-        local function format(time)
-            return explorer.format_time(time, now)
+    it("shows the entry count, filters, search state and keys in the winbar", function()
+        local callbacks = {}
+        history.page = function()
+            return {
+                {
+                    id = 1,
+                    time = "2026-09-24T12:00:00",
+                    method = "GET",
+                    status = 200,
+                    duration = 0.1,
+                    url = "https://example.org/a",
+                },
+                {
+                    id = 2,
+                    time = "2026-09-24T11:00:00",
+                    method = "GET",
+                    status = 200,
+                    duration = 0.1,
+                    url = "https://example.org/b",
+                },
+            },
+                false
+        end
+        history.page_async = function(_, _, _, callback)
+            table.insert(callbacks, callback)
+        end
+        vim.ui.input = function(_, callback)
+            callback("100%")
         end
 
-        assert.are.equal("today 09:05", format("2026-09-26T09:05:59"))
-        assert.are.equal("yesterday 23:59", format("2026-09-25T23:59:00"))
-        assert.are.equal("Thu 14:32", format("2026-09-24T14:32:10"))
-        assert.are.equal("Sun 08:00", format("2026-09-20T08:00:00"))
-        assert.are.equal("Sep 19 18:20", format("2026-09-19T18:20:00"))
-        assert.are.equal("Jan 3 07:15", format("2026-01-03T07:15:00"))
-        assert.are.equal("Dec 31, 2025", format("2025-12-31T23:00:00"))
-        assert.are.equal("Oct 1 12:00", format("2026-10-01T12:00:00"))
-        assert.are.equal("not a date", format("not a date"))
+        explorer.open(require("nurl.app.client"))
+        local win = vim.api.nvim_get_current_win()
+        local list = vim.api.nvim_get_current_buf()
+        local function winbar()
+            return vim.api.nvim_eval_statusline(
+                vim.wo[win].winbar,
+                { winid = win, use_winbar = true }
+            )
+        end
+
+        local text = winbar().str
+        assert.is_truthy(
+            text:find("<CR> open  / search  F filter  ? help  󰋚 History", 1, true)
+        )
+        assert.is_nil(text:find("entries", 1, true))
+        assert.is_nil(text:find("match", 1, true))
+        assert.is_nil(text:find("searching", 1, true))
+
+        for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(list, "n")) do
+            if mapping.lhs == "/" then
+                mapping.callback()
+            end
+        end
+        local raw = vim.wo[win].winbar
+        assert.is_truthy(winbar().str:find("⠋ searching  <CR>", 1, true))
+        assert.is_truthy(raw:find("%#NurlHistoryFilter# search=", 1, true))
+
+        -- Spinner ticks redraw the frame without setting the winbar again.
+        local sets = 0
+        local autocmd = vim.api.nvim_create_autocmd("OptionSet", {
+            pattern = "winbar",
+            callback = function()
+                sets = sets + 1
+            end,
+        })
+        local ticked = vim.wait(1000, function()
+            return winbar().str:find("⠋ searching", 1, true) == nil
+        end)
+        vim.api.nvim_del_autocmd(autocmd)
+        assert.is_true(ticked)
+        assert.are.equal(0, sets)
+        assert.are.equal(raw, vim.wo[win].winbar)
+
+        callbacks[1]({
+            {
+                id = 1,
+                time = "2026-09-24T12:00:00",
+                method = "GET",
+                status = 200,
+                duration = 0.1,
+                url = "https://example.org/100%",
+            },
+        }, false)
+        text = plain(vim.wo[win].winbar)
+        assert.is_truthy(text:find(" search=100%   1 match  <CR>", 1, true))
+        assert.is_nil(text:find("searching", 1, true))
+    end)
+
+    it("shows failed searches and stops searching when filters change", function()
+        local callbacks = {}
+        history.page = function()
+            return {}, false
+        end
+        history.page_async = function(_, _, _, callback)
+            table.insert(callbacks, callback)
+        end
+        local search = string.rep("ã", 45)
+        vim.ui.input = function(_, callback)
+            callback(search)
+        end
+        local original_notify = vim.notify
+        vim.notify = function() end
+
+        local ok, err = pcall(function()
+            explorer.open(require("nurl.app.client"))
+            local win = vim.api.nvim_get_current_win()
+            local list = vim.api.nvim_get_current_buf()
+            local function press(lhs)
+                for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(list, "n")) do
+                    if mapping.lhs == lhs then
+                        mapping.callback()
+                    end
+                end
+            end
+            local function winbar()
+                return plain(vim.wo[win].winbar)
+            end
+
+            -- Long filters are cut by characters, not bytes.
+            press("/")
+            assert.is_truthy(winbar():find(
+                " search=" .. string.rep("ã", 40) .. "… ",
+                1,
+                true
+            ))
+
+            press("C")
+            assert.is_nil(winbar():find("searching", 1, true))
+            assert.is_nil(winbar():find("match", 1, true))
+
+            press("/")
+            callbacks[2](nil, nil, "worker failed")
+            local text = winbar()
+            assert.is_truthy(text:find("…   󰅚 failed to load", 1, true))
+            assert.is_nil(text:find("match", 1, true))
+            assert.is_nil(text:find("searching", 1, true))
+
+            -- A page that fails after others leaves older entries unlisted.
+            press("/")
+            callbacks[3]({
+                {
+                    id = 1,
+                    time = "2026-09-24T12:00:00",
+                    method = "GET",
+                    status = 200,
+                    duration = 0.1,
+                    url = "https://example.org",
+                },
+            }, true)
+            callbacks[4](nil, nil, "worker failed")
+            assert.is_truthy(
+                winbar():find("…   1+ match  󰅚 failed to load", 1, true)
+            )
+        end)
+        vim.notify = original_notify
+        assert(ok, err)
+    end)
+
+    it("shows when the previewed request was sent in its winbar", function()
+        history.page = function()
+            return {
+                {
+                    id = 2,
+                    time = "2026-10-04T01:15:32",
+                    method = "GET",
+                    status = 200,
+                    duration = 0.1,
+                    url = "https://example.org/2",
+                },
+                {
+                    id = 1,
+                    time = "2026-09-29T22:56:07",
+                    method = "GET",
+                    status = 200,
+                    duration = 0.1,
+                    url = "https://example.org/1",
+                },
+            },
+                false
+        end
+        local original_get_request = history.get_request
+        history.get_request = function()
+            return nil
+        end
+
+        local ok, err = pcall(function()
+            explorer.open(require("nurl.app.client"))
+            local preview_win = vim.fn.win_getid(vim.fn.winnr("j"))
+            local function winbar()
+                return vim.api.nvim_eval_statusline(
+                    vim.wo[preview_win].winbar,
+                    { winid = preview_win, use_winbar = true }
+                ).str
+            end
+
+            assert.is_truthy(winbar():find("󰈈 Preview", 1, true))
+            assert.is_true(vim.wait(1000, function()
+                return winbar():find("^Sunday, Oct 4, 2026  01:15:32") ~= nil
+            end))
+
+            vim.api.nvim_win_set_cursor(0, { 2, 0 })
+            vim.api.nvim_exec_autocmds("CursorMoved", { buffer = 0 })
+            assert.is_true(vim.wait(1000, function()
+                return winbar():find("^Tuesday, Sep 29, 2026  22:56:07")
+                    ~= nil
+            end))
+            assert.is_truthy(winbar():find("󰈈 Preview", 1, true))
+        end)
+        history.get_request = original_get_request
+        assert(ok, err)
+    end)
+
+    it("shows a header above the first entry of each day", function()
+        local rows = {}
+        for i, time in ipairs({
+            "2025-12-31T23:00:00",
+            "2025-12-31T09:00:00",
+            "2025-12-30T22:00:00",
+            "2025-12-29T08:00:00",
+        }) do
+            table.insert(rows, {
+                id = 5 - i,
+                time = time,
+                method = "GET",
+                status = 200,
+                duration = 0.1,
+                url = "https://example.org/" .. i,
+            })
+        end
+        history.page = function()
+            return vim.deepcopy(rows), false
+        end
+
+        explorer.open(require("nurl.app.client"))
+        local win = vim.api.nvim_get_current_win()
+        local list = vim.api.nvim_get_current_buf()
+
+        assert.is_truthy(
+            vim.api.nvim_buf_get_lines(list, 0, 1, false)[1]:find("^23:00  GET")
+        )
+
+        local headers = {}
+        for _, mark in
+            ipairs(vim.api.nvim_buf_get_extmarks(list, -1, 0, -1, {
+                details = true,
+            }))
+        do
+            if mark[4].virt_lines then
+                assert.is_true(mark[4].virt_lines_above)
+                table.insert(headers, { mark[2], mark[4].virt_lines[1][1][1] })
+            end
+        end
+        assert.are.same({ { 2, "Dec 30, 2025" }, { 3, "Dec 29, 2025" } }, headers)
+
+        -- The winbar names the day of the top row.
+        local function day()
+            return vim.api
+                .nvim_eval_statusline(
+                    vim.wo[win].winbar,
+                    { winid = win, use_winbar = true }
+                ).str
+                :match("^(.-)%s%s")
+        end
+        assert.are.equal("Dec 31, 2025", day())
+
+        vim.fn.winrestview({ topline = 3, lnum = 3 })
+        vim.api.nvim_exec_autocmds("WinScrolled", { pattern = tostring(win) })
+        assert.are.equal("Dec 30, 2025", day())
     end)
 
     it("routes :Nurl history and the old API to the explorer", function()
@@ -482,6 +745,56 @@ INSERT INTO request_history (
         )
     end)
 
+    it("lets FileType autocmds of the user change the list", function()
+        history.page = function()
+            return {}, false
+        end
+        local group = vim.api.nvim_create_augroup("nurl_test_filetype", {})
+        vim.api.nvim_create_autocmd("FileType", {
+            group = group,
+            pattern = "nurl-history",
+            callback = function(args)
+                vim.wo.number = true
+                vim.keymap.set("n", "q", "<Nop>", {
+                    buffer = args.buf,
+                    desc = "user close",
+                })
+            end,
+        })
+
+        local ok, err = pcall(function()
+            explorer.open(require("nurl.app.client"))
+            assert.is_true(vim.wo.number)
+            local q = vim.fn.maparg("q", "n", false, true)
+            assert.are.equal("user close", q.desc)
+        end)
+        vim.api.nvim_del_augroup_by_id(group)
+        assert(ok, err)
+    end)
+
+    it("leaves the winbar of other buffers opened in the preview", function()
+        history.page = function()
+            return {}, false
+        end
+
+        explorer.open(require("nurl.app.client"))
+        local list = vim.api.nvim_get_current_buf()
+        local preview_win = vim.fn.win_getid(vim.fn.winnr("j"))
+        assert.is_truthy(vim.wo[preview_win].winbar:find("Preview", 1, true))
+
+        vim.api.nvim_win_call(preview_win, function()
+            vim.cmd.enew()
+        end)
+        assert.are.equal("", vim.wo[preview_win].winbar)
+
+        for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(list, "n")) do
+            if mapping.lhs == "C" then
+                mapping.callback()
+            end
+        end
+        assert.are.equal("", vim.wo[preview_win].winbar)
+    end)
+
     it("hides the user's window decorations without changing them", function()
         history.page = function()
             return {}, false
@@ -494,6 +807,12 @@ INSERT INTO request_history (
         local list_win = vim.api.nvim_get_current_win()
         local list_buf = vim.api.nvim_get_current_buf()
         local preview_win = vim.fn.win_getid(vim.fn.winnr("j"))
+
+        assert.are.equal("nurl-history", vim.bo[list_buf].filetype)
+        assert.are.equal(
+            "http",
+            vim.bo[vim.api.nvim_win_get_buf(preview_win)].filetype
+        )
 
         for _, win in ipairs({ list_win, preview_win }) do
             assert.is_false(vim.wo[win].number)
