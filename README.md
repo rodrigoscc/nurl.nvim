@@ -11,7 +11,7 @@ HTTP client for Neovim. Requests in pure Lua. Programmable, composable, extensib
 
 <!-- panvimdoc-ignore-start -->
 
-https://github.com/user-attachments/assets/7a96353a-066c-4b14-aaa7-be6d37ffb558
+https://github.com/user-attachments/assets/8ae62c7a-4c6b-4660-9b5b-8c1033db80d2
 
 <!-- panvimdoc-ignore-end -->
 
